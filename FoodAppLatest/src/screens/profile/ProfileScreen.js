@@ -129,9 +129,8 @@ export const ProfileScreen = ({ navigation }) => {
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Logout', style: 'destructive',
-        onPress: () => {
-          clearCart();
-          logout();
+        onPress: async () => {
+          await logout(); // ✅ await the async function
         },
       },
     ]);
@@ -144,10 +143,6 @@ export const ProfileScreen = ({ navigation }) => {
 
   const initials = user?.full_name
     ?.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) ?? 'U';
-
-  // 👇 ADD THIS
-  console.log("👤 user avatar_url:", user?.avatar_url);
-
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>

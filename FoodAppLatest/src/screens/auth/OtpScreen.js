@@ -27,14 +27,11 @@ export const OtpScreen = ({ route, navigation }) => {
   const [timer, setTimer] = useState(RESEND_TIMER);
   const [canResend, setCanResend] = useState(false);
   const [otpError, setOtpError] = useState(false);
-
+  const isVerifying = useRef(false);
   const inputs = useRef([]);
-  const setUser = useUserStore(s => s.setUser);
 
-  // Animation refs
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const shakeAnim = useRef(new Animated.Value(0)).current;
-  const successScale = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     Animated.timing(fadeAnim, {
@@ -44,7 +41,6 @@ export const OtpScreen = ({ route, navigation }) => {
     setTimeout(() => inputs.current[0]?.focus(), 300);
   }, []);
 
-  // Countdown timer
   useEffect(() => {
     if (timer <= 0) {
       setCanResend(true);
@@ -70,7 +66,6 @@ export const OtpScreen = ({ route, navigation }) => {
       inputs.current[index + 1]?.focus();
     }
 
-    // Auto submit when all filled
     if (val && index === OTP_LENGTH - 1) {
       const fullOtp = [...updated].join('');
       if (fullOtp.length === OTP_LENGTH) {
@@ -95,44 +90,56 @@ export const OtpScreen = ({ route, navigation }) => {
       Animated.timing(shakeAnim, { toValue: 0, duration: 60, useNativeDriver: true }),
     ]).start();
   };
+
   const handleVerify = async (otpString) => {
+    if (isVerifying.current) return;
+    isVerifying.current = true;
+
     const otpStr = otpString || otp.join('');
+    const cleanPhone = phone.replace(/\D/g, '').slice(-10);
 
     if (otpStr.length < OTP_LENGTH) {
       Alert.alert('Incomplete OTP', 'Please enter all 6 digits');
+      isVerifying.current = false;
       return;
     }
 
     setLoading(true);
 
+    // ── Step 1: Verify OTP — authService saves tokens to AsyncStorage ──
     try {
-      const cleanPhone = phone.replace(/\D/g, '').slice(-10);
-
-      console.log("VERIFY PAYLOAD:", {
-        mobile_number: cleanPhone,
-        otp: otpStr
-      });
-
-      const res = await verifyOTP(cleanPhone, otpStr);
-
-      setUser(res.user);
-
-      setLoading(false);
-
-      navigation.reset({
-        index: 0,
-        routes: [{ name: "MainApp" }]
-      });
-
+      await verifyOTP(cleanPhone, otpStr);
     } catch (error) {
-
+      isVerifying.current = false;
       setLoading(false);
       setOtpError(true);
-      setOtp(Array(OTP_LENGTH).fill(""));
+      setOtp(Array(OTP_LENGTH).fill(''));
       shakeBoxes();
       inputs.current[0]?.focus();
-
+      return;
     }
+
+    // ── Step 2: Clear any stale data from previous user ──────
+    require('../../store/cartStore').useCartStore.getState().clearCart();
+    require('../../store/orderStore').useOrderStore.getState().clearOrders();
+    require('../../store/notificationStore').useNotificationStore.getState().clearAll();
+    require('../../store/addressStore').useAddressStore.setState({
+      addresses: [],
+      selectedAddress: null,
+    });
+
+    // ── Step 3: Load new user into store from AsyncStorage ───
+    // verifyOTP already saved access_token, refresh_token, user
+    await useUserStore.getState().initUser();
+
+    // ── Step 4: Navigate to app ──────────────────────────────
+    isVerifying.current = false;
+    setLoading(false);
+
+    navigation.reset({
+      index: 0,
+      routes: [{ name: 'MainApp' }],
+    });
   };
 
   const handleResend = () => {
@@ -152,7 +159,6 @@ export const OtpScreen = ({ route, navigation }) => {
       <StatusBar backgroundColor={Colors.white} barStyle="dark-content" />
 
       <Animated.View style={[styles.container, { opacity: fadeAnim }]}>
-        {/* Header Icon */}
         <View style={styles.iconBox}>
           <Text style={styles.iconEmoji}>📱</Text>
         </View>
@@ -167,7 +173,6 @@ export const OtpScreen = ({ route, navigation }) => {
           </TouchableOpacity>
         </Text>
 
-        {/* OTP Boxes */}
         <Animated.View style={[
           styles.otpRow,
           { transform: [{ translateX: shakeAnim }] },
@@ -194,18 +199,15 @@ export const OtpScreen = ({ route, navigation }) => {
           ))}
         </Animated.View>
 
-        {/* Error text */}
         {otpError && (
           <Text style={styles.errorText}>❌ Incorrect OTP. Please try again.</Text>
         )}
 
-        {/* Progress bar */}
         <View style={styles.progressBar}>
           <Animated.View style={[styles.progressFill, { width: `${progress}%` }]} />
         </View>
         <Text style={styles.progressText}>{filledCount}/{OTP_LENGTH} digits entered</Text>
 
-        {/* Verify Button */}
         <Button
           title={loading ? 'Verifying...' : 'Verify OTP ✓'}
           onPress={() => handleVerify()}
@@ -214,7 +216,6 @@ export const OtpScreen = ({ route, navigation }) => {
           disabled={filledCount < OTP_LENGTH}
         />
 
-        {/* Resend */}
         <View style={styles.resendRow}>
           <Text style={styles.resendLabel}>Didn't receive OTP?  </Text>
           {canResend ? (
@@ -248,19 +249,6 @@ const styles = StyleSheet.create({
   subtitle: { fontSize: 14, color: Colors.textSecondary, lineHeight: 22, marginBottom: 16 },
   phone: { fontWeight: '700', color: Colors.textPrimary },
   changeText: { fontSize: 13, color: Colors.primary, fontWeight: '600', textDecorationLine: 'underline' },
-
-  demoHint: {
-    backgroundColor: '#F0FAF0',
-    borderWidth: 1,
-    borderColor: '#C3E6C3',
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    alignSelf: 'flex-start',
-    marginBottom: 28,
-  },
-  demoText: { fontSize: 13, color: Colors.success },
-  demoBold: { fontWeight: '800' },
 
   otpRow: {
     flexDirection: 'row',

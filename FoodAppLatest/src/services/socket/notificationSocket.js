@@ -9,11 +9,18 @@ class NotificationSocket {
     constructor() {
         this.connection = null;
         this._listeners = {};
-        this._pendingListeners = {}; // ✅ store before connect
+        this._pendingListeners = {};
+        this._connecting = false;      // ✅ tracks in-progress connect
+        this._intentionalStop = false; // ✅ tracks deliberate disconnect
     }
 
     async connect() {
+        // ✅ Already connected or connection in progress — bail out
         if (this.connection?.state === signalR.HubConnectionState.Connected) return;
+        if (this._connecting) return;
+
+        this._connecting = true;
+        this._intentionalStop = false;
 
         this.connection = new signalR.HubConnectionBuilder()
             .withUrl(HUB_URL, {
@@ -24,43 +31,48 @@ class NotificationSocket {
             .configureLogging(signalR.LogLevel.Warning)
             .build();
 
-        // ✅ Apply any listeners registered before connect() was called
+        // ✅ Apply listeners registered before connect() was called
         Object.entries(this._pendingListeners).forEach(([event, handlers]) => {
             handlers.forEach(h => this.connection.on(event, h));
         });
         this._pendingListeners = {};
 
+        // ✅ onreconnected: don't re-register — SignalR keeps handlers across reconnects
         this.connection.onreconnected(() => {
             console.log('🔄 Notification SignalR reconnected');
-            Object.entries(this._listeners).forEach(([event, handlers]) =>
-                handlers.forEach(h => this.connection.on(event, h))
-            );
         });
 
         this.connection.onclose((err) => {
-            console.log('❌ Notification SignalR closed:', err?.message);
+            this._connecting = false;
+            if (this._intentionalStop) {
+                console.log('✅ Notification SignalR disconnected intentionally');
+            } else {
+                console.log('❌ Notification SignalR closed unexpectedly:', err?.message);
+            }
         });
 
         try {
             await this.connection.start();
             console.log('✅ Notification SignalR connected');
         } catch (err) {
-            console.log('❌ Notification SignalR error:', err?.message);
+            // ✅ Suppress error if we intentionally stopped mid-negotiation
+            if (!this._intentionalStop) {
+                console.log('❌ Notification SignalR error:', err?.message);
+            }
+        } finally {
+            this._connecting = false;
         }
     }
 
     on(event, handler) {
-        // ✅ Normalize to lowercase — SignalR JS always delivers lowercase
         const key = event.toLowerCase();
         if (!this._listeners[key]) this._listeners[key] = [];
         if (this._listeners[key].includes(handler)) return;
         this._listeners[key].push(handler);
 
         if (this.connection) {
-            // Already have connection object — register directly
             this.connection.on(key, handler);
         } else {
-            // ✅ No connection yet — queue it for when connect() is called
             if (!this._pendingListeners[key]) this._pendingListeners[key] = [];
             this._pendingListeners[key].push(handler);
         }
@@ -75,8 +87,18 @@ class NotificationSocket {
     }
 
     async disconnect() {
-        await this.connection?.stop();
+        this._intentionalStop = true;
+        this._connecting = false;
+
+        try {
+            await this.connection?.stop();
+        } catch (_) {
+            // Already stopped or mid-negotiation — safe to ignore
+        }
+
         this.connection = null;
+        this._listeners = {};
+        this._pendingListeners = {};
     }
 }
 

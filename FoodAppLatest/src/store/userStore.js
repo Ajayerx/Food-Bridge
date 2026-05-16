@@ -8,23 +8,32 @@ export const useUserStore = create((set, get) => ({
   isLoggedIn: false,
   isLoading: true,
   darkMode: false,
+  isLoggingOut: false,
 
   initUser: async () => {
-    const user = await AsyncStorage.getItem("user");
-    const token = await AsyncStorage.getItem("access_token");
-    // ✅ Restore dark mode preference
-    const darkMode = await AsyncStorage.getItem(DARK_MODE_KEY);
-    const parsed = user ? JSON.parse(user) : null;
+    try {
+      const [user, token, darkMode] = await Promise.all([
+        AsyncStorage.getItem("user"),
+        AsyncStorage.getItem("access_token"),
+        AsyncStorage.getItem(DARK_MODE_KEY),
+      ]);
 
-    set({
-      user: parsed,
-      isLoggedIn: !!(parsed && token),
-      isLoading: false,
-      darkMode: darkMode === 'true',
-    });
+      const parsed = user ? JSON.parse(user) : null;
 
-    if (parsed && token) {
-      get().fetchProfile();
+      set({
+        user: parsed,
+        isLoggedIn: !!(parsed && token),
+        isLoading: false,
+        darkMode: darkMode === 'true',
+      });
+
+      // Fetch fresh profile in background — don't await
+      if (parsed && token) {
+        get().fetchProfile();
+      }
+    } catch (e) {
+      console.log("initUser error:", e.message);
+      set({ isLoading: false });
     }
   },
 
@@ -53,20 +62,54 @@ export const useUserStore = create((set, get) => ({
   },
 
   setUser: (user) => {
-    AsyncStorage.setItem("user", JSON.stringify(user));
-    set({ user, isLoggedIn: true });
+    if (user != null) {
+      AsyncStorage.setItem("user", JSON.stringify(user));
+      set({ user, isLoggedIn: true });
+    } else {
+      AsyncStorage.removeItem("user");
+      set({ user: null, isLoggedIn: false });
+    }
   },
 
   logout: async () => {
+    if (get().isLoggingOut) return;
+
+    // ✅ Step 1: Raise the flag FIRST — interceptor starts blocking immediately
+    set({ isLoggingOut: true });
+
+    // ✅ Step 2: Small tick to let the flag propagate before any async work
+    await new Promise(resolve => setTimeout(resolve, 50));
+
+    // ✅ Step 3: Call logout API (token still valid at this point)
     try {
-      const { logout: logoutAPI } = await import('../services/auth/authService');
+      const { logout: logoutAPI } = require('../services/auth/authService');
       await logoutAPI();
-    } catch (_) { }
-    await AsyncStorage.multiRemove(["access_token", "refresh_token", "user"]);
-    set({ user: null, isLoggedIn: false });
+    } catch (_) {
+      // Network failure — still proceed
+    }
+
+    // ✅ Step 4: Now safe to wipe storage — interceptor is already blocking
+    await AsyncStorage.clear();
+
+    // ✅ Step 5: Reset all stores
+    require('./cartStore').useCartStore.getState().clearCart();
+    require('./orderStore').useOrderStore.getState().clearOrders();
+    require('./notificationStore').useNotificationStore.getState().clearAll();
+    require('./addressStore').useAddressStore.setState({
+      addresses: [],
+      selectedAddress: null,
+    });
+
+    // ✅ Step 6: Reset user store — navigator switches to Login
+    set({
+      user: null,
+      isLoggedIn: false,
+      isLoading: false,
+      darkMode: false,
+      isLoggingOut: false,   // ← release the flag last
+    });
   },
 
-  // ✅ Persist dark mode toggle
   toggleDarkMode: async () => {
     const next = !get().darkMode;
     await AsyncStorage.setItem(DARK_MODE_KEY, String(next));

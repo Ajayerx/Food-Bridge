@@ -1,0 +1,47 @@
+{
+  "user": {
+    "id": "user_001",
+    "name": "Ajay Sharma",
+    "email": "ajay@example.com",
+    "phone": "+91 9876543210",
+    "avatar": "https://i.pravatar.cc/150?img=3",
+    "addresses": [
+      {
+        "id": "addr_001",
+        "type": "Home",
+        "line1": "Flat 402, Sunflower Apartments",
+        "area": "Vijay Nagar",
+        "city": "Indore",
+        "pincode": "452010",
+        "landmark": "Near D-Mart",
+        "isDefault": true,
+        "lat": 22.7533,
+        "lng": 75.8937
+      },
+      {
+        "id": "addr_002",
+        "type": "Work",
+        "line1": "3rd Floor, Laxmi Business Park",
+        "area": "AB Road",
+        "city": "Indore",
+        "pincode": "452001",
+        "landmark": "Near Rajwada",
+        "isDefault": false,
+        "lat": 22.7196,
+        "lng": 75.8577
+      },
+      {
+        "id": "addr_003",
+        "type": "Other",
+        "line1": "12, Annapurna Road",
+        "area": "Scheme 54",
+        "city": "Indore",
+        "pincode": "452011",
+        "landmark": "",
+        "isDefault": false,
+        "lat": 22.7368,
+        "lng": 75.8836
+      }
+    ]
+  }
+}

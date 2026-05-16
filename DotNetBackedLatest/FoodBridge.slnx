@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="FoodBridge.API/FoodBridge.API.csproj" />
+  <Project Path="FoodBridge.Application/FoodBridge.Application.csproj" />
+  <Project Path="FoodBridge.Domain/FoodBridge.Domain.csproj" />
+  <Project Path="FoodBridge.Infrastructure/FoodBridge.Infrastructure.csproj" />
+</Solution>

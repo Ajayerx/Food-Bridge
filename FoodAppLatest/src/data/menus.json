@@ -1,0 +1,921 @@
+{
+  "rest_001": {
+    "categories": [
+      {
+        "id": "rcat_001",
+        "name": "Recommended",
+        "items": [
+          {
+            "id": "item_001",
+            "name": "Chicken Dum Biryani",
+            "description": "Slow-cooked aromatic basmati rice with tender chicken pieces, saffron & caramelised onions",
+            "price": 249,
+            "originalPrice": 299,
+            "image": "https://images.unsplash.com/photo-1563379091339-03246963d96c?w=400",
+            "isVeg": false,
+            "isBestseller": true,
+            "isSpicy": true,
+            "rating": 4.5,
+            "customizable": true,
+            "addons": [
+              {
+                "id": "addon_001",
+                "name": "Extra Raita",
+                "price": 40
+              },
+              {
+                "id": "addon_002",
+                "name": "Extra Salan",
+                "price": 30
+              },
+              {
+                "id": "addon_003",
+                "name": "Salad",
+                "price": 25
+              }
+            ]
+          },
+          {
+            "id": "item_002",
+            "name": "Mutton Biryani",
+            "description": "Tender mutton slow-cooked with whole spices in long grain basmati",
+            "price": 329,
+            "originalPrice": 379,
+            "image": "https://images.unsplash.com/photo-1589302168068-964664d93dc0?w=400",
+            "isVeg": false,
+            "isBestseller": true,
+            "isSpicy": true,
+            "rating": 4.6,
+            "customizable": true,
+            "addons": [
+              {
+                "id": "addon_001",
+                "name": "Extra Raita",
+                "price": 40
+              },
+              {
+                "id": "addon_004",
+                "name": "Boiled Egg",
+                "price": 20
+              }
+            ]
+          },
+          {
+            "id": "item_003",
+            "name": "Veg Biryani",
+            "description": "Fragrant basmati rice with fresh vegetables and whole spices",
+            "price": 179,
+            "originalPrice": 199,
+            "image": "https://images.unsplash.com/photo-1596797038530-2c107229654b?w=400",
+            "isVeg": true,
+            "isBestseller": false,
+            "isSpicy": false,
+            "rating": 4.2,
+            "customizable": false,
+            "addons": []
+          },
+          {
+            "id": "item_004",
+            "name": "Chicken Seekh Kebab",
+            "description": "Minced chicken mixed with herbs grilled on skewers, served with mint chutney",
+            "price": 199,
+            "originalPrice": 229,
+            "image": "https://images.unsplash.com/photo-1530469912745-a215c6b256ea?w=400",
+            "isVeg": false,
+            "isBestseller": true,
+            "isSpicy": false,
+            "rating": 4.4,
+            "customizable": false,
+            "addons": []
+          }
+        ]
+      },
+      {
+        "id": "rcat_002",
+        "name": "Biryani",
+        "items": [
+          {
+            "id": "item_005",
+            "name": "Hyderabadi Chicken Biryani",
+            "description": "Authentic Hyderabadi style biryani with whole spices",
+            "price": 269,
+            "originalPrice": 299,
+            "image": "https://images.unsplash.com/photo-1563379091339-03246963d96c?w=400",
+            "isVeg": false,
+            "isBestseller": true,
+            "isSpicy": true,
+            "rating": 4.7,
+            "customizable": true,
+            "addons": [
+              {
+                "id": "addon_001",
+                "name": "Extra Raita",
+                "price": 40
+              }
+            ]
+          },
+          {
+            "id": "item_006",
+            "name": "Prawn Biryani",
+            "description": "Jumbo prawns with aromatic spices",
+            "price": 349,
+            "originalPrice": 399,
+            "image": "https://images.unsplash.com/photo-1596797038530-2c107229654b?w=400",
+            "isVeg": false,
+            "isBestseller": false,
+            "isSpicy": true,
+            "rating": 4.3,
+            "customizable": false,
+            "addons": []
+          }
+        ]
+      },
+      {
+        "id": "rcat_003",
+        "name": "Kebabs",
+        "items": [
+          {
+            "id": "item_009",
+            "name": "Chicken Tikka",
+            "description": "Juicy chicken cubes in yogurt and spices",
+            "price": 249,
+            "originalPrice": 279,
+            "image": "https://images.unsplash.com/photo-1599487488170-d11ec9c172f0?w=400",
+            "isVeg": false,
+            "isBestseller": true,
+            "isSpicy": true,
+            "rating": 4.5,
+            "customizable": false,
+            "addons": []
+          },
+          {
+            "id": "item_010",
+            "name": "Paneer Tikka",
+            "description": "Cottage cheese cubes grilled to perfection",
+            "price": 229,
+            "originalPrice": 249,
+            "image": "https://images.unsplash.com/photo-1599487488170-d11ec9c172f0?w=400",
+            "isVeg": true,
+            "isBestseller": false,
+            "isSpicy": false,
+            "rating": 4.3,
+            "customizable": false,
+            "addons": []
+          }
+        ]
+      },
+      {
+        "id": "rcat_004",
+        "name": "Desserts",
+        "items": [
+          {
+            "id": "item_012",
+            "name": "Phirni",
+            "description": "Creamy rice pudding with saffron",
+            "price": 89,
+            "originalPrice": 99,
+            "image": "https://images.unsplash.com/photo-1551024601-bec78aea704b?w=400",
+            "isVeg": true,
+            "isBestseller": false,
+            "isSpicy": false,
+            "rating": 4.4,
+            "customizable": false,
+            "addons": []
+          }
+        ]
+      }
+    ]
+  },
+  "rest_002": {
+    "categories": [
+      {
+        "id": "rcat_005",
+        "name": "Recommended",
+        "items": [
+          {
+            "id": "item_020",
+            "name": "Margherita Pizza",
+            "description": "Classic tomato sauce, fresh mozzarella and basil",
+            "price": 249,
+            "originalPrice": 289,
+            "image": "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=400",
+            "isVeg": true,
+            "isBestseller": true,
+            "isSpicy": false,
+            "rating": 4.5,
+            "customizable": true,
+            "addons": [
+              {
+                "id": "addon_010",
+                "name": "Extra Cheese",
+                "price": 50
+              },
+              {
+                "id": "addon_011",
+                "name": "Olives",
+                "price": 30
+              }
+            ]
+          },
+          {
+            "id": "item_021",
+            "name": "Chicken BBQ Pizza",
+            "description": "Grilled chicken with BBQ sauce",
+            "price": 349,
+            "originalPrice": 399,
+            "image": "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=400",
+            "isVeg": false,
+            "isBestseller": true,
+            "isSpicy": false,
+            "rating": 4.6,
+            "customizable": true,
+            "addons": [
+              {
+                "id": "addon_010",
+                "name": "Extra Cheese",
+                "price": 50
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "rcat_006",
+        "name": "Pizzas",
+        "items": [
+          {
+            "id": "item_023",
+            "name": "Veggie Supreme",
+            "description": "Loaded with vegetables",
+            "price": 299,
+            "originalPrice": 349,
+            "image": "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=400",
+            "isVeg": true,
+            "isBestseller": false,
+            "isSpicy": false,
+            "rating": 4.3,
+            "customizable": true,
+            "addons": [
+              {
+                "id": "addon_010",
+                "name": "Extra Cheese",
+                "price": 50
+              }
+            ]
+          },
+          {
+            "id": "item_024",
+            "name": "Pepperoni Feast",
+            "description": "Loaded pepperoni slices",
+            "price": 399,
+            "originalPrice": 449,
+            "image": "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=400",
+            "isVeg": false,
+            "isBestseller": true,
+            "isSpicy": false,
+            "rating": 4.7,
+            "customizable": true,
+            "addons": [
+              {
+                "id": "addon_010",
+                "name": "Extra Cheese",
+                "price": 50
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "rcat_007",
+        "name": "Pastas",
+        "items": [
+          {
+            "id": "item_026",
+            "name": "Pasta Alfredo",
+            "description": "Creamy white sauce pasta",
+            "price": 219,
+            "originalPrice": 249,
+            "image": "https://images.unsplash.com/photo-1621996346565-e3dbc646d9a9?w=400",
+            "isVeg": true,
+            "isBestseller": false,
+            "isSpicy": false,
+            "rating": 4.1,
+            "customizable": false,
+            "addons": []
+          }
+        ]
+      }
+    ]
+  },
+  "rest_003": {
+    "categories": [
+      {
+        "id": "rcat_009",
+        "name": "Recommended",
+        "items": [
+          {
+            "id": "item_030",
+            "name": "Classic Chicken Burger",
+            "description": "Crispy fried chicken with lettuce",
+            "price": 149,
+            "originalPrice": 179,
+            "image": "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=400",
+            "isVeg": false,
+            "isBestseller": true,
+            "isSpicy": false,
+            "rating": 4.2,
+            "customizable": true,
+            "addons": [
+              {
+                "id": "addon_020",
+                "name": "Extra Patty",
+                "price": 60
+              },
+              {
+                "id": "addon_021",
+                "name": "Extra Cheese",
+                "price": 30
+              }
+            ]
+          },
+          {
+            "id": "item_031",
+            "name": "Double Smash Burger",
+            "description": "Two beef patties with cheese",
+            "price": 249,
+            "originalPrice": 289,
+            "image": "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=400",
+            "isVeg": false,
+            "isBestseller": true,
+            "isSpicy": false,
+            "rating": 4.5,
+            "customizable": true,
+            "addons": [
+              {
+                "id": "addon_021",
+                "name": "Extra Cheese",
+                "price": 30
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "rcat_010",
+        "name": "Burgers",
+        "items": [
+          {
+            "id": "item_033",
+            "name": "Spicy Zinger Burger",
+            "description": "Hot and spicy fried chicken",
+            "price": 179,
+            "originalPrice": 199,
+            "image": "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=400",
+            "isVeg": false,
+            "isBestseller": true,
+            "isSpicy": true,
+            "rating": 4.3,
+            "customizable": false,
+            "addons": []
+          }
+        ]
+      },
+      {
+        "id": "rcat_011",
+        "name": "Sides",
+        "items": [
+          {
+            "id": "item_035",
+            "name": "Crispy Fries",
+            "description": "Golden crispy fries",
+            "price": 89,
+            "originalPrice": 99,
+            "image": "https://images.unsplash.com/photo-1573080496219-bb080dd4f877?w=400",
+            "isVeg": true,
+            "isBestseller": true,
+            "isSpicy": false,
+            "rating": 4.2,
+            "customizable": false,
+            "addons": []
+          }
+        ]
+      }
+    ]
+  },
+  "rest_004": {
+    "categories": [
+      {
+        "id": "rcat_r4_1",
+        "name": "Recommended",
+        "items": [
+          {
+            "id": "item_r4_1",
+            "name": "Veg Hakka Noodles",
+            "description": "Stir-fried noodles with vegetables",
+            "price": 149,
+            "originalPrice": 169,
+            "image": "https://images.unsplash.com/photo-1569718212165-3a8278d5f624?w=400",
+            "isVeg": true,
+            "isBestseller": true,
+            "isSpicy": false,
+            "rating": 4.2,
+            "customizable": false,
+            "addons": []
+          },
+          {
+            "id": "item_r4_2",
+            "name": "Chicken Fried Rice",
+            "description": "Wok-tossed rice with chicken",
+            "price": 179,
+            "originalPrice": 199,
+            "image": "https://images.unsplash.com/photo-1569718212165-3a8278d5f624?w=400",
+            "isVeg": false,
+            "isBestseller": true,
+            "isSpicy": false,
+            "rating": 4.3,
+            "customizable": false,
+            "addons": []
+          }
+        ]
+      },
+      {
+        "id": "rcat_r4_2",
+        "name": "Noodles",
+        "items": [
+          {
+            "id": "item_r4_3",
+            "name": "Schezwan Noodles",
+            "description": "Spicy schezwan sauce noodles",
+            "price": 169,
+            "originalPrice": 189,
+            "image": "https://images.unsplash.com/photo-1569718212165-3a8278d5f624?w=400",
+            "isVeg": true,
+            "isBestseller": false,
+            "isSpicy": true,
+            "rating": 4.1,
+            "customizable": false,
+            "addons": []
+          }
+        ]
+      },
+      {
+        "id": "rcat_r4_3",
+        "name": "Momos",
+        "items": [
+          {
+            "id": "item_r4_4",
+            "name": "Steamed Veg Momos",
+            "description": "Soft steamed dumplings",
+            "price": 99,
+            "originalPrice": 119,
+            "image": "https://images.unsplash.com/photo-1534422298391-e4f8c172dddb?w=400",
+            "isVeg": true,
+            "isBestseller": true,
+            "isSpicy": false,
+            "rating": 4.4,
+            "customizable": false,
+            "addons": []
+          }
+        ]
+      }
+    ]
+  },
+  "rest_005": {
+    "categories": [
+      {
+        "id": "rcat_r5_1",
+        "name": "Recommended",
+        "items": [
+          {
+            "id": "item_r5_1",
+            "name": "Chocolate Lava Cake",
+            "description": "Warm chocolate cake with molten center",
+            "price": 129,
+            "originalPrice": 149,
+            "image": "https://images.unsplash.com/photo-1551024601-bec78aea704b?w=400",
+            "isVeg": true,
+            "isBestseller": true,
+            "isSpicy": false,
+            "rating": 4.7,
+            "customizable": false,
+            "addons": []
+          },
+          {
+            "id": "item_r5_2",
+            "name": "Mango Kulfi",
+            "description": "Traditional Indian ice cream",
+            "price": 79,
+            "originalPrice": 89,
+            "image": "https://images.unsplash.com/photo-1551024601-bec78aea704b?w=400",
+            "isVeg": true,
+            "isBestseller": true,
+            "isSpicy": false,
+            "rating": 4.5,
+            "customizable": false,
+            "addons": []
+          }
+        ]
+      },
+      {
+        "id": "rcat_r5_2",
+        "name": "Ice Creams",
+        "items": [
+          {
+            "id": "item_r5_3",
+            "name": "Brownie Sundae",
+            "description": "Ice cream with brownie chunks",
+            "price": 119,
+            "originalPrice": 139,
+            "image": "https://images.unsplash.com/photo-1551024601-bec78aea704b?w=400",
+            "isVeg": true,
+            "isBestseller": false,
+            "isSpicy": false,
+            "rating": 4.4,
+            "customizable": false,
+            "addons": []
+          }
+        ]
+      }
+    ]
+  },
+  "rest_006": {
+    "categories": [
+      {
+        "id": "rcat_r6_1",
+        "name": "Recommended",
+        "items": [
+          {
+            "id": "item_r6_1",
+            "name": "Masala Dosa",
+            "description": "Crispy rice crepe with potato filling",
+            "price": 89,
+            "originalPrice": 99,
+            "image": "https://images.unsplash.com/photo-1630383249896-424e482df921?w=400",
+            "isVeg": true,
+            "isBestseller": true,
+            "isSpicy": false,
+            "rating": 4.5,
+            "customizable": false,
+            "addons": []
+          },
+          {
+            "id": "item_r6_2",
+            "name": "Idli Sambar",
+            "description": "Steamed rice cakes with lentil stew",
+            "price": 69,
+            "originalPrice": 79,
+            "image": "https://images.unsplash.com/photo-1630383249896-424e482df921?w=400",
+            "isVeg": true,
+            "isBestseller": true,
+            "isSpicy": false,
+            "rating": 4.4,
+            "customizable": false,
+            "addons": []
+          }
+        ]
+      }
+    ]
+  },
+  "rest_007": {
+    "categories": [
+      {
+        "id": "rcat_r7_1",
+        "name": "Recommended",
+        "items": [
+          {
+            "id": "item_r7_1",
+            "name": "Rajasthani Thali",
+            "description": "Complete meal with dal, sabzi, roti, rice",
+            "price": 249,
+            "originalPrice": 279,
+            "image": "https://images.unsplash.com/photo-1585937421612-70a008356fbe?w=400",
+            "isVeg": true,
+            "isBestseller": true,
+            "isSpicy": false,
+            "rating": 4.6,
+            "customizable": false,
+            "addons": []
+          },
+          {
+            "id": "item_r7_2",
+            "name": "Dal Baati Churma",
+            "description": "Traditional Rajasthani dish",
+            "price": 199,
+            "originalPrice": 219,
+            "image": "https://images.unsplash.com/photo-1585937421612-70a008356fbe?w=400",
+            "isVeg": true,
+            "isBestseller": true,
+            "isSpicy": false,
+            "rating": 4.5,
+            "customizable": false,
+            "addons": []
+          }
+        ]
+      }
+    ]
+  },
+  "rest_008": {
+    "categories": [
+      {
+        "id": "rcat_r8_1",
+        "name": "Recommended",
+        "items": [
+          {
+            "id": "item_r8_1",
+            "name": "Paneer Tikka Roll",
+            "description": "Grilled paneer wrapped in paratha",
+            "price": 89,
+            "originalPrice": 99,
+            "image": "https://images.unsplash.com/photo-1626645738196-c2a7c87a8f58?w=400",
+            "isVeg": true,
+            "isBestseller": true,
+            "isSpicy": false,
+            "rating": 4.2,
+            "customizable": false,
+            "addons": []
+          },
+          {
+            "id": "item_r8_2",
+            "name": "Chicken Tikka Roll",
+            "description": "Spicy chicken wrapped in paratha",
+            "price": 99,
+            "originalPrice": 119,
+            "image": "https://images.unsplash.com/photo-1626645738196-c2a7c87a8f58?w=400",
+            "isVeg": false,
+            "isBestseller": true,
+            "isSpicy": true,
+            "rating": 4.3,
+            "customizable": false,
+            "addons": []
+          }
+        ]
+      }
+    ]
+  },
+  "rest_009": {
+    "categories": [
+      {
+        "id": "rcat_r9_1",
+        "name": "Recommended",
+        "items": [
+          {
+            "id": "item_r9_1",
+            "name": "Chicken Steam Momos",
+            "description": "Juicy chicken dumplings",
+            "price": 99,
+            "originalPrice": 119,
+            "image": "https://images.unsplash.com/photo-1534422298391-e4f8c172dddb?w=400",
+            "isVeg": false,
+            "isBestseller": true,
+            "isSpicy": false,
+            "rating": 4.5,
+            "customizable": false,
+            "addons": []
+          },
+          {
+            "id": "item_r9_2",
+            "name": "Veg Steam Momos",
+            "description": "Fresh vegetable dumplings",
+            "price": 79,
+            "originalPrice": 89,
+            "image": "https://images.unsplash.com/photo-1534422298391-e4f8c172dddb?w=400",
+            "isVeg": true,
+            "isBestseller": true,
+            "isSpicy": false,
+            "rating": 4.4,
+            "customizable": false,
+            "addons": []
+          }
+        ]
+      }
+    ]
+  },
+  "rest_010": {
+    "categories": [
+      {
+        "id": "rcat_r10_1",
+        "name": "Recommended",
+        "items": [
+          {
+            "id": "item_r10_1",
+            "name": "Club Sandwich",
+            "description": "Triple decker sandwich",
+            "price": 149,
+            "originalPrice": 169,
+            "image": "https://images.unsplash.com/photo-1528735602780-2552fd46c7af?w=400",
+            "isVeg": false,
+            "isBestseller": true,
+            "isSpicy": false,
+            "rating": 4.3,
+            "customizable": false,
+            "addons": []
+          },
+          {
+            "id": "item_r10_2",
+            "name": "Veg Grilled Sandwich",
+            "description": "Grilled vegetable sandwich",
+            "price": 99,
+            "originalPrice": 119,
+            "image": "https://images.unsplash.com/photo-1528735602780-2552fd46c7af?w=400",
+            "isVeg": true,
+            "isBestseller": true,
+            "isSpicy": false,
+            "rating": 4.2,
+            "customizable": false,
+            "addons": []
+          }
+        ]
+      }
+    ]
+  },
+  "rest_011": {
+    "categories": [
+      {
+        "id": "rcat_r11_1",
+        "name": "Recommended",
+        "items": [
+          {
+            "id": "item_r11_1",
+            "name": "Mixed Grill Platter",
+            "description": "Assorted kebabs platter",
+            "price": 399,
+            "originalPrice": 449,
+            "image": "https://images.unsplash.com/photo-1599487488170-d11ec9c172f0?w=400",
+            "isVeg": false,
+            "isBestseller": true,
+            "isSpicy": false,
+            "rating": 4.7,
+            "customizable": false,
+            "addons": []
+          },
+          {
+            "id": "item_r11_2",
+            "name": "Dal Makhani",
+            "description": "Creamy black lentils",
+            "price": 199,
+            "originalPrice": 219,
+            "image": "https://images.unsplash.com/photo-1599487488170-d11ec9c172f0?w=400",
+            "isVeg": true,
+            "isBestseller": true,
+            "isSpicy": false,
+            "rating": 4.5,
+            "customizable": false,
+            "addons": []
+          }
+        ]
+      }
+    ]
+  },
+  "rest_012": {
+    "categories": [
+      {
+        "id": "rcat_r12_1",
+        "name": "Recommended",
+        "items": [
+          {
+            "id": "item_r12_1",
+            "name": "Quinoa Power Bowl",
+            "description": "Healthy grain bowl",
+            "price": 199,
+            "originalPrice": 219,
+            "image": "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=400",
+            "isVeg": true,
+            "isBestseller": true,
+            "isSpicy": false,
+            "rating": 4.4,
+            "customizable": false,
+            "addons": []
+          },
+          {
+            "id": "item_r12_2",
+            "name": "Greek Salad",
+            "description": "Fresh Mediterranean salad",
+            "price": 149,
+            "originalPrice": 169,
+            "image": "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=400",
+            "isVeg": true,
+            "isBestseller": true,
+            "isSpicy": false,
+            "rating": 4.3,
+            "customizable": false,
+            "addons": []
+          }
+        ]
+      }
+    ]
+  },
+  "rest_013": {
+    "categories": [
+      {
+        "id": "rcat_r13_1",
+        "name": "Recommended",
+        "items": [
+          {
+            "id": "item_r13_1",
+            "name": "Cappuccino",
+            "description": "Classic Italian coffee",
+            "price": 99,
+            "originalPrice": 119,
+            "image": "https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=400",
+            "isVeg": true,
+            "isBestseller": true,
+            "isSpicy": false,
+            "rating": 4.5,
+            "customizable": false,
+            "addons": []
+          },
+          {
+            "id": "item_r13_2",
+            "name": "Blueberry Muffin",
+            "description": "Fresh baked muffin",
+            "price": 89,
+            "originalPrice": 99,
+            "image": "https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=400",
+            "isVeg": true,
+            "isBestseller": true,
+            "isSpicy": false,
+            "rating": 4.4,
+            "customizable": false,
+            "addons": []
+          }
+        ]
+      }
+    ]
+  },
+  "rest_014": {
+    "categories": [
+      {
+        "id": "rcat_r14_1",
+        "name": "Recommended",
+        "items": [
+          {
+            "id": "item_r14_1",
+            "name": "Fish Fingers",
+            "description": "Crispy fried fish strips",
+            "price": 199,
+            "originalPrice": 219,
+            "image": "https://images.unsplash.com/photo-1559742811-822873691df8?w=400",
+            "isVeg": false,
+            "isBestseller": true,
+            "isSpicy": false,
+            "rating": 4.3,
+            "customizable": false,
+            "addons": []
+          },
+          {
+            "id": "item_r14_2",
+            "name": "Prawn Tempura",
+            "description": "Crispy battered prawns",
+            "price": 279,
+            "originalPrice": 299,
+            "image": "https://images.unsplash.com/photo-1559742811-822873691df8?w=400",
+            "isVeg": false,
+            "isBestseller": true,
+            "isSpicy": false,
+            "rating": 4.5,
+            "customizable": false,
+            "addons": []
+          }
+        ]
+      }
+    ]
+  },
+  "rest_015": {
+    "categories": [
+      {
+        "id": "rcat_r15_1",
+        "name": "Recommended",
+        "items": [
+          {
+            "id": "item_r15_1",
+            "name": "Pani Puri",
+            "description": "Crispy puris with spicy water",
+            "price": 49,
+            "originalPrice": 59,
+            "image": "https://images.unsplash.com/photo-1601050690597-df0568f70950?w=400",
+            "isVeg": true,
+            "isBestseller": true,
+            "isSpicy": true,
+            "rating": 4.6,
+            "customizable": false,
+            "addons": []
+          },
+          {
+            "id": "item_r15_2",
+            "name": "Sev Puri",
+            "description": "Crispy snack with chutneys",
+            "price": 59,
+            "originalPrice": 69,
+            "image": "https://images.unsplash.com/photo-1601050690597-df0568f70950?w=400",
+            "isVeg": true,
+            "isBestseller": true,
+            "isSpicy": false,
+            "rating": 4.5,
+            "customizable": false,
+            "addons": []
+          }
+        ]
+      }
+    ]
+  }
+}

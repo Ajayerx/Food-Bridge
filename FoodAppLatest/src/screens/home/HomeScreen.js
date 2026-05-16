@@ -1,0 +1,1144 @@
+import Geolocation from "react-native-geolocation-service";
+import { PermissionsAndroid, Platform } from "react-native";
+import axios from "axios";
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { getRestaurantById, getMenuByRestaurantId } from '../../services/restaurant/restaurantService';
+
+import {
+  View,
+  Text,
+  Modal,
+  StyleSheet,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  ScrollView,
+  RefreshControl,
+  Animated,
+  Dimensions,
+  StatusBar,
+  Image,
+} from 'react-native';
+import { useAddressStore } from "../../store/addressStore";
+import { SafeAreaView } from 'react-native-safe-area-context';
+import Icon from 'react-native-vector-icons/MaterialIcons';
+import LinearGradient from 'react-native-linear-gradient';
+import { Colors } from '../../constants/colors';
+import { RestaurantCard } from '../../components/cards/RestaurantCard';
+import { Chip } from '../../components/common/Chip';
+import { EmptyState } from '../../components/common/EmptyState';
+import { useRestaurants } from '../../hooks/useRestaurants';
+import { useQueryClient } from '@tanstack/react-query';
+import { useUserStore } from '../../store/userStore';
+import { useCart } from '../../hooks/useCart';
+import { FILTER_CHIPS, CATEGORIES } from '../../constants/categories';
+import api from '../../services/api/base';
+import { useNotificationStore } from '../../store/notificationStore';
+
+const { width } = Dimensions.get('window');
+const BANNER_WIDTH = width - 32;
+
+// ─────────────────────────────────────────────────────────
+// Constants
+// ─────────────────────────────────────────────────────────
+const BANNERS = [
+  { id: 'b1', title: '50% OFF', subtitle: 'On your first order', cta: 'Order Now', emoji: '🎉', tag: 'LIMITED TIME', colors: ['#FF6B35', '#FF8C42', '#FFA55A'] },
+  { id: 'b2', title: 'Free Delivery', subtitle: 'On orders above ₹299', cta: 'Explore', emoji: '🛵', tag: 'TODAY ONLY', colors: ['#6C63FF', '#8B80FF', '#A99DF5'] },
+  { id: 'b3', title: '2X Rewards', subtitle: 'Earn double points today', cta: 'Claim Now', emoji: '⭐', tag: 'EXCLUSIVE', colors: ['#11998E', '#38EF7D', '#2DC653'] },
+  { id: 'b4', title: 'New Arrivals', subtitle: 'Try 20+ new restaurants', cta: 'Discover', emoji: '✨', tag: 'NEW', colors: ['#F857A6', '#FF5858', '#FF8C42'] },
+];
+
+const LOOP_BANNERS = [...BANNERS, ...BANNERS, ...BANNERS];
+
+const CAT_GRADIENTS = [
+  ['#FFF3E0', '#FFE0B2'], ['#FCE4EC', '#F8BBD0'], ['#E8F5E9', '#C8E6C9'],
+  ['#E3F2FD', '#BBDEFB'], ['#F3E5F5', '#E1BEE7'], ['#FFF8E1', '#FFECB3'],
+  ['#E0F7FA', '#B2EBF2'], ['#FBE9E7', '#FFCCBC'],
+];
+
+const SORT_OPTIONS = [
+  { id: 'relevance', label: 'Relevance', icon: 'sort' },
+  { id: 'rating', label: 'Rating (High to Low)', icon: 'star' },
+  { id: 'delivery_time', label: 'Delivery Time', icon: 'access-time' },
+  { id: 'price_low', label: 'Cost: Low to High', icon: 'trending-up' },
+  { id: 'price_high', label: 'Cost: High to Low', icon: 'trending-down' },
+];
+
+const BANNER_KEY_EXTRACTOR = (item, index) => item.id + '-' + index;
+const BANNER_GET_ITEM_LAYOUT = (_, index) => ({
+  length: BANNER_WIDTH + 16, offset: (BANNER_WIDTH + 16) * index, index,
+});
+
+const sortRestaurants = (restaurants, sortId) => {
+  if (!restaurants) return [];
+  const arr = [...restaurants];
+  switch (sortId) {
+    case 'rating': return arr.sort((a, b) => (b.avg_rating ?? 0) - (a.avg_rating ?? 0));
+    case 'delivery_time': return arr.sort((a, b) => (a.avg_delivery_minutes ?? 0) - (b.avg_delivery_minutes ?? 0));
+    case 'price_low': return arr.sort((a, b) => (a.average_cost ?? 0) - (b.average_cost ?? 0));
+    case 'price_high': return arr.sort((a, b) => (b.average_cost ?? 0) - (a.average_cost ?? 0));
+    default: return arr;
+  }
+};
+
+// ─────────────────────────────────────────────────────────
+// SkeletonCard
+// ─────────────────────────────────────────────────────────
+const SkeletonCard = () => {
+  const shimmer = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const loop = Animated.loop(Animated.sequence([
+      Animated.timing(shimmer, { toValue: 1, duration: 900, useNativeDriver: true, isInteraction: false }),
+      Animated.timing(shimmer, { toValue: 0, duration: 900, useNativeDriver: true, isInteraction: false }),
+    ]));
+    loop.start();
+    return () => shimmer.stopAnimation();
+  }, []);
+  const opacity = shimmer.interpolate({ inputRange: [0, 1], outputRange: [0.3, 0.85] });
+  return (
+    <Animated.View style={[styles.skeletonCard, { opacity }]}>
+      <View style={styles.skeletonImg} />
+      <View style={styles.skeletonBody}>
+        <View style={[styles.skeletonLine, { width: '65%', height: 15 }]} />
+        <View style={[styles.skeletonLine, { width: '45%', height: 11 }]} />
+        <View style={[styles.skeletonLine, { width: '80%', height: 11 }]} />
+      </View>
+    </Animated.View>
+  );
+};
+
+// ─────────────────────────────────────────────────────────
+// DishSkeleton
+// ─────────────────────────────────────────────────────────
+const DishSkeleton = () => {
+  const shimmer = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const loop = Animated.loop(Animated.sequence([
+      Animated.timing(shimmer, { toValue: 1, duration: 900, useNativeDriver: true, isInteraction: false }),
+      Animated.timing(shimmer, { toValue: 0, duration: 900, useNativeDriver: true, isInteraction: false }),
+    ]));
+    loop.start();
+    return () => shimmer.stopAnimation();
+  }, []);
+  const opacity = shimmer.interpolate({ inputRange: [0, 1], outputRange: [0.3, 0.85] });
+  return (
+    <Animated.View style={[styles.dishSkeletonCard, { opacity }]}>
+      <View style={styles.dishSkeletonImg} />
+      <View style={[styles.dishSkeletonLine, { width: '80%' }]} />
+      <View style={[styles.dishSkeletonLine, { width: '50%' }]} />
+    </Animated.View>
+  );
+};
+
+// ─────────────────────────────────────────────────────────
+// BannerCard
+// ─────────────────────────────────────────────────────────
+const BannerCard = React.memo(({ item, index, scrollX }) => {
+  const floatAnim = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(floatAnim, { toValue: -10, duration: 1400, useNativeDriver: true, isInteraction: false }),
+        Animated.timing(floatAnim, { toValue: 0, duration: 1400, useNativeDriver: true, isInteraction: false }),
+      ])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, []);
+  const inputRange = [(index - 1) * (BANNER_WIDTH + 16), index * (BANNER_WIDTH + 16), (index + 1) * (BANNER_WIDTH + 16)];
+  const scale = scrollX.interpolate({ inputRange, outputRange: [0.92, 1, 0.92], extrapolate: 'clamp' });
+  return (
+    <Animated.View style={{ transform: [{ scale }] }}>
+      <View style={styles.bannerOuter}>
+        <LinearGradient colors={item.colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.bannerGradient}>
+          <View style={styles.bannerHighlight} />
+          <View style={styles.bannerCircle1} />
+          <View style={styles.bannerCircle2} />
+          <View style={styles.bannerCircle3} />
+          <View style={styles.bannerTag}>
+            <View style={styles.bannerTagDot} />
+            <Text style={styles.bannerTagText}>{item.tag}</Text>
+          </View>
+          <View style={styles.bannerContent}>
+            <View style={styles.bannerLeft}>
+              <Text style={styles.bannerTitle}>{item.title}</Text>
+              <Text style={styles.bannerSubtitle}>{item.subtitle}</Text>
+              <View style={styles.bannerCtaBtn}>
+                <Text style={styles.bannerCtaText}>{item.cta}</Text>
+                <Icon name="arrow-forward-ios" size={11} color="#333" />
+              </View>
+            </View>
+            <View style={styles.bannerEmojiContainer}>
+              <Animated.Text style={[styles.bannerEmoji, { transform: [{ translateY: floatAnim }] }]}>
+                {item.emoji}
+              </Animated.Text>
+            </View>
+          </View>
+        </LinearGradient>
+      </View>
+    </Animated.View>
+  );
+});
+
+// ─────────────────────────────────────────────────────────
+// BannerSection — self-contained, no external refs
+// ─────────────────────────────────────────────────────────
+const BannerSection = React.memo(() => {
+  const bannerScrollRef = useRef(null);
+  const scrollX = useRef(new Animated.Value(0)).current;
+  const activeIndexRef = useRef(BANNERS.length); // start at middle set
+
+  // Auto-scroll interval
+  useEffect(() => {
+    const interval = setInterval(() => {
+      let nextIndex = activeIndexRef.current + 1;
+      bannerScrollRef.current?.scrollToOffset({
+        offset: nextIndex * (BANNER_WIDTH + 16),
+        animated: true,
+      });
+      activeIndexRef.current = nextIndex;
+      if (nextIndex >= LOOP_BANNERS.length - BANNERS.length) {
+        activeIndexRef.current = BANNERS.length;
+        bannerScrollRef.current?.scrollToOffset({
+          offset: BANNERS.length * (BANNER_WIDTH + 16),
+          animated: false,
+        });
+      }
+    }, 3500);
+    return () => clearInterval(interval);
+  }, []);
+
+  const onMomentumScrollEnd = useCallback((e) => {
+    activeIndexRef.current = Math.round(
+      e.nativeEvent.contentOffset.x / (BANNER_WIDTH + 16)
+    );
+  }, []);
+
+  return (
+    <Animated.FlatList
+      ref={bannerScrollRef}
+      data={LOOP_BANNERS}
+      horizontal
+      initialScrollIndex={BANNERS.length}   // ✅ start at middle set — no requestAnimationFrame needed
+      showsHorizontalScrollIndicator={false}
+      keyExtractor={BANNER_KEY_EXTRACTOR}
+      renderItem={({ item, index }) => (
+        <BannerCard item={item} index={index} scrollX={scrollX} />
+      )}
+      getItemLayout={BANNER_GET_ITEM_LAYOUT}
+      contentContainerStyle={styles.bannersContent}
+      disableIntervalMomentum
+      snapToInterval={BANNER_WIDTH + 16}
+      snapToAlignment="start"
+      decelerationRate="fast"
+      onMomentumScrollEnd={onMomentumScrollEnd}
+      onScroll={Animated.event(
+        [{ nativeEvent: { contentOffset: { x: scrollX } } }],
+        { useNativeDriver: false }
+      )}
+      scrollEventThrottle={16}
+      removeClippedSubviews
+      windowSize={5}
+      initialNumToRender={3}
+    />
+  );
+});
+
+// ─────────────────────────────────────────────────────────
+// CategoryCard
+// ─────────────────────────────────────────────────────────
+const CategoryCard = React.memo(({ item, index, onPress }) => {
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      onPressIn={() => Animated.spring(scaleAnim, { toValue: 0.88, useNativeDriver: true }).start()}
+      onPressOut={() => Animated.spring(scaleAnim, { toValue: 1, friction: 4, useNativeDriver: true }).start()}
+      activeOpacity={1}>
+      <Animated.View style={[styles.catCard, { transform: [{ scale: scaleAnim }] }]}>
+        <LinearGradient colors={CAT_GRADIENTS[index % CAT_GRADIENTS.length]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.catGradient}>
+          <Text style={styles.catEmoji}>{item.emoji}</Text>
+        </LinearGradient>
+        <Text style={styles.catName}>{item.name}</Text>
+      </Animated.View>
+    </TouchableOpacity>
+  );
+});
+
+// ─────────────────────────────────────────────────────────
+// HomeDishCard
+// ─────────────────────────────────────────────────────────
+const HomeDishCard = React.memo(({ item, quantity, onAdd, onRemove, onPress }) => {
+  const isVeg = item?.dietary_tag?.toLowerCase() === 'veg' ||
+    item?.dietary_tag?.toLowerCase() === 'vegan';
+  const price = Number(item?.base_price ?? item?.price ?? 0);
+  const originalPrice = item?.original_price ?? item?.mrp ?? null;
+
+  return (
+    <TouchableOpacity activeOpacity={0.9} onPress={onPress}>
+      <View style={styles.homeDishCard}>
+        <View style={styles.homeDishImgBox}>
+          {item?.image_url ? (
+            <Image source={{ uri: item.image_url }} style={styles.homeDishImg} resizeMode="cover" />
+          ) : (
+            <View style={[styles.homeDishImgBox, styles.homeDishPlaceholder]}>
+              <Text style={{ fontSize: 32 }}>🍽️</Text>
+            </View>
+          )}
+          <View style={[styles.vegBadgeSmall, { borderColor: isVeg ? '#2E7D32' : '#C62828' }]}>
+            <View style={[styles.vegDotSmall, { backgroundColor: isVeg ? '#2E7D32' : '#C62828' }]} />
+          </View>
+        </View>
+        <View style={styles.homeDishInfo}>
+          <Text numberOfLines={1} style={styles.homeDishName}>{item?.name}</Text>
+          <View style={styles.priceRow}>
+            {originalPrice ? <Text style={styles.originalPrice}>₹{originalPrice}</Text> : null}
+            <Text style={styles.homeDishPrice}>₹{price}</Text>
+          </View>
+          <Text numberOfLines={2} style={styles.homeDishDesc}>
+            {item?.description || 'Freshly prepared delicious dish.'}
+          </Text>
+          {quantity === 0 ? (
+            <TouchableOpacity
+              style={styles.addBtn}
+              onPress={(e) => { e.stopPropagation?.(); onAdd(); }}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.addBtnText}>ADD</Text>
+            </TouchableOpacity>
+          ) : (
+            <View style={styles.stepperFilled}>
+              <TouchableOpacity onPress={(e) => { e.stopPropagation?.(); onRemove(); }}>
+                <Text style={styles.stepperBtnFilled}>−</Text>
+              </TouchableOpacity>
+              <Text style={styles.stepperCountFilled}>{quantity}</Text>
+              <TouchableOpacity onPress={(e) => { e.stopPropagation?.(); onAdd(); }}>
+                <Text style={styles.stepperBtnFilled}>+</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
+});
+
+// ─────────────────────────────────────────────────────────
+// PopularDishesSection
+// ─────────────────────────────────────────────────────────
+const PopularDishesSection = React.memo(({ onDishPress, onAdd, onRemove, getQuantity }) => {
+  const [dishes, setDishes] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    api.get('/menu-items/popular', { params: { limit: 10 } })
+      .then(res => { if (!cancelled) setDishes(res.data?.data ?? []); })
+      .catch(() => { if (!cancelled) setDishes([]); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, []);
+
+  if (!loading && dishes.length === 0) return null;
+
+  return (
+    <View style={styles.dishSection}>
+      <View style={styles.sectionHeaderRow}>
+        <View>
+          <Text style={styles.sectionTitle}>Popular Dishes 🔥</Text>
+          <Text style={styles.sectionSubtitle}>Trending near you</Text>
+        </View>
+        <TouchableOpacity><Text style={styles.seeAll}>See All</Text></TouchableOpacity>
+      </View>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.dishesContent}>
+        {loading
+          ? [1, 2, 3, 4].map(k => <DishSkeleton key={k} />)
+          : dishes.map(dish => (
+            <HomeDishCard
+              key={dish.id}
+              item={dish}
+              quantity={getQuantity(dish.id)}
+              onAdd={() => onAdd(dish)}
+              onRemove={() => onRemove(dish.id)}
+              onPress={() => onDishPress(dish)}
+            />
+          ))
+        }
+      </ScrollView>
+    </View>
+  );
+});
+
+// ─────────────────────────────────────────────────────────
+// AnimatedRestaurantCard
+// ─────────────────────────────────────────────────────────
+const AnimatedRestaurantCard = React.memo(({ item, index, onPress }) => {
+  const cardAnim = useRef(new Animated.Value(0)).current;
+  const hasAnimated = useRef(false); // ✅ only animate once
+
+  useEffect(() => {
+    if (hasAnimated.current) return;
+    hasAnimated.current = true;
+    Animated.timing(cardAnim, {
+      toValue: 1,
+      duration: 350,
+      delay: index * 60,
+      useNativeDriver: true,
+    }).start();
+  }, []);
+
+  return (
+    <Animated.View style={{
+      opacity: cardAnim,
+      transform: [{
+        translateY: cardAnim.interpolate({ inputRange: [0, 1], outputRange: [24, 0] })
+      }]
+    }}>
+      <RestaurantCard restaurant={item} onPress={onPress} />
+    </Animated.View>
+  );
+});
+
+// ─────────────────────────────────────────────────────────
+// SortBottomSheet
+// ─────────────────────────────────────────────────────────
+const SortBottomSheet = React.memo(({ visible, onClose, activeSort, onSelectSort }) => {
+  const slideAnim = useRef(new Animated.Value(300)).current;
+  const overlayAnim = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (visible) {
+      Animated.parallel([
+        Animated.spring(slideAnim, { toValue: 0, friction: 8, tension: 60, useNativeDriver: true }),
+        Animated.timing(overlayAnim, { toValue: 1, duration: 200, useNativeDriver: true }),
+      ]).start();
+    } else {
+      Animated.parallel([
+        Animated.timing(slideAnim, { toValue: 300, duration: 200, useNativeDriver: true }),
+        Animated.timing(overlayAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
+      ]).start();
+    }
+  }, [visible]);
+  if (!visible) return null;
+  return (
+    <>
+      <TouchableWithoutFeedback onPress={onClose}>
+        <Animated.View style={[styles.sortOverlay, { opacity: overlayAnim }]} />
+      </TouchableWithoutFeedback>
+      <Animated.View style={[styles.sortSheet, { transform: [{ translateY: slideAnim }] }]}>
+        <View style={styles.sortHandle} />
+        <Text style={styles.sortSheetTitle}>Sort By</Text>
+        {SORT_OPTIONS.map(option => {
+          const isActive = activeSort === option.id;
+          return (
+            <TouchableOpacity key={option.id} style={[styles.sortOption, isActive && styles.sortOptionActive]} onPress={() => { onSelectSort(option.id); onClose(); }} activeOpacity={0.75}>
+              <View style={[styles.sortOptionIcon, isActive && styles.sortOptionIconActive]}>
+                <Icon name={option.icon} size={16} color={isActive ? Colors.primary : Colors.textSecondary} />
+              </View>
+              <Text style={[styles.sortOptionText, isActive && styles.sortOptionTextActive]}>{option.label}</Text>
+              {isActive && <Icon name="check-circle" size={18} color={Colors.primary} />}
+            </TouchableOpacity>
+          );
+        })}
+      </Animated.View>
+    </>
+  );
+});
+
+// ─────────────────────────────────────────────────────────
+// HomeListHeader
+// ─────────────────────────────────────────────────────────
+const HomeListHeader = React.memo(({
+  activeFilters, onToggleFilter, onClearFilters,
+  restaurantCount, navigation, fadeAnims, activeSort,
+  onOpenSort, onDishPress, onDishAdd, onDishRemove, getQuantity,
+}) => {
+  const { bannerFade, filterFade, catFade, restFade } = fadeAnims;
+  return (
+    <View>
+      <Animated.View style={{ opacity: bannerFade }}>
+        <BannerSection />
+      </Animated.View>
+      <Animated.View style={{ opacity: filterFade }}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filtersRow} contentContainerStyle={styles.filtersContent}>
+          {FILTER_CHIPS.map(chip => (
+            <Chip key={chip.id} label={chip.label} active={activeFilters.includes(chip.id)} onPress={() => onToggleFilter(chip.id)} />
+          ))}
+          {activeFilters.length > 0 && (
+            <TouchableOpacity style={styles.clearBtn} onPress={onClearFilters}>
+              <Icon name="close" size={12} color={Colors.error} />
+              <Text style={styles.clearBtnText}>Clear</Text>
+            </TouchableOpacity>
+          )}
+        </ScrollView>
+      </Animated.View>
+      <Animated.View style={{ opacity: catFade }}>
+        <View style={styles.sectionHeaderRow}>
+          <Text style={styles.sectionTitle}>What's on your mind?</Text>
+          <TouchableOpacity onPress={() => navigation.navigate('SearchScreen', {})}><Text style={styles.seeAll}>See All</Text></TouchableOpacity>
+        </View>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.catsContent}>
+          {CATEGORIES.map((cat, i) => (
+            <CategoryCard key={cat.id} item={cat} index={i} onPress={() => navigation.navigate('SearchScreen', { query: cat.name, autoFill: true })} />
+          ))}
+        </ScrollView>
+      </Animated.View>
+      <Animated.View style={{ opacity: catFade }}>
+        <PopularDishesSection onDishPress={onDishPress} onAdd={onDishAdd} onRemove={onDishRemove} getQuantity={getQuantity} />
+      </Animated.View>
+      <Animated.View style={[styles.restHeaderRow, { opacity: restFade }]}>
+        <View>
+          <Text style={styles.sectionTitle}>{activeFilters.length > 0 ? `Filtered (${restaurantCount})` : 'All Restaurants'}</Text>
+          <Text style={styles.restSubtitle}>{restaurantCount} places near you</Text>
+        </View>
+        <TouchableOpacity style={styles.sortBtn} onPress={onOpenSort}>
+          <Icon name="tune" size={14} color={Colors.primary} />
+          <Text style={styles.sortText}>Sort</Text>
+          {activeSort !== 'relevance' && <View style={styles.sortActiveDot} />}
+        </TouchableOpacity>
+      </Animated.View>
+    </View>
+  );
+});
+
+// ─────────────────────────────────────────────────────────
+// DishBottomModal
+// ─────────────────────────────────────────────────────────
+const DishBottomModal = ({ visible, dish, onClose, onAdd, navigation }) => {
+  const slideAnim = useRef(new Animated.Value(500)).current;
+  useEffect(() => {
+    if (visible) {
+      Animated.spring(slideAnim, { toValue: 0, friction: 8, tension: 50, useNativeDriver: true }).start();
+    } else {
+      Animated.timing(slideAnim, { toValue: 500, duration: 220, useNativeDriver: true }).start();
+    }
+  }, [visible]);
+
+  if (!dish) return null;
+
+  const isVeg = dish?.dietary_tag?.toLowerCase() === 'veg' ||
+    dish?.dietary_tag?.toLowerCase() === 'vegan';
+  const price = Number(dish?.base_price ?? dish?.price ?? 0);
+  const originalPrice = dish?.original_price ?? dish?.mrp ?? null;
+
+  const handleAdd = () => {
+    onAdd();
+    onClose();
+    navigation.navigate('CartScreen');
+  };
+
+  return (
+    <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
+      <View style={styles.dishModalContainer}>
+        <TouchableWithoutFeedback onPress={onClose}>
+          <View style={styles.dishModalOverlay} />
+        </TouchableWithoutFeedback>
+        <Animated.View style={[styles.dishModalSheet, { transform: [{ translateY: slideAnim }] }]}>
+          <View style={styles.dishModalImgBox}>
+            {dish?.image_url ? (
+              <Image source={{ uri: dish.image_url }} style={styles.dishModalImg} resizeMode="cover" />
+            ) : (
+              <View style={[styles.dishModalImg, styles.dishModalImgPlaceholder]}>
+                <Text style={{ fontSize: 64 }}>🍽️</Text>
+              </View>
+            )}
+          </View>
+          <View style={styles.dishModalContent}>
+            <View style={[styles.vegIndicator, { borderColor: isVeg ? '#2E7D32' : '#C62828' }]}>
+              <View style={[styles.vegDot, { backgroundColor: isVeg ? '#2E7D32' : '#C62828' }]} />
+            </View>
+            <Text style={styles.dishModalTitle}>{dish?.name}</Text>
+            <View style={styles.priceRow}>
+              {originalPrice ? <Text style={styles.originalPrice}>₹{originalPrice}</Text> : null}
+              <Text style={styles.dishModalPrice}>₹{price}</Text>
+            </View>
+            <Text style={[styles.dishModalDesc, { marginTop: 6, marginBottom: 16 }]}>
+              {dish?.description || 'Delicious and freshly prepared dish.'}
+            </Text>
+            <TouchableOpacity style={styles.dishModalAddBtnFull} onPress={handleAdd} activeOpacity={0.88}>
+              <Text style={styles.dishModalAddTextFull}>ADD TO CART</Text>
+            </TouchableOpacity>
+          </View>
+          <TouchableOpacity style={styles.dishModalCloseBtnCenter} onPress={onClose}>
+            <Icon name="close" size={20} color="#fff" />
+          </TouchableOpacity>
+        </Animated.View>
+      </View>
+    </Modal>
+  );
+};
+
+// ─────────────────────────────────────────────────────────
+// CartConflictModal
+// ─────────────────────────────────────────────────────────
+const CartConflictModal = ({ visible, currentRestaurantName, newRestaurantName, onCancel, onReplace }) => (
+  <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel}>
+    <TouchableOpacity style={styles.conflictOverlay} activeOpacity={1} onPress={onCancel}>
+      <TouchableOpacity style={styles.conflictSheet} activeOpacity={1} onPress={() => { }}>
+        <TouchableOpacity style={styles.conflictClose} onPress={onCancel}>
+          <Icon name="close" size={20} color={Colors.textSecondary} />
+        </TouchableOpacity>
+        <Text style={styles.conflictTitle}>Replace cart item?</Text>
+        <Text style={styles.conflictMessage}>
+          Your cart contains dishes from{' '}
+          <Text style={styles.conflictRestName}>{currentRestaurantName}</Text>
+          {'. Do you want to discard the selection and add dishes from '}
+          <Text style={styles.conflictRestName}>{newRestaurantName}</Text>{'?'}
+        </Text>
+        <View style={styles.conflictBtns}>
+          <TouchableOpacity style={styles.conflictBtnNo} onPress={onCancel} activeOpacity={0.8}>
+            <Text style={styles.conflictBtnNoText}>No</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.conflictBtnReplace} onPress={onReplace} activeOpacity={0.85}>
+            <Text style={styles.conflictBtnReplaceText}>Replace</Text>
+          </TouchableOpacity>
+        </View>
+      </TouchableOpacity>
+    </TouchableOpacity>
+  </Modal>
+);
+
+// ─────────────────────────────────────────────────────────
+// HomeScreen
+// ─────────────────────────────────────────────────────────
+export const HomeScreen = ({ navigation }) => {
+  const [activeSort, setActiveSort] = useState('relevance');
+  const [sortSheetVisible, setSortSheetVisible] = useState(false);
+  const [selectedDish, setSelectedDish] = useState(null);
+  const [dishModalVisible, setDishModalVisible] = useState(false);
+  const [conflictModal, setConflictModal] = useState(false);
+  const [pendingDish, setPendingDish] = useState(null);
+
+  const {
+    addItem,
+    replaceCartAndAdd,
+    removeItem,
+    itemCount,
+    restaurantName: cartRestaurantName,
+    getQuantityForItem,
+  } = useCart();
+
+  const handleAddDish = useCallback((dish) => {
+    const dishRestaurantId = dish?.restaurant_id ?? dish?.restaurantId ?? null;
+    const dishRestaurantName = dish?.restaurant_name ?? dish?.restaurantName ?? 'Restaurant';
+    const result = addItem(dish, dishRestaurantId, dishRestaurantName);
+    if (result === 'CONFLICT') {
+      setPendingDish(dish);
+      setConflictModal(true);
+    }
+  }, [addItem]);
+
+  const handleRemoveDish = useCallback((dishId) => removeItem(dishId), [removeItem]);
+
+  const handleConfirmReplace = useCallback(() => {
+    if (pendingDish) {
+      const dishRestaurantId = pendingDish?.restaurant_id ?? pendingDish?.restaurantId ?? null;
+      const dishRestaurantName = pendingDish?.restaurant_name ?? pendingDish?.restaurantName ?? 'Restaurant';
+      replaceCartAndAdd(pendingDish, dishRestaurantId, dishRestaurantName);
+    }
+    setConflictModal(false);
+    setPendingDish(null);
+    setDishModalVisible(false);
+    setSelectedDish(null);
+  }, [pendingDish, replaceCartAndAdd]);
+
+  const handleCancelReplace = useCallback(() => {
+    setConflictModal(false);
+    setPendingDish(null);
+  }, []);
+
+  const openDishModal = useCallback((dish) => {
+    setSelectedDish(dish);
+    setDishModalVisible(true);
+  }, []);
+
+  const closeDishModal = useCallback(() => {
+    setDishModalVisible(false);
+    setSelectedDish(null);
+  }, []);
+
+  const handleModalAdd = useCallback(() => {
+    if (selectedDish) handleAddDish(selectedDish);
+  }, [selectedDish, handleAddDish]);
+
+  // ── Address Dropdown ───────────────────────────────────
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const dropdownAnim = useRef(new Animated.Value(0)).current;
+  const overlayAnim = useRef(new Animated.Value(0)).current;
+  const arrowAnim = useRef(new Animated.Value(0)).current;
+
+  const openDropdown = useCallback(() => {
+    setDropdownOpen(true);
+    Animated.parallel([
+      Animated.spring(dropdownAnim, { toValue: 1, friction: 8, tension: 60, useNativeDriver: true }),
+      Animated.timing(overlayAnim, { toValue: 1, duration: 200, useNativeDriver: true }),
+      Animated.timing(arrowAnim, { toValue: 1, duration: 200, useNativeDriver: true }),
+    ]).start();
+  }, []);
+
+  const closeDropdown = useCallback(() => {
+    Animated.parallel([
+      Animated.timing(dropdownAnim, { toValue: 0, duration: 180, useNativeDriver: true }),
+      Animated.timing(overlayAnim, { toValue: 0, duration: 180, useNativeDriver: true }),
+      Animated.timing(arrowAnim, { toValue: 0, duration: 180, useNativeDriver: true }),
+    ]).start(() => setDropdownOpen(false));
+  }, []);
+
+  const selectedAddress = useAddressStore(s => s.selectedAddress);
+  const addresses = useAddressStore(s => s.addresses);
+  const fetchAddresses = useAddressStore(s => s.fetchAddresses);
+  const setSelectedAddress = useAddressStore(s => s.setSelectedAddress);
+  const selectAddressFromDropdown = useCallback((address) => {
+    setSelectedAddress(address);
+    closeDropdown();
+  }, [setSelectedAddress, closeDropdown]);
+
+  useEffect(() => { fetchAddresses(); }, []);
+
+  const [activeFilters, setActiveFilters] = useState([]);
+  const queryClient = useQueryClient();
+  const user = useUserStore(s => s.user);
+  const badgeCount = useNotificationStore(s => s.badgeCount);
+  const scrollY = useRef(new Animated.Value(0)).current;
+
+  const filters = useMemo(() =>
+    activeFilters.reduce((acc, f) => ({ ...acc, [f]: true }), {}),
+    [activeFilters]
+  );
+
+  const { data: restaurants, isLoading, refetch, isRefetching } = useRestaurants(filters);
+
+  const sortedRestaurants = useMemo(() =>
+    sortRestaurants(restaurants, activeSort),
+    [restaurants, activeSort]
+  );
+
+  const bannerFade = useRef(new Animated.Value(0)).current;
+  const filterFade = useRef(new Animated.Value(0)).current;
+  const catFade = useRef(new Animated.Value(0)).current;
+  const restFade = useRef(new Animated.Value(0)).current;
+  const fadeAnims = useRef({ bannerFade, filterFade, catFade, restFade }).current;
+
+  useEffect(() => {
+    if (!isLoading && restaurants?.length >= 0) {
+      Animated.stagger(100, [
+        Animated.timing(bannerFade, { toValue: 1, duration: 500, useNativeDriver: true }),
+        Animated.timing(filterFade, { toValue: 1, duration: 500, useNativeDriver: true }),
+        Animated.timing(catFade, { toValue: 1, duration: 500, useNativeDriver: true }),
+        Animated.timing(restFade, { toValue: 1, duration: 500, useNativeDriver: true }),
+      ]).start();
+    }
+  }, [isLoading]);
+
+  const greetingOpacity = scrollY.interpolate({ inputRange: [0, 60], outputRange: [1, 0], extrapolate: 'clamp' });
+  const topBarElevation = scrollY.interpolate({ inputRange: [0, 60], outputRange: [0, 8], extrapolate: 'clamp' });
+
+  const toggleFilter = useCallback(id => {
+    setActiveFilters(prev => prev.includes(id) ? prev.filter(f => f !== id) : [...prev, id]);
+  }, []);
+  const clearFilters = useCallback(() => setActiveFilters([]), []);
+
+  const requestLocationPermission = async () => {
+    if (Platform.OS === "android") {
+      const granted = await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION);
+      return granted === PermissionsAndroid.RESULTS.GRANTED;
+    }
+    return true;
+  };
+
+  const fetchAddress = async (latitude, longitude) => {
+    try {
+      const res = await axios.get(`https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=YOUR_GOOGLE_MAPS_API_KEY`);
+      if (!res.data.results?.length) return;
+      const result = res.data.results[0];
+      const cityComponent = result.address_components?.find(c => c.types.includes("locality"));
+      const stateComponent = result.address_components?.find(c => c.types.includes("administrative_area_level_1"));
+      setSelectedAddress({ label: "Current Location", address: result.formatted_address || "Unknown address", city: cityComponent?.long_name || "Unknown", state: stateComponent?.long_name || "", latitude, longitude });
+    } catch (error) { console.log("Address fetch error", error?.response?.data || error); }
+  };
+
+  const getCurrentLocation = async () => {
+    const hasPermission = await requestLocationPermission();
+    if (!hasPermission) return;
+    Geolocation.getCurrentPosition(
+      (position) => fetchAddress(position.coords.latitude, position.coords.longitude),
+      (error) => console.log("Location Error", error),
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }
+    );
+  };
+
+  const restaurantCount = sortedRestaurants?.length ?? 0;
+
+  const openRestaurant = useCallback(async (restaurant) => {
+    const restaurantId = restaurant.id;
+    try {
+      await Promise.all([
+        queryClient.prefetchQuery({ queryKey: ["restaurantDetail", restaurantId], queryFn: () => getRestaurantById(restaurantId) }),
+        queryClient.prefetchQuery({ queryKey: ["restaurantMenu", restaurantId], queryFn: () => getMenuByRestaurantId(restaurantId) }),
+      ]);
+    } catch (e) { }
+    navigation.navigate("RestaurantDetailScreen", { restaurantId });
+  }, [queryClient, navigation]);
+
+  const renderItem = useCallback(
+    ({ item, index }) => (
+      <AnimatedRestaurantCard item={item} index={index} onPress={() => openRestaurant(item)} />
+    ),
+    [openRestaurant],
+  );
+
+  // ✅ Memoized — only re-renders when these deps change, not on every render
+  const listHeaderComponent = useMemo(() => (
+    <HomeListHeader
+      activeFilters={activeFilters}
+      onToggleFilter={toggleFilter}
+      onClearFilters={clearFilters}
+      restaurantCount={restaurantCount}
+      navigation={navigation}
+      fadeAnims={fadeAnims}
+      activeSort={activeSort}
+      onOpenSort={() => setSortSheetVisible(true)}
+      onDishPress={openDishModal}
+      onDishAdd={handleAddDish}
+      onDishRemove={handleRemoveDish}
+      getQuantity={getQuantityForItem}
+    />
+  ), [activeFilters, restaurantCount, activeSort, toggleFilter, clearFilters,
+    openDishModal, handleAddDish, handleRemoveDish, getQuantityForItem]);
+
+  const pendingRestaurantName = pendingDish?.restaurant_name ?? pendingDish?.restaurantName ?? 'this restaurant';
+
+  return (
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <StatusBar backgroundColor={Colors.white} barStyle="dark-content" />
+
+      {/* Top Bar */}
+      <Animated.View style={[styles.topBar, { elevation: topBarElevation }]}>
+        <Animated.View style={{ opacity: greetingOpacity, overflow: 'hidden' }}>
+          <Text style={styles.greeting}>Hey {user?.full_name?.split(' ')[0] ?? 'Foodie'} 👋, hungry?</Text>
+        </Animated.View>
+        <View style={styles.locationCartRow}>
+          <TouchableOpacity style={styles.locationBtn}>
+            <View style={styles.locationIconBox}>
+              <Icon name="location-on" size={16} color={Colors.primary} />
+            </View>
+            <View style={styles.locationTexts}>
+              <Text style={styles.locationLabel}>DELIVERING TO</Text>
+              <TouchableOpacity style={styles.locationValueRow} onPress={dropdownOpen ? closeDropdown : openDropdown} activeOpacity={0.7}>
+                <Text style={styles.locationText} numberOfLines={1}>
+                  {selectedAddress
+                    ? (selectedAddress.address_line1
+                      ? `${selectedAddress.address_line1}, ${selectedAddress.city}`
+                      : selectedAddress.city || "Select Address")
+                    : "Select Address"}
+                </Text>
+                <Animated.View style={{ transform: [{ rotate: arrowAnim.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '180deg'] }) }] }}>
+                  <Icon name="keyboard-arrow-down" size={18} color={Colors.primary} />
+                </Animated.View>
+              </TouchableOpacity>
+            </View>
+          </TouchableOpacity>
+          <View style={styles.topBarActions}>
+            <TouchableOpacity
+              style={styles.iconBtn}
+              onPress={() => navigation.navigate('NotificationsScreen', { userId: user?.user_id })}>
+              <Icon name="notifications-none" size={22} color={Colors.textPrimary} />
+              {badgeCount > 0 && <View style={styles.notifDot} />}
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.iconBtn} onPress={() => navigation.navigate('CartScreen')}>
+              <Icon name="shopping-cart" size={22} color={Colors.textPrimary} />
+              {itemCount > 0 && (
+                <View style={styles.cartBadge}><Text style={styles.cartBadgeText}>{itemCount}</Text></View>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+        <TouchableOpacity style={styles.searchBar} onPress={() => navigation.navigate('SearchScreen')} activeOpacity={0.8}>
+          <View style={styles.searchLeft}>
+            <Icon name="search" size={20} color={Colors.textSecondary} />
+            <Text style={styles.searchText}>Search restaurants & dishes...</Text>
+          </View>
+          <View style={styles.micBtn}><Icon name="mic" size={16} color={Colors.white} /></View>
+        </TouchableOpacity>
+      </Animated.View>
+
+      {/* ✅ Content — restaurant FlatList (NOT banner FlatList) */}
+      {isLoading ? (
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.skeletonContainer}>
+          {listHeaderComponent}
+          {[1, 2, 3].map(i => <SkeletonCard key={i} />)}
+        </ScrollView>
+      ) : (
+        <Animated.FlatList
+          data={sortedRestaurants}
+          keyExtractor={item => item.id}
+          renderItem={renderItem}
+          ListHeaderComponent={listHeaderComponent}
+          contentContainerStyle={styles.listContent}
+          onScroll={Animated.event(
+            [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+            { useNativeDriver: true }
+          )}
+          scrollEventThrottle={16}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefetching}
+              onRefresh={refetch}
+              colors={[Colors.primary]}
+              tintColor={Colors.primary}
+            />
+          }
+          ListEmptyComponent={
+            <EmptyState
+              emoji="🍽️"
+              title="No restaurants found"
+              subtitle="Try removing some filters"
+              buttonTitle="Clear Filters"
+              onButtonPress={clearFilters}
+            />
+          }
+        />
+      )}
+
+      {/* Address Dropdown */}
+      {dropdownOpen && (
+        <>
+          <TouchableWithoutFeedback onPress={closeDropdown}>
+            <Animated.View style={[styles.dropdownOverlay, { opacity: overlayAnim }]} />
+          </TouchableWithoutFeedback>
+          <Animated.View style={[styles.dropdown, {
+            opacity: dropdownAnim,
+            transform: [
+              { translateY: dropdownAnim.interpolate({ inputRange: [0, 1], outputRange: [-16, 0] }) },
+              { scale: dropdownAnim.interpolate({ inputRange: [0, 1], outputRange: [0.97, 1] }) },
+            ]
+          }]}>
+            <View style={styles.dropdownHeader}>
+              <Text style={styles.dropdownTitle}>Deliver to</Text>
+              <TouchableOpacity onPress={() => { closeDropdown(); navigation.navigate("AddAddressScreen"); }} style={styles.dropdownAddBtn}>
+                <Icon name="add" size={14} color={Colors.primary} />
+                <Text style={styles.dropdownAddText}>Add New</Text>
+              </TouchableOpacity>
+            </View>
+            <TouchableOpacity style={styles.dropdownLocationBtn} onPress={() => { getCurrentLocation(); closeDropdown(); }} activeOpacity={0.75}>
+              <View style={styles.dropdownLocationIcon}><Icon name="my-location" size={18} color={Colors.primary} /></View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.dropdownLocationTitle}>Use Current Location</Text>
+                <Text style={styles.dropdownLocationSub}>Enable GPS to detect automatically</Text>
+              </View>
+              <Icon name="chevron-right" size={18} color={Colors.textLight} />
+            </TouchableOpacity>
+            {addresses?.length > 0 && (
+              <View style={styles.dropdownDivider}>
+                <View style={styles.dropdownDividerLine} />
+                <Text style={styles.dropdownDividerText}>SAVED ADDRESSES</Text>
+                <View style={styles.dropdownDividerLine} />
+              </View>
+            )}
+            {addresses?.map((addr) => {
+              const isSelected = selectedAddress?.id === addr.id;
+              const iconName = addr.label === 'Home' ? 'home' : addr.label === 'Work' ? 'work' : 'location-on';
+              return (
+                <TouchableOpacity key={addr.id} style={[styles.dropdownItem, isSelected && styles.dropdownItemSelected]} onPress={() => selectAddressFromDropdown(addr)} activeOpacity={0.75}>
+                  <View style={[styles.dropdownItemIcon, isSelected && styles.dropdownItemIconSelected]}>
+                    <Icon name={iconName} size={16} color={isSelected ? Colors.primary : Colors.textSecondary} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <View style={styles.dropdownItemTop}>
+                      <Text style={[styles.dropdownItemLabel, isSelected && styles.dropdownItemLabelSelected]}>{addr.label}</Text>
+                      {!!addr.is_default && <View style={styles.dropdownDefaultBadge}><Text style={styles.dropdownDefaultText}>Default</Text></View>}
+                    </View>
+                    <Text style={styles.dropdownItemAddr} numberOfLines={1}>
+                      {[addr.address_line1, addr.city, addr.pin_code].filter(Boolean).join(', ')}
+                    </Text>
+                  </View>
+                  {isSelected && <Icon name="check-circle" size={18} color={Colors.primary} />}
+                </TouchableOpacity>
+              );
+            })}
+            <TouchableOpacity style={styles.dropdownManageBtn} onPress={() => { closeDropdown(); navigation.navigate("AddressesScreen"); }}>
+              <Icon name="edit-location-alt" size={14} color={Colors.textSecondary} />
+              <Text style={styles.dropdownManageText}>Manage all addresses</Text>
+              <Icon name="chevron-right" size={14} color={Colors.textLight} />
+            </TouchableOpacity>
+          </Animated.View>
+        </>
+      )}
+
+      {/* Sort Bottom Sheet */}
+      <SortBottomSheet
+        visible={sortSheetVisible}
+        onClose={() => setSortSheetVisible(false)}
+        activeSort={activeSort}
+        onSelectSort={setActiveSort}
+      />
+
+      {/* Dish Bottom Modal */}
+      <DishBottomModal
+        visible={dishModalVisible}
+        dish={selectedDish}
+        onClose={closeDishModal}
+        onAdd={handleModalAdd}
+        navigation={navigation}
+      />
+
+      {/* Cart Conflict Modal */}
+      <CartConflictModal
+        visible={conflictModal}
+        currentRestaurantName={cartRestaurantName}
+        newRestaurantName={pendingRestaurantName}
+        onCancel={handleCancelReplace}
+        onReplace={handleConfirmReplace}
+      />
+    </SafeAreaView>
+  );
+};
+
+// ─────────────────────────────────────────────────────────
+// Styles
+// ─────────────────────────────────────────────────────────
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: Colors.background },
+  topBar: { backgroundColor: Colors.white, paddingHorizontal: 16, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: Colors.border, overflow: 'visible', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, zIndex: 10 },
+  greeting: { fontSize: 13, color: Colors.textSecondary, fontWeight: '500', paddingTop: 4 },
+  locationCartRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 6, marginBottom: 10 },
+  locationBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 },
+  locationIconBox: { width: 34, height: 34, borderRadius: 10, backgroundColor: Colors.primaryLight, justifyContent: 'center', alignItems: 'center' },
+  locationTexts: { gap: 1 },
+  locationLabel: { fontSize: 9, color: Colors.textLight, fontWeight: '700', letterSpacing: 0.8 },
+  locationValueRow: { flexDirection: 'row', alignItems: 'center', gap: 2 },
+  locationText: { fontSize: 14, fontWeight: '700', color: Colors.textPrimary, maxWidth: 180 },
+  topBarActions: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  iconBtn: { width: 38, height: 38, borderRadius: 12, backgroundColor: Colors.background, justifyContent: 'center', alignItems: 'center', position: 'relative' },
+  notifDot: { position: 'absolute', top: 7, right: 7, width: 7, height: 7, borderRadius: 4, backgroundColor: Colors.error, borderWidth: 1.5, borderColor: Colors.white },
+  cartBadge: { position: 'absolute', top: 4, right: 4, backgroundColor: Colors.primary, borderRadius: 8, minWidth: 16, height: 16, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 3, borderWidth: 1.5, borderColor: Colors.white },
+  cartBadgeText: { color: Colors.white, fontSize: 9, fontWeight: '800' },
+  searchBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: Colors.background, borderRadius: 14, paddingLeft: 14, paddingRight: 6, paddingVertical: 9, borderWidth: 1.5, borderColor: Colors.border },
+  searchLeft: { flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 },
+  searchText: { fontSize: 14, color: Colors.textLight },
+  micBtn: { width: 34, height: 34, borderRadius: 10, backgroundColor: Colors.primary, justifyContent: 'center', alignItems: 'center' },
+  bannersContent: { paddingTop: 16, paddingBottom: 16 },
+  bannerOuter: { width: BANNER_WIDTH, minHeight: 150, borderRadius: 18, marginRight: 16, overflow: 'hidden', elevation: 4, shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.15, shadowRadius: 12 },
+  bannerGradient: { width: '100%', flex: 1, padding: 16, borderRadius: 18, minHeight: 136, overflow: 'hidden' },
+  bannerHighlight: { position: 'absolute', top: 0, left: 0, right: 0, height: '45%', backgroundColor: 'rgba(255,255,255,0.08)', borderTopLeftRadius: 18, borderTopRightRadius: 18 },
+  bannerCircle1: { position: 'absolute', width: 190, height: 190, borderRadius: 95, backgroundColor: 'rgba(255,255,255,0.1)', top: -70, right: -30 },
+  bannerCircle2: { position: 'absolute', width: 120, height: 120, borderRadius: 60, backgroundColor: 'rgba(255,255,255,0.08)', bottom: -40, right: 70 },
+  bannerCircle3: { position: 'absolute', width: 70, height: 70, borderRadius: 35, backgroundColor: 'rgba(255,255,255,0.1)', top: 20, right: 120 },
+  bannerTag: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(255,255,255,0.22)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20, alignSelf: 'flex-start', borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)', marginBottom: 10 },
+  bannerTagDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: Colors.white },
+  bannerTagText: { fontSize: 9, fontWeight: '800', color: Colors.white, letterSpacing: 1 },
+  bannerContent: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  bannerLeft: { flex: 1, gap: 5 },
+  bannerTitle: { fontSize: 24, fontWeight: '900', color: Colors.white, letterSpacing: -0.5 },
+  bannerSubtitle: { fontSize: 12, color: 'rgba(255,255,255,0.88)', fontWeight: '500' },
+  bannerCtaBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: Colors.white, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 18, alignSelf: 'flex-start', marginTop: 6, elevation: 2 },
+  bannerCtaText: { fontSize: 12, fontWeight: '800', color: '#1A1A1A' },
+  bannerEmoji: { fontSize: 48, lineHeight: 52 },
+  bannerEmojiContainer: { width: 70, alignItems: 'center', justifyContent: 'center' },
+  filtersRow: { flexGrow: 0, marginVertical: 10 },
+  filtersContent: { paddingHorizontal: 16, gap: 8, alignItems: 'center' },
+  clearBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999, backgroundColor: '#FFECEC', borderWidth: 1, borderColor: '#FFAAAA' },
+  clearBtnText: { fontSize: 12, color: Colors.error, fontWeight: '600' },
+  sectionHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, marginBottom: 8, marginTop: 6 },
+  sectionTitle: { fontSize: 18, fontWeight: '800', color: Colors.textPrimary },
+  sectionSubtitle: { fontSize: 12, color: Colors.textSecondary, marginTop: 2 },
+  seeAll: { fontSize: 13, color: Colors.primary, fontWeight: '700' },
+  catsContent: { paddingHorizontal: 16, gap: 10, paddingBottom: 4 },
+  catCard: { width: 76, alignItems: 'center', gap: 7 },
+  catGradient: { width: 64, height: 64, borderRadius: 20, justifyContent: 'center', alignItems: 'center', elevation: 2 },
+  catEmoji: { fontSize: 28 },
+  catName: { fontSize: 11, fontWeight: '600', color: Colors.textPrimary, textAlign: 'center' },
+  dishSection: { marginTop: 8, marginBottom: 4 },
+  dishesContent: { paddingHorizontal: 16, gap: 12, paddingBottom: 8, paddingTop: 4 },
+  stepperFilled: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: Colors.primary, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3, marginTop: 6 },
+  stepperBtnFilled: { fontSize: 18, color: Colors.white, fontWeight: 'bold', paddingHorizontal: 2 },
+  stepperCountFilled: { fontWeight: '700', color: Colors.white, fontSize: 13 },
+  dishModalAddBtnFull: { backgroundColor: Colors.primary, borderRadius: 12, paddingVertical: 14, alignItems: 'center', width: '100%' },
+  dishModalAddTextFull: { color: Colors.white, fontWeight: '800', fontSize: 15, letterSpacing: 0.5 },
+  dishModalCloseBtnCenter: { alignSelf: 'center', marginTop: 4, marginBottom: 20, width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'center', alignItems: 'center' },
+  homeDishCard: { width: 160, borderRadius: 18, backgroundColor: '#fff', marginRight: 12, overflow: 'hidden', elevation: 4, shadowColor: '#000', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.08, shadowRadius: 8 },
+  homeDishImgBox: { height: 110, position: 'relative' },
+  homeDishImg: { width: '100%', height: '100%' },
+  homeDishPlaceholder: { justifyContent: 'center', alignItems: 'center', backgroundColor: '#F5F5F5' },
+  vegBadgeSmall: { position: 'absolute', top: 7, left: 7, width: 16, height: 16, borderRadius: 3, borderWidth: 1.5, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.white },
+  vegDotSmall: { width: 8, height: 8, borderRadius: 4 },
+  homeDishInfo: { padding: 10, gap: 2 },
+  homeDishName: { fontSize: 13, fontWeight: '700', color: Colors.textPrimary },
+  priceRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 2 },
+  originalPrice: { fontSize: 11, color: Colors.textLight, textDecorationLine: 'line-through' },
+  homeDishPrice: { fontSize: 13, fontWeight: '800', color: Colors.textPrimary },
+  homeDishDesc: { fontSize: 11, color: Colors.textSecondary, lineHeight: 15, marginTop: 2 },
+  addBtn: { borderWidth: 1.5, borderColor: Colors.primary, paddingVertical: 5, borderRadius: 8, alignItems: 'center', marginTop: 6 },
+  addBtnText: { color: Colors.primary, fontWeight: '800', fontSize: 12, letterSpacing: 0.5 },
+  dishSkeletonCard: { width: 160, backgroundColor: Colors.white, borderRadius: 18, overflow: 'hidden', elevation: 2, marginRight: 12 },
+  dishSkeletonImg: { width: '100%', height: 110, backgroundColor: Colors.border },
+  dishSkeletonLine: { height: 11, backgroundColor: Colors.border, borderRadius: 6, margin: 10, marginBottom: 5 },
+  restHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, marginTop: 16, marginBottom: 10 },
+  restSubtitle: { fontSize: 12, color: Colors.textSecondary, marginTop: 2 },
+  sortBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: Colors.primaryLight, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: Colors.primary + '33', position: 'relative' },
+  sortText: { fontSize: 12, fontWeight: '700', color: Colors.primary },
+  sortActiveDot: { width: 7, height: 7, borderRadius: 3.5, backgroundColor: Colors.primary, position: 'absolute', top: -2, right: -2 },
+  listContent: { paddingHorizontal: 16, paddingBottom: 40 },
+  skeletonContainer: { paddingHorizontal: 16, paddingBottom: 32 },
+  skeletonCard: { backgroundColor: Colors.white, borderRadius: 16, marginBottom: 16, overflow: 'hidden' },
+  skeletonImg: { width: '100%', height: 150, backgroundColor: Colors.border },
+  skeletonBody: { padding: 14, gap: 10 },
+  skeletonLine: { backgroundColor: Colors.border, borderRadius: 6 },
+  sortOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.4)', zIndex: 200 },
+  sortSheet: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: Colors.white, borderTopLeftRadius: 24, borderTopRightRadius: 24, zIndex: 300, elevation: 20, paddingBottom: 32 },
+  sortHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: Colors.border, alignSelf: 'center', marginTop: 12, marginBottom: 4 },
+  sortSheetTitle: { fontSize: 16, fontWeight: '800', color: Colors.textPrimary, paddingHorizontal: 20, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: Colors.border },
+  sortOption: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 20, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: Colors.border + '80' },
+  sortOptionActive: { backgroundColor: Colors.primaryLight + '60' },
+  sortOptionIcon: { width: 38, height: 38, borderRadius: 12, backgroundColor: Colors.background, justifyContent: 'center', alignItems: 'center' },
+  sortOptionIconActive: { backgroundColor: Colors.primaryLight },
+  sortOptionText: { flex: 1, fontSize: 14, fontWeight: '600', color: Colors.textPrimary },
+  sortOptionTextActive: { color: Colors.primary, fontWeight: '700' },
+  dropdownOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.35)', zIndex: 50 },
+  dropdown: { position: 'absolute', top: 0, left: 12, right: 12, backgroundColor: Colors.white, borderRadius: 18, zIndex: 100, elevation: 16, overflow: 'hidden', marginTop: 8 },
+  dropdownHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingTop: 16, paddingBottom: 10, borderBottomWidth: 1, borderBottomColor: Colors.border },
+  dropdownTitle: { fontSize: 15, fontWeight: '800', color: Colors.textPrimary },
+  dropdownAddBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: Colors.primaryLight, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20 },
+  dropdownAddText: { fontSize: 12, fontWeight: '700', color: Colors.primary },
+  dropdownLocationBtn: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: Colors.border },
+  dropdownLocationIcon: { width: 38, height: 38, borderRadius: 12, backgroundColor: Colors.primaryLight, justifyContent: 'center', alignItems: 'center' },
+  dropdownLocationTitle: { fontSize: 13, fontWeight: '700', color: Colors.textPrimary, marginBottom: 2 },
+  dropdownLocationSub: { fontSize: 11, color: Colors.textLight },
+  dropdownDivider: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 16, paddingVertical: 10 },
+  dropdownDividerLine: { flex: 1, height: 1, backgroundColor: Colors.border },
+  dropdownDividerText: { fontSize: 10, fontWeight: '700', color: Colors.textLight, letterSpacing: 0.8 },
+  dropdownItem: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: Colors.border },
+  dropdownItemSelected: { backgroundColor: '#FFFAF7' },
+  dropdownItemIcon: { width: 36, height: 36, borderRadius: 10, backgroundColor: '#F5F5F5', justifyContent: 'center', alignItems: 'center' },
+  dropdownItemIconSelected: { backgroundColor: Colors.primaryLight },
+  dropdownItemTop: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 },
+  dropdownItemLabel: { fontSize: 13, fontWeight: '700', color: Colors.textPrimary },
+  dropdownItemLabelSelected: { color: Colors.primary },
+  dropdownDefaultBadge: { backgroundColor: Colors.primaryLight, paddingHorizontal: 6, paddingVertical: 1, borderRadius: 6 },
+  dropdownDefaultText: { fontSize: 9, fontWeight: '700', color: Colors.primary },
+  dropdownItemAddr: { fontSize: 11, color: Colors.textSecondary },
+  dropdownManageBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 16, paddingVertical: 13, justifyContent: 'center' },
+  dropdownManageText: { fontSize: 12, fontWeight: '600', color: Colors.textSecondary, flex: 1 },
+  dishModalContainer: { flex: 1, justifyContent: 'flex-end' },
+  dishModalOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.5)' },
+  dishModalSheet: { backgroundColor: Colors.white, borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '85%', overflow: 'hidden' },
+  dishModalImgBox: { width: '100%', height: 230 },
+  dishModalImg: { width: '100%', height: '100%' },
+  dishModalImgPlaceholder: { justifyContent: 'center', alignItems: 'center', backgroundColor: '#F5F5F5' },
+  dishModalContent: { padding: 16 },
+  vegIndicator: { width: 16, height: 16, borderRadius: 3, borderWidth: 1.5, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.white, marginBottom: 8 },
+  vegDot: { width: 8, height: 8, borderRadius: 4 },
+  dishModalTitle: { fontSize: 18, fontWeight: '800', color: Colors.textPrimary },
+  dishModalPrice: { fontSize: 16, fontWeight: '800', color: Colors.textPrimary, marginTop: 2 },
+  dishModalDesc: { fontSize: 13, color: Colors.textSecondary, lineHeight: 20 },
+  conflictOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', paddingHorizontal: 24 },
+  conflictSheet: { backgroundColor: Colors.white, borderRadius: 20, paddingHorizontal: 20, paddingTop: 20, paddingBottom: 24, width: '100%', elevation: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 12 },
+  conflictClose: { position: 'absolute', top: 12, right: 12, padding: 4 },
+  conflictTitle: { fontSize: 18, fontWeight: '800', color: Colors.textPrimary, marginBottom: 8, marginTop: 4, paddingRight: 24 },
+  conflictMessage: { fontSize: 13, color: Colors.textSecondary, lineHeight: 20, marginBottom: 24 },
+  conflictRestName: { fontWeight: '700', color: Colors.textPrimary },
+  conflictBtns: { flexDirection: 'row', gap: 10 },
+  conflictBtnNo: { flex: 1, paddingVertical: 13, borderRadius: 12, backgroundColor: '#FFF3E0', alignItems: 'center', borderWidth: 1.5, borderColor: '#FFCC80' },
+  conflictBtnNoText: { fontSize: 14, fontWeight: '700', color: Colors.primary },
+  conflictBtnReplace: { flex: 1, paddingVertical: 13, borderRadius: 12, backgroundColor: Colors.primary, alignItems: 'center' },
+  conflictBtnReplaceText: { fontSize: 14, fontWeight: '700', color: Colors.white },
+});

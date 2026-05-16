@@ -1,0 +1,64 @@
+{
+  "offers": [
+    {
+      "id": "offer_001",
+      "title": "50% OFF up to ₹100",
+      "subtitle": "On orders above ₹199",
+      "code": "SAVE50",
+      "image": "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=800",
+      "bgColor": "#FF6B35",
+      "expiryDate": "2026-03-31",
+      "minOrderAmount": 199,
+      "maxDiscount": 100,
+      "discountPercent": 50
+    },
+    {
+      "id": "offer_002",
+      "title": "Free Delivery",
+      "subtitle": "On your first 3 orders",
+      "code": "FREEDEL",
+      "image": "https://images.unsplash.com/photo-1526367790999-0150786686a2?w=800",
+      "bgColor": "#60B246",
+      "expiryDate": "2026-03-15",
+      "minOrderAmount": 0,
+      "maxDiscount": 50,
+      "discountPercent": 0
+    },
+    {
+      "id": "offer_003",
+      "title": "Flat ₹80 OFF",
+      "subtitle": "Use code FLAT80 | Min order ₹349",
+      "code": "FLAT80",
+      "image": "https://images.unsplash.com/photo-1565958011703-44f9829ba187?w=800",
+      "bgColor": "#E91E63",
+      "expiryDate": "2026-02-28",
+      "minOrderAmount": 349,
+      "maxDiscount": 80,
+      "discountPercent": 0
+    },
+    {
+      "id": "offer_004",
+      "title": "Buy 1 Get 1 Free",
+      "subtitle": "On select restaurants every Tuesday",
+      "code": "BOGO",
+      "image": "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=800",
+      "bgColor": "#9C27B0",
+      "expiryDate": "2026-03-31",
+      "minOrderAmount": 149,
+      "maxDiscount": 150,
+      "discountPercent": 50
+    },
+    {
+      "id": "offer_005",
+      "title": "Weekend Special",
+      "subtitle": "30% OFF on weekends | Max ₹120",
+      "code": "WEEKEND30",
+      "image": "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=800",
+      "bgColor": "#FF5722",
+      "expiryDate": "2026-04-30",
+      "minOrderAmount": 199,
+      "maxDiscount": 120,
+      "discountPercent": 30
+    }
+  ]
+}

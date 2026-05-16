@@ -1,0 +1,499 @@
+{
+  "restaurants": [
+    {
+      "id": "rest_001",
+      "name": "Biryani Blues",
+      "cuisines": [
+        "Biryani",
+        "Mughlai",
+        "North Indian"
+      ],
+      "rating": 4.3,
+      "totalRatings": "10K+",
+      "deliveryTime": "30-35 mins",
+      "deliveryFee": 30,
+      "minOrderAmount": 149,
+      "distance": "2.1 km",
+      "promoted": true,
+      "isVeg": false,
+      "isOpen": true,
+      "offer": "50% OFF up to ₹100",
+      "image": "https://images.unsplash.com/photo-1563379091339-03246963d96c?w=600",
+      "thumbnailImage": "https://images.unsplash.com/photo-1631515243349-e0cb75fb8d3a?w=300",
+      "address": "Vijay Nagar, Indore",
+      "tags": [
+        "Top Rated",
+        "Fast Delivery"
+      ],
+      "categories": [
+        "Recommended",
+        "Biryani",
+        "Kebabs",
+        "Desserts"
+      ]
+    },
+    {
+      "id": "rest_002",
+      "name": "Pizza Paradise",
+      "cuisines": [
+        "Pizza",
+        "Italian",
+        "Fast Food"
+      ],
+      "rating": 4.5,
+      "totalRatings": "25K+",
+      "deliveryTime": "25-30 mins",
+      "deliveryFee": 0,
+      "minOrderAmount": 199,
+      "distance": "1.5 km",
+      "promoted": false,
+      "isVeg": false,
+      "isOpen": true,
+      "offer": "Buy 1 Get 1 Free",
+      "image": "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=600",
+      "thumbnailImage": "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=300",
+      "address": "AB Road, Indore",
+      "tags": [
+        "Free Delivery",
+        "Top Rated"
+      ],
+      "categories": [
+        "Recommended",
+        "Pizzas",
+        "Pastas",
+        "Desserts",
+        "Beverages"
+      ]
+    },
+    {
+      "id": "rest_003",
+      "name": "Burger Barn",
+      "cuisines": [
+        "Burgers",
+        "Fast Food",
+        "Shakes"
+      ],
+      "rating": 4.1,
+      "totalRatings": "8K+",
+      "deliveryTime": "20-25 mins",
+      "deliveryFee": 20,
+      "minOrderAmount": 99,
+      "distance": "0.8 km",
+      "promoted": true,
+      "isVeg": false,
+      "isOpen": true,
+      "offer": "20% OFF on orders above ₹199",
+      "image": "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=600",
+      "thumbnailImage": "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=300",
+      "address": "Palasia, Indore",
+      "tags": [
+        "Fast Delivery",
+        "Value For Money"
+      ],
+      "categories": [
+        "Recommended",
+        "Burgers",
+        "Wraps",
+        "Sides",
+        "Shakes"
+      ]
+    },
+    {
+      "id": "rest_004",
+      "name": "Wok & Roll Chinese",
+      "cuisines": [
+        "Chinese",
+        "Thai",
+        "Asian"
+      ],
+      "rating": 4.0,
+      "totalRatings": "5K+",
+      "deliveryTime": "35-40 mins",
+      "deliveryFee": 40,
+      "minOrderAmount": 199,
+      "distance": "3.2 km",
+      "promoted": false,
+      "isVeg": false,
+      "isOpen": true,
+      "offer": "Flat ₹50 OFF",
+      "image": "https://images.unsplash.com/photo-1569718212165-3a8278d5f624?w=600",
+      "thumbnailImage": "https://images.unsplash.com/photo-1569718212165-3a8278d5f624?w=300",
+      "address": "MG Road, Indore",
+      "tags": [
+        "Popular",
+        "Must Try"
+      ],
+      "categories": [
+        "Recommended",
+        "Soups",
+        "Noodles",
+        "Rice",
+        "Momos",
+        "Starters"
+      ]
+    },
+    {
+      "id": "rest_005",
+      "name": "Sweet Tooth Desserts",
+      "cuisines": [
+        "Desserts",
+        "Ice Cream",
+        "Cakes"
+      ],
+      "rating": 4.6,
+      "totalRatings": "12K+",
+      "deliveryTime": "20-25 mins",
+      "deliveryFee": 15,
+      "minOrderAmount": 79,
+      "distance": "1.1 km",
+      "promoted": true,
+      "isVeg": true,
+      "isOpen": true,
+      "offer": "30% OFF on first order",
+      "image": "https://images.unsplash.com/photo-1551024601-bec78aea704b?w=600",
+      "thumbnailImage": "https://images.unsplash.com/photo-1551024601-bec78aea704b?w=300",
+      "address": "Sapna Sangeeta, Indore",
+      "tags": [
+        "Top Rated",
+        "Pure Veg"
+      ],
+      "categories": [
+        "Recommended",
+        "Ice Creams",
+        "Cakes",
+        "Pastries",
+        "Shakes"
+      ]
+    },
+    {
+      "id": "rest_006",
+      "name": "South Spice Kitchen",
+      "cuisines": [
+        "South Indian",
+        "Kerala",
+        "Tamil"
+      ],
+      "rating": 4.4,
+      "totalRatings": "7K+",
+      "deliveryTime": "30-40 mins",
+      "deliveryFee": 25,
+      "minOrderAmount": 149,
+      "distance": "2.7 km",
+      "promoted": false,
+      "isVeg": false,
+      "isOpen": true,
+      "offer": "15% OFF on orders above ₹250",
+      "image": "https://images.unsplash.com/photo-1630383249896-424e482df921?w=600",
+      "thumbnailImage": "https://images.unsplash.com/photo-1630383249896-424e482df921?w=300",
+      "address": "Scheme 54, Indore",
+      "tags": [
+        "Authentic",
+        "Popular"
+      ],
+      "categories": [
+        "Recommended",
+        "Dosas",
+        "Idli Vada",
+        "Rice Meals",
+        "Noodles"
+      ]
+    },
+    {
+      "id": "rest_007",
+      "name": "The Thali House",
+      "cuisines": [
+        "Rajasthani",
+        "Gujarati",
+        "North Indian"
+      ],
+      "rating": 4.2,
+      "totalRatings": "6K+",
+      "deliveryTime": "35-45 mins",
+      "deliveryFee": 30,
+      "minOrderAmount": 199,
+      "distance": "3.5 km",
+      "promoted": false,
+      "isVeg": true,
+      "isOpen": true,
+      "offer": "Free Dessert above ₹300",
+      "image": "https://images.unsplash.com/photo-1585937421612-70a008356fbe?w=600",
+      "thumbnailImage": "https://images.unsplash.com/photo-1585937421612-70a008356fbe?w=300",
+      "address": "Rau, Indore",
+      "tags": [
+        "Pure Veg",
+        "Family Meal"
+      ],
+      "categories": [
+        "Recommended",
+        "Thali",
+        "Sabzi",
+        "Breads",
+        "Desserts"
+      ]
+    },
+    {
+      "id": "rest_008",
+      "name": "Rolls & Wraps Express",
+      "cuisines": [
+        "Rolls",
+        "Wraps",
+        "Kathi Roll"
+      ],
+      "rating": 3.9,
+      "totalRatings": "3K+",
+      "deliveryTime": "15-20 mins",
+      "deliveryFee": 20,
+      "minOrderAmount": 79,
+      "distance": "0.5 km",
+      "promoted": false,
+      "isVeg": false,
+      "isOpen": true,
+      "offer": "Combo at ₹149",
+      "image": "https://images.unsplash.com/photo-1626645738196-c2a7c87a8f58?w=600",
+      "thumbnailImage": "https://images.unsplash.com/photo-1626645738196-c2a7c87a8f58?w=300",
+      "address": "Lasudia, Indore",
+      "tags": [
+        "Super Fast",
+        "Budget Friendly"
+      ],
+      "categories": [
+        "Recommended",
+        "Veg Rolls",
+        "Non-Veg Rolls",
+        "Combo Meals"
+      ]
+    },
+    {
+      "id": "rest_009",
+      "name": "Momo Mania",
+      "cuisines": [
+        "Tibetan",
+        "Momos",
+        "Chinese"
+      ],
+      "rating": 4.3,
+      "totalRatings": "9K+",
+      "deliveryTime": "25-30 mins",
+      "deliveryFee": 25,
+      "minOrderAmount": 99,
+      "distance": "1.8 km",
+      "promoted": true,
+      "isVeg": false,
+      "isOpen": true,
+      "offer": "40% OFF up to ₹80",
+      "image": "https://images.unsplash.com/photo-1534422298391-e4f8c172dddb?w=600",
+      "thumbnailImage": "https://images.unsplash.com/photo-1534422298391-e4f8c172dddb?w=300",
+      "address": "New Palasia, Indore",
+      "tags": [
+        "Trending",
+        "Most Ordered"
+      ],
+      "categories": [
+        "Recommended",
+        "Steamed Momos",
+        "Fried Momos",
+        "Pan Fried",
+        "Soups"
+      ]
+    },
+    {
+      "id": "rest_010",
+      "name": "Sandwich Station",
+      "cuisines": [
+        "Sandwiches",
+        "Burgers",
+        "Salads"
+      ],
+      "rating": 4.0,
+      "totalRatings": "4K+",
+      "deliveryTime": "20-25 mins",
+      "deliveryFee": 0,
+      "minOrderAmount": 99,
+      "distance": "1.2 km",
+      "promoted": false,
+      "isVeg": false,
+      "isOpen": true,
+      "offer": "Free delivery on all orders",
+      "image": "https://images.unsplash.com/photo-1528735602780-2552fd46c7af?w=600",
+      "thumbnailImage": "https://images.unsplash.com/photo-1528735602780-2552fd46c7af?w=300",
+      "address": "Sukhliya, Indore",
+      "tags": [
+        "Free Delivery",
+        "Healthy"
+      ],
+      "categories": [
+        "Recommended",
+        "Veg Sandwiches",
+        "Non-Veg Sandwiches",
+        "Salads",
+        "Juices"
+      ]
+    },
+    {
+      "id": "rest_011",
+      "name": "Tandoor Tales",
+      "cuisines": [
+        "North Indian",
+        "Tandoor",
+        "Kebabs"
+      ],
+      "rating": 4.5,
+      "totalRatings": "15K+",
+      "deliveryTime": "40-45 mins",
+      "deliveryFee": 35,
+      "minOrderAmount": 249,
+      "distance": "4.1 km",
+      "promoted": true,
+      "isVeg": false,
+      "isOpen": true,
+      "offer": "25% OFF on weekends",
+      "image": "https://images.unsplash.com/photo-1599487488170-d11ec9c172f0?w=600",
+      "thumbnailImage": "https://images.unsplash.com/photo-1599487488170-d11ec9c172f0?w=300",
+      "address": "Bypass Road, Indore",
+      "tags": [
+        "Premium",
+        "Chef's Special"
+      ],
+      "categories": [
+        "Recommended",
+        "Starters",
+        "Kebabs",
+        "Main Course",
+        "Breads",
+        "Desserts"
+      ]
+    },
+    {
+      "id": "rest_012",
+      "name": "Healthy Bites",
+      "cuisines": [
+        "Salads",
+        "Healthy",
+        "Bowls"
+      ],
+      "rating": 4.1,
+      "totalRatings": "2K+",
+      "deliveryTime": "20-30 mins",
+      "deliveryFee": 20,
+      "minOrderAmount": 149,
+      "distance": "2.3 km",
+      "promoted": false,
+      "isVeg": true,
+      "isOpen": true,
+      "offer": "10% OFF with code HEALTHY10",
+      "image": "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=600",
+      "thumbnailImage": "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=300",
+      "address": "Scheme 78, Indore",
+      "tags": [
+        "Healthy",
+        "Pure Veg"
+      ],
+      "categories": [
+        "Recommended",
+        "Salads",
+        "Grain Bowls",
+        "Smoothies",
+        "Wraps"
+      ]
+    },
+    {
+      "id": "rest_013",
+      "name": "Cafe Coffee Corner",
+      "cuisines": [
+        "Coffee",
+        "Snacks",
+        "Bakery"
+      ],
+      "rating": 4.2,
+      "totalRatings": "8K+",
+      "deliveryTime": "15-20 mins",
+      "deliveryFee": 15,
+      "minOrderAmount": 99,
+      "distance": "0.9 km",
+      "promoted": false,
+      "isVeg": true,
+      "isOpen": true,
+      "offer": "Buy 2 coffees, get 1 free",
+      "image": "https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=600",
+      "thumbnailImage": "https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=300",
+      "address": "Treasure Island Mall, Indore",
+      "tags": [
+        "Quick Bites",
+        "Cozy"
+      ],
+      "categories": [
+        "Recommended",
+        "Hot Beverages",
+        "Cold Beverages",
+        "Snacks",
+        "Cakes"
+      ]
+    },
+    {
+      "id": "rest_014",
+      "name": "Fish & Grill House",
+      "cuisines": [
+        "Seafood",
+        "Grills",
+        "Coastal"
+      ],
+      "rating": 4.4,
+      "totalRatings": "6K+",
+      "deliveryTime": "35-45 mins",
+      "deliveryFee": 40,
+      "minOrderAmount": 299,
+      "distance": "5.2 km",
+      "promoted": false,
+      "isVeg": false,
+      "isOpen": false,
+      "offer": "Weekend Special 20% OFF",
+      "image": "https://images.unsplash.com/photo-1559742811-822873691df8?w=600",
+      "thumbnailImage": "https://images.unsplash.com/photo-1559742811-822873691df8?w=300",
+      "address": "IDA Scheme, Indore",
+      "tags": [
+        "Exotic",
+        "Weekend Special"
+      ],
+      "categories": [
+        "Recommended",
+        "Fish Starters",
+        "Crab",
+        "Prawn",
+        "Main Course"
+      ]
+    },
+    {
+      "id": "rest_015",
+      "name": "Street Food Stop",
+      "cuisines": [
+        "Street Food",
+        "Chaats",
+        "Snacks"
+      ],
+      "rating": 4.0,
+      "totalRatings": "11K+",
+      "deliveryTime": "20-25 mins",
+      "deliveryFee": 10,
+      "minOrderAmount": 49,
+      "distance": "0.3 km",
+      "promoted": true,
+      "isVeg": true,
+      "isOpen": true,
+      "offer": "35% OFF on orders above ₹149",
+      "image": "https://images.unsplash.com/photo-1601050690597-df0568f70950?w=600",
+      "thumbnailImage": "https://images.unsplash.com/photo-1601050690597-df0568f70950?w=300",
+      "address": "Sarafa Bazaar, Indore",
+      "tags": [
+        "Local Favourite",
+        "Budget Friendly"
+      ],
+      "categories": [
+        "Recommended",
+        "Chaats",
+        "Fried Snacks",
+        "Sweet Snacks",
+        "Beverages"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,414 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "D:\\Sarthak\\DotnetFoodApp\\New folder (2)\\api_upgraded\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{909E1F74-2A5A-6F3D-1278-B3BD67A5AF60}|FoodBridge.Application\\FoodBridge.Application.csproj|d:\\sarthak\\dotnetfoodapp\\new folder (2)\\api_upgraded\\foodbridge.application\\features\\restaurants\\queries\\getrestaurantmenu\\getrestaurantmenuqueryhandler.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{909E1F74-2A5A-6F3D-1278-B3BD67A5AF60}|FoodBridge.Application\\FoodBridge.Application.csproj|solutionrelative:foodbridge.application\\features\\restaurants\\queries\\getrestaurantmenu\\getrestaurantmenuqueryhandler.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{CBEE2A03-2791-FF12-B1F3-5C5366239BEF}|FoodBridge.Domain\\FoodBridge.Domain.csproj|d:\\sarthak\\dotnetfoodapp\\new folder (2)\\api_upgraded\\foodbridge.domain\\common\\softdeleteentity.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{CBEE2A03-2791-FF12-B1F3-5C5366239BEF}|FoodBridge.Domain\\FoodBridge.Domain.csproj|solutionrelative:foodbridge.domain\\common\\softdeleteentity.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{CBEE2A03-2791-FF12-B1F3-5C5366239BEF}|FoodBridge.Domain\\FoodBridge.Domain.csproj|d:\\sarthak\\dotnetfoodapp\\new folder (2)\\api_upgraded\\foodbridge.domain\\entities\\menuitem.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{CBEE2A03-2791-FF12-B1F3-5C5366239BEF}|FoodBridge.Domain\\FoodBridge.Domain.csproj|solutionrelative:foodbridge.domain\\entities\\menuitem.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{CBEE2A03-2791-FF12-B1F3-5C5366239BEF}|FoodBridge.Domain\\FoodBridge.Domain.csproj|d:\\sarthak\\dotnetfoodapp\\new folder (2)\\api_upgraded\\foodbridge.domain\\entities\\menucategory.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{CBEE2A03-2791-FF12-B1F3-5C5366239BEF}|FoodBridge.Domain\\FoodBridge.Domain.csproj|solutionrelative:foodbridge.domain\\entities\\menucategory.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{CBEE2A03-2791-FF12-B1F3-5C5366239BEF}|FoodBridge.Domain\\FoodBridge.Domain.csproj|d:\\sarthak\\dotnetfoodapp\\new folder (2)\\api_upgraded\\foodbridge.domain\\entities\\restaurant.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{CBEE2A03-2791-FF12-B1F3-5C5366239BEF}|FoodBridge.Domain\\FoodBridge.Domain.csproj|solutionrelative:foodbridge.domain\\entities\\restaurant.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{909E1F74-2A5A-6F3D-1278-B3BD67A5AF60}|FoodBridge.Application\\FoodBridge.Application.csproj|d:\\sarthak\\dotnetfoodapp\\new folder (2)\\api_upgraded\\foodbridge.application\\dtos\\auth\\otpverifydto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{909E1F74-2A5A-6F3D-1278-B3BD67A5AF60}|FoodBridge.Application\\FoodBridge.Application.csproj|solutionrelative:foodbridge.application\\dtos\\auth\\otpverifydto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{909E1F74-2A5A-6F3D-1278-B3BD67A5AF60}|FoodBridge.Application\\FoodBridge.Application.csproj|d:\\sarthak\\dotnetfoodapp\\new folder (2)\\api_upgraded\\foodbridge.application\\features\\auth\\commands\\verifyotp\\verifyotpcommandhandler.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{909E1F74-2A5A-6F3D-1278-B3BD67A5AF60}|FoodBridge.Application\\FoodBridge.Application.csproj|solutionrelative:foodbridge.application\\features\\auth\\commands\\verifyotp\\verifyotpcommandhandler.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{909E1F74-2A5A-6F3D-1278-B3BD67A5AF60}|FoodBridge.Application\\FoodBridge.Application.csproj|d:\\sarthak\\dotnetfoodapp\\new folder (2)\\api_upgraded\\foodbridge.application\\features\\auth\\commands\\verifyotp\\verifyotpcommand.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{909E1F74-2A5A-6F3D-1278-B3BD67A5AF60}|FoodBridge.Application\\FoodBridge.Application.csproj|solutionrelative:foodbridge.application\\features\\auth\\commands\\verifyotp\\verifyotpcommand.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{D70D8D29-0D2D-574B-002C-690580F6FBA2}|FoodBridge.API\\FoodBridge.API.csproj|d:\\sarthak\\dotnetfoodapp\\new folder (2)\\api_upgraded\\foodbridge.api\\controllers\\authcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{D70D8D29-0D2D-574B-002C-690580F6FBA2}|FoodBridge.API\\FoodBridge.API.csproj|solutionrelative:foodbridge.api\\controllers\\authcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{D70D8D29-0D2D-574B-002C-690580F6FBA2}|FoodBridge.API\\FoodBridge.API.csproj|d:\\sarthak\\dotnetfoodapp\\new folder (2)\\api_upgraded\\foodbridge.api\\controllers\\userscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{D70D8D29-0D2D-574B-002C-690580F6FBA2}|FoodBridge.API\\FoodBridge.API.csproj|solutionrelative:foodbridge.api\\controllers\\userscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{909E1F74-2A5A-6F3D-1278-B3BD67A5AF60}|FoodBridge.Application\\FoodBridge.Application.csproj|d:\\sarthak\\dotnetfoodapp\\new folder (2)\\api_upgraded\\foodbridge.application\\dtos\\auth\\refreshrequestdto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{909E1F74-2A5A-6F3D-1278-B3BD67A5AF60}|FoodBridge.Application\\FoodBridge.Application.csproj|solutionrelative:foodbridge.application\\dtos\\auth\\refreshrequestdto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{909E1F74-2A5A-6F3D-1278-B3BD67A5AF60}|FoodBridge.Application\\FoodBridge.Application.csproj|d:\\sarthak\\dotnetfoodapp\\new folder (2)\\api_upgraded\\foodbridge.application\\features\\auth\\commands\\requestotp\\requestotpcommandvalidator.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{909E1F74-2A5A-6F3D-1278-B3BD67A5AF60}|FoodBridge.Application\\FoodBridge.Application.csproj|solutionrelative:foodbridge.application\\features\\auth\\commands\\requestotp\\requestotpcommandvalidator.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{909E1F74-2A5A-6F3D-1278-B3BD67A5AF60}|FoodBridge.Application\\FoodBridge.Application.csproj|d:\\sarthak\\dotnetfoodapp\\new folder (2)\\api_upgraded\\foodbridge.application\\dtos\\auth\\otprequestdto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{909E1F74-2A5A-6F3D-1278-B3BD67A5AF60}|FoodBridge.Application\\FoodBridge.Application.csproj|solutionrelative:foodbridge.application\\dtos\\auth\\otprequestdto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{D70D8D29-0D2D-574B-002C-690580F6FBA2}|FoodBridge.API\\FoodBridge.API.csproj|d:\\sarthak\\dotnetfoodapp\\new folder (2)\\api_upgraded\\foodbridge.api\\extensions\\webapplicationextensions.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{D70D8D29-0D2D-574B-002C-690580F6FBA2}|FoodBridge.API\\FoodBridge.API.csproj|solutionrelative:foodbridge.api\\extensions\\webapplicationextensions.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{D70D8D29-0D2D-574B-002C-690580F6FBA2}|FoodBridge.API\\FoodBridge.API.csproj|d:\\sarthak\\dotnetfoodapp\\new folder (2)\\api_upgraded\\foodbridge.api\\extensions\\servicecollectionextensions.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{D70D8D29-0D2D-574B-002C-690580F6FBA2}|FoodBridge.API\\FoodBridge.API.csproj|solutionrelative:foodbridge.api\\extensions\\servicecollectionextensions.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{909E1F74-2A5A-6F3D-1278-B3BD67A5AF60}|FoodBridge.Application\\FoodBridge.Application.csproj|d:\\sarthak\\dotnetfoodapp\\new folder (2)\\api_upgraded\\foodbridge.application\\dtos\\orders\\orderdto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{909E1F74-2A5A-6F3D-1278-B3BD67A5AF60}|FoodBridge.Application\\FoodBridge.Application.csproj|solutionrelative:foodbridge.application\\dtos\\orders\\orderdto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{CBEE2A03-2791-FF12-B1F3-5C5366239BEF}|FoodBridge.Domain\\FoodBridge.Domain.csproj|d:\\sarthak\\dotnetfoodapp\\new folder (2)\\api_upgraded\\foodbridge.domain\\enums\\foodbridgeenums.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{CBEE2A03-2791-FF12-B1F3-5C5366239BEF}|FoodBridge.Domain\\FoodBridge.Domain.csproj|solutionrelative:foodbridge.domain\\enums\\foodbridgeenums.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{909E1F74-2A5A-6F3D-1278-B3BD67A5AF60}|FoodBridge.Application\\FoodBridge.Application.csproj|d:\\sarthak\\dotnetfoodapp\\new folder (2)\\api_upgraded\\foodbridge.application\\dtos\\coupons\\coupondto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{909E1F74-2A5A-6F3D-1278-B3BD67A5AF60}|FoodBridge.Application\\FoodBridge.Application.csproj|solutionrelative:foodbridge.application\\dtos\\coupons\\coupondto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{D70D8D29-0D2D-574B-002C-690580F6FBA2}|FoodBridge.API\\FoodBridge.API.csproj|d:\\sarthak\\dotnetfoodapp\\new folder (2)\\api_upgraded\\foodbridge.api\\controllers\\paymentscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{D70D8D29-0D2D-574B-002C-690580F6FBA2}|FoodBridge.API\\FoodBridge.API.csproj|solutionrelative:foodbridge.api\\controllers\\paymentscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{D70D8D29-0D2D-574B-002C-690580F6FBA2}|FoodBridge.API\\FoodBridge.API.csproj|d:\\sarthak\\dotnetfoodapp\\new folder (2)\\api_upgraded\\foodbridge.api\\controllers\\couponscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{D70D8D29-0D2D-574B-002C-690580F6FBA2}|FoodBridge.API\\FoodBridge.API.csproj|solutionrelative:foodbridge.api\\controllers\\couponscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{D70D8D29-0D2D-574B-002C-690580F6FBA2}|FoodBridge.API\\FoodBridge.API.csproj|d:\\sarthak\\dotnetfoodapp\\new folder (2)\\api_upgraded\\foodbridge.api\\controllers\\orderscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{D70D8D29-0D2D-574B-002C-690580F6FBA2}|FoodBridge.API\\FoodBridge.API.csproj|solutionrelative:foodbridge.api\\controllers\\orderscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{D70D8D29-0D2D-574B-002C-690580F6FBA2}|FoodBridge.API\\FoodBridge.API.csproj|d:\\sarthak\\dotnetfoodapp\\new folder (2)\\api_upgraded\\foodbridge.api\\controllers\\restaurantscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{D70D8D29-0D2D-574B-002C-690580F6FBA2}|FoodBridge.API\\FoodBridge.API.csproj|solutionrelative:foodbridge.api\\controllers\\restaurantscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    }
+  ],
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 0,
+      "VerticalTabListWidth": 256,
+      "DocumentGroups": [
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": 8,
+          "Children": [
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{3ae79031-e1bc-11d0-8f78-00a0c9110057}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:4:0:{d212f56b-c48a-434c-a121-1c5d80b59b9f}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{aa2115a1-9712-457b-9047-dbb71ca2cdd2}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:2:0:{d212f56b-c48a-434c-a121-1c5d80b59b9f}"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "SoftDeleteEntity.cs",
+              "DocumentMoniker": "D:\\Sarthak\\DotnetFoodApp\\New folder (2)\\api_upgraded\\FoodBridge.Domain\\Common\\SoftDeleteEntity.cs",
+              "RelativeDocumentMoniker": "FoodBridge.Domain\\Common\\SoftDeleteEntity.cs",
+              "ToolTip": "D:\\Sarthak\\DotnetFoodApp\\New folder (2)\\api_upgraded\\FoodBridge.Domain\\Common\\SoftDeleteEntity.cs",
+              "RelativeToolTip": "FoodBridge.Domain\\Common\\SoftDeleteEntity.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAcAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-11T08:47:24.431Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "MenuItem.cs",
+              "DocumentMoniker": "D:\\Sarthak\\DotnetFoodApp\\New folder (2)\\api_upgraded\\FoodBridge.Domain\\Entities\\MenuItem.cs",
+              "RelativeDocumentMoniker": "FoodBridge.Domain\\Entities\\MenuItem.cs",
+              "ToolTip": "D:\\Sarthak\\DotnetFoodApp\\New folder (2)\\api_upgraded\\FoodBridge.Domain\\Entities\\MenuItem.cs",
+              "RelativeToolTip": "FoodBridge.Domain\\Entities\\MenuItem.cs",
+              "ViewState": "AgIAAAUAAAAAAAAAAAAuwBUAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-11T08:46:56.452Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "MenuCategory.cs",
+              "DocumentMoniker": "D:\\Sarthak\\DotnetFoodApp\\New folder (2)\\api_upgraded\\FoodBridge.Domain\\Entities\\MenuCategory.cs",
+              "RelativeDocumentMoniker": "FoodBridge.Domain\\Entities\\MenuCategory.cs",
+              "ToolTip": "D:\\Sarthak\\DotnetFoodApp\\New folder (2)\\api_upgraded\\FoodBridge.Domain\\Entities\\MenuCategory.cs",
+              "RelativeToolTip": "FoodBridge.Domain\\Entities\\MenuCategory.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAA8AAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-11T08:46:42.259Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
+              "Title": "Restaurant.cs",
+              "DocumentMoniker": "D:\\Sarthak\\DotnetFoodApp\\New folder (2)\\api_upgraded\\FoodBridge.Domain\\Entities\\Restaurant.cs",
+              "RelativeDocumentMoniker": "FoodBridge.Domain\\Entities\\Restaurant.cs",
+              "ToolTip": "D:\\Sarthak\\DotnetFoodApp\\New folder (2)\\api_upgraded\\FoodBridge.Domain\\Entities\\Restaurant.cs",
+              "RelativeToolTip": "FoodBridge.Domain\\Entities\\Restaurant.cs",
+              "ViewState": "AgIAABMAAAAAAAAAAAA+wCMAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-11T08:46:27.001Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "GetRestaurantMenuQueryHandler.cs",
+              "DocumentMoniker": "D:\\Sarthak\\DotnetFoodApp\\New folder (2)\\api_upgraded\\FoodBridge.Application\\Features\\Restaurants\\Queries\\GetRestaurantMenu\\GetRestaurantMenuQueryHandler.cs",
+              "RelativeDocumentMoniker": "FoodBridge.Application\\Features\\Restaurants\\Queries\\GetRestaurantMenu\\GetRestaurantMenuQueryHandler.cs",
+              "ToolTip": "D:\\Sarthak\\DotnetFoodApp\\New folder (2)\\api_upgraded\\FoodBridge.Application\\Features\\Restaurants\\Queries\\GetRestaurantMenu\\GetRestaurantMenuQueryHandler.cs",
+              "RelativeToolTip": "FoodBridge.Application\\Features\\Restaurants\\Queries\\GetRestaurantMenu\\GetRestaurantMenuQueryHandler.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAADQAAAAUAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-11T08:30:42.477Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:1:0:{d212f56b-c48a-434c-a121-1c5d80b59b9f}"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 6,
+              "Title": "VerifyOtpCommandHandler.cs",
+              "DocumentMoniker": "D:\\Sarthak\\DotnetFoodApp\\New folder (2)\\api_upgraded\\FoodBridge.Application\\Features\\Auth\\Commands\\VerifyOtp\\VerifyOtpCommandHandler.cs",
+              "RelativeDocumentMoniker": "FoodBridge.Application\\Features\\Auth\\Commands\\VerifyOtp\\VerifyOtpCommandHandler.cs",
+              "ToolTip": "D:\\Sarthak\\DotnetFoodApp\\New folder (2)\\api_upgraded\\FoodBridge.Application\\Features\\Auth\\Commands\\VerifyOtp\\VerifyOtpCommandHandler.cs",
+              "RelativeToolTip": "FoodBridge.Application\\Features\\Auth\\Commands\\VerifyOtp\\VerifyOtpCommandHandler.cs",
+              "ViewState": "AgIAAE4AAAAAAAAAAAAcwGkAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-11T08:13:30.607Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 7,
+              "Title": "VerifyOtpCommand.cs",
+              "DocumentMoniker": "D:\\Sarthak\\DotnetFoodApp\\New folder (2)\\api_upgraded\\FoodBridge.Application\\Features\\Auth\\Commands\\VerifyOtp\\VerifyOtpCommand.cs",
+              "RelativeDocumentMoniker": "FoodBridge.Application\\Features\\Auth\\Commands\\VerifyOtp\\VerifyOtpCommand.cs",
+              "ToolTip": "D:\\Sarthak\\DotnetFoodApp\\New folder (2)\\api_upgraded\\FoodBridge.Application\\Features\\Auth\\Commands\\VerifyOtp\\VerifyOtpCommand.cs",
+              "RelativeToolTip": "FoodBridge.Application\\Features\\Auth\\Commands\\VerifyOtp\\VerifyOtpCommand.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAkAAAAlAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-11T08:13:12.694Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 8,
+              "Title": "AuthController.cs",
+              "DocumentMoniker": "D:\\Sarthak\\DotnetFoodApp\\New folder (2)\\api_upgraded\\FoodBridge.API\\Controllers\\AuthController.cs",
+              "RelativeDocumentMoniker": "FoodBridge.API\\Controllers\\AuthController.cs",
+              "ToolTip": "D:\\Sarthak\\DotnetFoodApp\\New folder (2)\\api_upgraded\\FoodBridge.API\\Controllers\\AuthController.cs",
+              "RelativeToolTip": "FoodBridge.API\\Controllers\\AuthController.cs",
+              "ViewState": "AgIAACkAAAAAAAAAAAAIwEIAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-11T08:12:13.938Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 10,
+              "Title": "RefreshRequestDto.cs",
+              "DocumentMoniker": "D:\\Sarthak\\DotnetFoodApp\\New folder (2)\\api_upgraded\\FoodBridge.Application\\DTOs\\Auth\\RefreshRequestDto.cs",
+              "RelativeDocumentMoniker": "FoodBridge.Application\\DTOs\\Auth\\RefreshRequestDto.cs",
+              "ToolTip": "D:\\Sarthak\\DotnetFoodApp\\New folder (2)\\api_upgraded\\FoodBridge.Application\\DTOs\\Auth\\RefreshRequestDto.cs",
+              "RelativeToolTip": "FoodBridge.Application\\DTOs\\Auth\\RefreshRequestDto.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAYAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-11T07:52:04.232Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 5,
+              "Title": "OtpVerifyDto.cs",
+              "DocumentMoniker": "D:\\Sarthak\\DotnetFoodApp\\New folder (2)\\api_upgraded\\FoodBridge.Application\\DTOs\\Auth\\OtpVerifyDto.cs",
+              "RelativeDocumentMoniker": "FoodBridge.Application\\DTOs\\Auth\\OtpVerifyDto.cs",
+              "ToolTip": "D:\\Sarthak\\DotnetFoodApp\\New folder (2)\\api_upgraded\\FoodBridge.Application\\DTOs\\Auth\\OtpVerifyDto.cs",
+              "RelativeToolTip": "FoodBridge.Application\\DTOs\\Auth\\OtpVerifyDto.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAsAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-11T07:51:45.69Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 11,
+              "Title": "RequestOtpCommandValidator.cs",
+              "DocumentMoniker": "D:\\Sarthak\\DotnetFoodApp\\New folder (2)\\api_upgraded\\FoodBridge.Application\\Features\\Auth\\Commands\\RequestOtp\\RequestOtpCommandValidator.cs",
+              "RelativeDocumentMoniker": "FoodBridge.Application\\Features\\Auth\\Commands\\RequestOtp\\RequestOtpCommandValidator.cs",
+              "ToolTip": "D:\\Sarthak\\DotnetFoodApp\\New folder (2)\\api_upgraded\\FoodBridge.Application\\Features\\Auth\\Commands\\RequestOtp\\RequestOtpCommandValidator.cs",
+              "RelativeToolTip": "FoodBridge.Application\\Features\\Auth\\Commands\\RequestOtp\\RequestOtpCommandValidator.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAA8AAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-11T07:32:27.624Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 12,
+              "Title": "OtpRequestDto.cs",
+              "DocumentMoniker": "D:\\Sarthak\\DotnetFoodApp\\New folder (2)\\api_upgraded\\FoodBridge.Application\\DTOs\\Auth\\OtpRequestDto.cs",
+              "RelativeDocumentMoniker": "FoodBridge.Application\\DTOs\\Auth\\OtpRequestDto.cs",
+              "ToolTip": "D:\\Sarthak\\DotnetFoodApp\\New folder (2)\\api_upgraded\\FoodBridge.Application\\DTOs\\Auth\\OtpRequestDto.cs",
+              "RelativeToolTip": "FoodBridge.Application\\DTOs\\Auth\\OtpRequestDto.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAkAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-11T07:32:08.522Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 9,
+              "Title": "UsersController.cs",
+              "DocumentMoniker": "D:\\Sarthak\\DotnetFoodApp\\New folder (2)\\api_upgraded\\FoodBridge.API\\Controllers\\UsersController.cs",
+              "RelativeDocumentMoniker": "FoodBridge.API\\Controllers\\UsersController.cs",
+              "ToolTip": "D:\\Sarthak\\DotnetFoodApp\\New folder (2)\\api_upgraded\\FoodBridge.API\\Controllers\\UsersController.cs",
+              "RelativeToolTip": "FoodBridge.API\\Controllers\\UsersController.cs",
+              "ViewState": "AgIAAGEAAAAAAAAAAAAUwHEAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-11T07:09:54.497Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 14,
+              "Title": "ServiceCollectionExtensions.cs",
+              "DocumentMoniker": "D:\\Sarthak\\DotnetFoodApp\\New folder (2)\\api_upgraded\\FoodBridge.API\\Extensions\\ServiceCollectionExtensions.cs",
+              "RelativeDocumentMoniker": "FoodBridge.API\\Extensions\\ServiceCollectionExtensions.cs",
+              "ToolTip": "D:\\Sarthak\\DotnetFoodApp\\New folder (2)\\api_upgraded\\FoodBridge.API\\Extensions\\ServiceCollectionExtensions.cs",
+              "RelativeToolTip": "FoodBridge.API\\Extensions\\ServiceCollectionExtensions.cs",
+              "ViewState": "AgIAAGkAAAAAAAAAAAAcwIQAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-11T07:29:15.224Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 13,
+              "Title": "WebApplicationExtensions.cs",
+              "DocumentMoniker": "D:\\Sarthak\\DotnetFoodApp\\New folder (2)\\api_upgraded\\FoodBridge.API\\Extensions\\WebApplicationExtensions.cs",
+              "RelativeDocumentMoniker": "FoodBridge.API\\Extensions\\WebApplicationExtensions.cs",
+              "ToolTip": "D:\\Sarthak\\DotnetFoodApp\\New folder (2)\\api_upgraded\\FoodBridge.API\\Extensions\\WebApplicationExtensions.cs",
+              "RelativeToolTip": "FoodBridge.API\\Extensions\\WebApplicationExtensions.cs",
+              "ViewState": "AgIAAAkAAAAAAAAAAAAcwCQAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-11T07:27:36.532Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 15,
+              "Title": "OrderDto.cs",
+              "DocumentMoniker": "D:\\Sarthak\\DotnetFoodApp\\New folder (2)\\api_upgraded\\FoodBridge.Application\\DTOs\\Orders\\OrderDto.cs",
+              "RelativeDocumentMoniker": "FoodBridge.Application\\DTOs\\Orders\\OrderDto.cs",
+              "ToolTip": "D:\\Sarthak\\DotnetFoodApp\\New folder (2)\\api_upgraded\\FoodBridge.Application\\DTOs\\Orders\\OrderDto.cs",
+              "RelativeToolTip": "FoodBridge.Application\\DTOs\\Orders\\OrderDto.cs",
+              "ViewState": "AgIAACMAAAAAAAAAAAAuwDMAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-11T07:21:23.745Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 16,
+              "Title": "FoodBridgeEnums.cs",
+              "DocumentMoniker": "D:\\Sarthak\\DotnetFoodApp\\New folder (2)\\api_upgraded\\FoodBridge.Domain\\Enums\\FoodBridgeEnums.cs",
+              "RelativeDocumentMoniker": "FoodBridge.Domain\\Enums\\FoodBridgeEnums.cs",
+              "ToolTip": "D:\\Sarthak\\DotnetFoodApp\\New folder (2)\\api_upgraded\\FoodBridge.Domain\\Enums\\FoodBridgeEnums.cs",
+              "RelativeToolTip": "FoodBridge.Domain\\Enums\\FoodBridgeEnums.cs",
+              "ViewState": "AgIAAEUBAAAAAAAAAAAIwF4BAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-11T07:15:54.29Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 17,
+              "Title": "CouponDto.cs",
+              "DocumentMoniker": "D:\\Sarthak\\DotnetFoodApp\\New folder (2)\\api_upgraded\\FoodBridge.Application\\DTOs\\Coupons\\CouponDto.cs",
+              "RelativeDocumentMoniker": "FoodBridge.Application\\DTOs\\Coupons\\CouponDto.cs",
+              "ToolTip": "D:\\Sarthak\\DotnetFoodApp\\New folder (2)\\api_upgraded\\FoodBridge.Application\\DTOs\\Coupons\\CouponDto.cs",
+              "RelativeToolTip": "FoodBridge.Application\\DTOs\\Coupons\\CouponDto.cs",
+              "ViewState": "AgIAAAUAAAAAAAAAAAA8wBQAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-11T07:15:01.284Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 18,
+              "Title": "PaymentsController.cs",
+              "DocumentMoniker": "D:\\Sarthak\\DotnetFoodApp\\New folder (2)\\api_upgraded\\FoodBridge.API\\Controllers\\PaymentsController.cs",
+              "RelativeDocumentMoniker": "FoodBridge.API\\Controllers\\PaymentsController.cs",
+              "ToolTip": "D:\\Sarthak\\DotnetFoodApp\\New folder (2)\\api_upgraded\\FoodBridge.API\\Controllers\\PaymentsController.cs",
+              "RelativeToolTip": "FoodBridge.API\\Controllers\\PaymentsController.cs",
+              "ViewState": "AgIAACsAAAAAAAAAAAAUwEUAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-11T07:11:25.889Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 19,
+              "Title": "CouponsController.cs",
+              "DocumentMoniker": "D:\\Sarthak\\DotnetFoodApp\\New folder (2)\\api_upgraded\\FoodBridge.API\\Controllers\\CouponsController.cs",
+              "RelativeDocumentMoniker": "FoodBridge.API\\Controllers\\CouponsController.cs",
+              "ToolTip": "D:\\Sarthak\\DotnetFoodApp\\New folder (2)\\api_upgraded\\FoodBridge.API\\Controllers\\CouponsController.cs",
+              "RelativeToolTip": "FoodBridge.API\\Controllers\\CouponsController.cs",
+              "ViewState": "AgIAAF8AAAAAAAAAAAAIwHgAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-11T07:11:10.136Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 20,
+              "Title": "OrdersController.cs",
+              "DocumentMoniker": "D:\\Sarthak\\DotnetFoodApp\\New folder (2)\\api_upgraded\\FoodBridge.API\\Controllers\\OrdersController.cs",
+              "RelativeDocumentMoniker": "FoodBridge.API\\Controllers\\OrdersController.cs",
+              "ToolTip": "D:\\Sarthak\\DotnetFoodApp\\New folder (2)\\api_upgraded\\FoodBridge.API\\Controllers\\OrdersController.cs",
+              "RelativeToolTip": "FoodBridge.API\\Controllers\\OrdersController.cs",
+              "ViewState": "AgIAAK8AAAAAAAAAAAAUwMkAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-11T07:10:49.337Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 21,
+              "Title": "RestaurantsController.cs",
+              "DocumentMoniker": "D:\\Sarthak\\DotnetFoodApp\\New folder (2)\\api_upgraded\\FoodBridge.API\\Controllers\\RestaurantsController.cs",
+              "RelativeDocumentMoniker": "FoodBridge.API\\Controllers\\RestaurantsController.cs",
+              "ToolTip": "D:\\Sarthak\\DotnetFoodApp\\New folder (2)\\api_upgraded\\FoodBridge.API\\Controllers\\RestaurantsController.cs",
+              "RelativeToolTip": "FoodBridge.API\\Controllers\\RestaurantsController.cs",
+              "ViewState": "AgIAAM0AAAAAAAAAAADwv+UAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-11T07:10:28.609Z",
+              "EditorCaption": ""
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

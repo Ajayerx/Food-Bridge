@@ -1,0 +1,13 @@
+﻿################################################################################
+# This .gitignore file was automatically created by Microsoft(R) Visual Studio.
+################################################################################
+
+/.vs
+FoodBridge.API/bin/
+FoodBridge.API/obj
+FoodBridge.Application/bin/Debug
+FoodBridge.Application/obj
+FoodBridge.Domain/bin/Debug
+FoodBridge.Domain/obj
+FoodBridge.Infrastructure/bin/Debug
+FoodBridge.Infrastructure/obj

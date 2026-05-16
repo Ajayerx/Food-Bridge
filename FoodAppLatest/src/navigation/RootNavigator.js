@@ -31,17 +31,12 @@ import { LocationSelectScreen } from "../screens/location/LocationSelectScreen";
 import NotificationsScreen from '../screens/notification/NotificationsScreen';
 import NotificationDetailScreen from '../screens/notification/NotificationDetailScreen';
 
+
 const Stack = createNativeStackNavigator();
-const RootNavigator = () => {
-  const isLoading = useUserStore(s => s.isLoading);
-  const isLoggedIn = useUserStore(s => s.isLoggedIn);
 
-  useSocket();
-
-  // ⏳ Splash while loading
-  if (isLoading) {
-    return <SplashScreen />;
-  }
+// ✅ Separate component so useSocket only mounts when logged in
+const AuthenticatedNavigator = () => {
+  useSocket(); // ✅ now only called when user is confirmed logged in
 
   return (
     <Stack.Navigator
@@ -50,39 +45,48 @@ const RootNavigator = () => {
         contentStyle: { backgroundColor: Colors.background },
       }}
     >
-
-      {/* ❌ NOT LOGGED IN */}
-      {!isLoggedIn ? (
-        <>
-          <Stack.Screen name="LoginScreen" component={LoginScreen} />
-          <Stack.Screen name="OtpScreen" component={OtpScreen} />
-        </>
-      ) : (
-        <>
-          {/* ✅ LOGGED IN */}
-          <Stack.Screen name="MainApp" component={BottomTabNavigator} />
-
-          <Stack.Screen name="RestaurantDetailScreen" component={RestaurantDetailScreen} />
-          <Stack.Screen name="CartScreen" component={CartScreen} />
-          <Stack.Screen name="CheckoutScreen" component={CheckoutScreen} />
-          <Stack.Screen name="CouponScreen" component={CouponScreen} options={{ presentation: 'modal' }} />
-          <Stack.Screen name="OrderTrackingScreen" component={OrderTrackingScreen} />
-          <Stack.Screen name="SearchScreen" component={SearchScreen} />
-          <Stack.Screen name="EditProfileScreen" component={EditProfileScreen} />
-          <Stack.Screen name="OrderDetailScreen" component={OrderDetailScreen} />
-          <Stack.Screen name="AddressesScreen" component={AddressesScreen} />
-          <Stack.Screen name="AddAddressScreen" component={AddAddressScreen} />
-          <Stack.Screen name="EditAddressScreen" component={EditAddressScreen} />
-          <Stack.Screen name="PaymentMethods" component={PaymentMethodsScreen} />
-          <Stack.Screen name="AddCard" component={AddCardScreen} />
-          <Stack.Screen name="LocationSelectScreen" component={LocationSelectScreen} />
-          <Stack.Screen name="NotificationsScreen" component={NotificationsScreen} />
-          <Stack.Screen name="NotificationDetailScreen" component={NotificationDetailScreen} />
-        </>
-      )}
-
+      <Stack.Screen name="MainApp" component={BottomTabNavigator} />
+      <Stack.Screen name="RestaurantDetailScreen" component={RestaurantDetailScreen} />
+      <Stack.Screen name="CartScreen" component={CartScreen} />
+      <Stack.Screen name="CheckoutScreen" component={CheckoutScreen} />
+      <Stack.Screen name="CouponScreen" component={CouponScreen} options={{ presentation: 'modal' }} />
+      <Stack.Screen name="OrderTrackingScreen" component={OrderTrackingScreen} />
+      <Stack.Screen name="SearchScreen" component={SearchScreen} />
+      <Stack.Screen name="EditProfileScreen" component={EditProfileScreen} />
+      <Stack.Screen name="OrderDetailScreen" component={OrderDetailScreen} />
+      <Stack.Screen name="AddressesScreen" component={AddressesScreen} />
+      <Stack.Screen name="AddAddressScreen" component={AddAddressScreen} />
+      <Stack.Screen name="EditAddressScreen" component={EditAddressScreen} />
+      <Stack.Screen name="PaymentMethods" component={PaymentMethodsScreen} />
+      <Stack.Screen name="AddCard" component={AddCardScreen} />
+      <Stack.Screen name="LocationSelectScreen" component={LocationSelectScreen} />
+      <Stack.Screen name="NotificationsScreen" component={NotificationsScreen} />
+      <Stack.Screen name="NotificationDetailScreen" component={NotificationDetailScreen} />
     </Stack.Navigator>
   );
+};
+
+const RootNavigator = () => {
+  const isLoading = useUserStore(s => s.isLoading);
+  const isLoggedIn = useUserStore(s => s.isLoggedIn);
+
+  // ⏳ Splash while hydrating AsyncStorage
+  if (isLoading) {
+    return <SplashScreen />;
+  }
+
+  if (!isLoggedIn) {
+    return (
+      <Stack.Navigator screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="LoginScreen" component={LoginScreen} />
+        <Stack.Screen name="OtpScreen" component={OtpScreen} />
+      </Stack.Navigator>
+    );
+  }
+
+  // ✅ Only mounts AuthenticatedNavigator (and useSocket inside it)
+  // when we know for sure the user is logged in
+  return <AuthenticatedNavigator />;
 };
 
 export default RootNavigator;

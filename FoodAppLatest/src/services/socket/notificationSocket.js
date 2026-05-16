@@ -26,6 +26,10 @@ class NotificationSocket {
             .withUrl(HUB_URL, {
                 accessTokenFactory: async () =>
                     (await AsyncStorage.getItem('access_token')) ?? '',
+                // ✅ Skip HTTP negotiation — connects directly via WebSocket
+                // This is what stops the "stopped during negotiation" error
+                transport: signalR.HttpTransportType.WebSockets,
+                skipNegotiation: true,
             })
             .withAutomaticReconnect([0, 2000, 5000, 10000, 30000])
             .configureLogging(signalR.LogLevel.Warning)

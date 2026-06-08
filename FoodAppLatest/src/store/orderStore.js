@@ -5,6 +5,7 @@ import {
   getOrderById as getOrderByIdAPI,
   placeOrder as placeOrderAPI,
 } from "../services/order/orderService";
+import { getRestaurantById } from "../services/restaurant/restaurantService";
 
 // ✅ Display labels used in UI — values must match STATUS_CONFIG keys in OrderTrackingScreen
 export const ORDER_STATUSES = [
@@ -59,9 +60,6 @@ export const useOrderStore = create(
           // Fetch restaurant name if not already known
           let restaurantName = order.restaurant_name || 'Restaurant';
           try {
-            const { getRestaurantById } = await import(
-              "../services/restaurant/restaurantService"
-            );
             const rest = await getRestaurantById(order.restaurant_id);
             restaurantName = rest?.data?.name || restaurantName;
           } catch (_) { }
@@ -143,9 +141,6 @@ export const useOrderStore = create(
           // Fetch restaurant name for tracking screen
           let restaurantName = cartData.restaurantName || 'Restaurant';
           try {
-            const { getRestaurantById } = await import(
-              "../services/restaurant/restaurantService"
-            );
             const rest = await getRestaurantById(cartData.restaurantId);
             restaurantName = rest?.data?.name || restaurantName;
           } catch (_) { }

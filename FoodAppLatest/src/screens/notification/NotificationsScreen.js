@@ -1,8 +1,4 @@
 // screens/NotificationsScreen.js
-// ─────────────────────────────────────────────────────────────────────────────
-// Customer app — full Notifications screen (Swiggy/Zomato-level)
-// ─────────────────────────────────────────────────────────────────────────────
-
 import React, { useState, useCallback } from "react";
 import {
     View,
@@ -19,6 +15,8 @@ import { useNotifications } from "../../hooks/useNotifications";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { notificationService } from "../../services/notification/notificationService";
 import { useNavigation } from '@react-navigation/native';
+import Icon from 'react-native-vector-icons/MaterialIcons';
+import { Colors } from '../../constants/colors';
 
 
 // ── Type config ──────────────────────────────────────────────────────────
@@ -166,8 +164,8 @@ export default function NotificationsScreen({ route, navigation }) {
         <View style={[styles.container, { paddingTop: insets.top }]}>
             {/* Header */}
             <View style={styles.header}>
-                <TouchableOpacity onPress={() => navigation?.goBack()} style={styles.backBtn}>
-                    <Text style={styles.backIcon}>←</Text>
+                <TouchableOpacity onPress={() => navigation?.goBack()}>
+                    <Icon name="arrow-back-ios" size={20} color={Colors.textPrimary} />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Notifications</Text>
                 {badgeCount > 0 && (
@@ -228,13 +226,18 @@ const styles = StyleSheet.create({
         backgroundColor: "#f9fafb",
     },
     header: {
-        flexDirection: "row",
-        alignItems: "center",
-        paddingHorizontal: 16,
-        paddingVertical: 14,
-        backgroundColor: "#ffffff",
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: 16,
+        backgroundColor: Colors.white,
         borderBottomWidth: 1,
-        borderBottomColor: "#f3f4f6",
+        borderColor: Colors.border,   // ← was borderBottomColor: "#f3f4f6"
+    },
+    headerTitle: {
+        fontSize: 18,
+        fontWeight: '700',
+        color: Colors.textPrimary,    // ← was "#111827"
     },
     backBtn: {
         width: 36,
@@ -246,12 +249,6 @@ const styles = StyleSheet.create({
         marginRight: 10,
     },
     backIcon: { fontSize: 20, color: "#374151" },
-    headerTitle: {
-        flex: 1,
-        fontSize: 18,
-        fontWeight: "700",
-        color: "#111827",
-    },
     markAllBtn: {
         backgroundColor: "#fff7ed",
         paddingHorizontal: 12,

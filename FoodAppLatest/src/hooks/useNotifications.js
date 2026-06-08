@@ -1,7 +1,7 @@
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useCallback } from "react";
 import { AppState } from "react-native";
 import { useNotificationStore } from "../store/notificationStore";
-import { useUserStore } from "../store/userStore";          // ✅ add this
+import { useUserStore } from "../store/userStore";
 import { notificationService } from "../services/notification/notificationService";
 import { notificationSocket } from "../services/socket/notificationSocket";
 
@@ -14,20 +14,32 @@ function normalizeNotification(n) {
             .toUpperCase()
             .replace(/^_/, '');
     };
+
+    const rawId = n.id ?? n.Id;
+    const rawUserId = n.user_id ?? n.userId ?? n.UserId;
+    const rawIsRead = n.is_read ?? n.isRead ?? false;
+    const rawCreatedAt = n.created_at ?? n.createdAt;
+    const rawData = n.data ?? n.Data;
+
+    const parsedData = rawData
+        ? (typeof rawData === "string"
+            ? (() => { try { return JSON.parse(rawData); } catch { return null; } })()
+            : rawData)
+        : null;
+
     return {
-        id: String(n.id),
-        userId: n.user_id,
-        title: n.title,
-        body: n.body,
-        type: normalizeType(n.type),
-        channel: n.channel ?? "in_app",
-        isRead: n.is_read === 1 || n.is_read === true,
-        data: n.data
-            ? (typeof n.data === "string" ? JSON.parse(n.data) : n.data)
-            : null,
-        createdAt: n.created_at,
+        id: String(rawId),
+        userId: rawUserId ? String(rawUserId) : null,
+        title: n.title ?? n.Title,
+        body: n.body ?? n.Body,
+        type: normalizeType(n.type ?? n.Type),
+        channel: n.channel ?? n.Channel ?? "in_app",
+        isRead: rawIsRead === 1 || rawIsRead === true,
+        data: parsedData,
+        createdAt: rawCreatedAt,
     };
 }
+
 export function useNotifications(userId) {
     const {
         addNotification,
@@ -38,59 +50,52 @@ export function useNotifications(userId) {
         isInitialized,
     } = useNotificationStore();
 
-    // ── Auth guard (read directly from store, not React state) ───────────
     const isAuthed = () => {
         const { isLoggedIn, isLoggingOut } = useUserStore.getState();
         return isLoggedIn && !isLoggingOut;
     };
 
-    // ── Fetch from API ────────────────────────────────────────────────────
     const fetchInitial = useCallback(async () => {
         if (!userId) return;
-        if (!isAuthed()) return;          // ✅ guard added
+        if (!isAuthed()) return;
 
         try {
             const res = await notificationService.getNotifications({ page: 1, limit: 30 });
-
-            // ✅ Response may be null if interceptor swallowed it during logout
             if (!res) return;
 
             const responseData = res.data?.data;
             const items = Array.isArray(responseData?.items) ? responseData.items : [];
             const unreadCount = responseData?.unread_count ?? responseData?.unreadCount ?? 0;
 
-            // ✅ Re-check after await — user may have logged out while fetching
             if (!isAuthed()) return;
 
             setNotifications(items.map(normalizeNotification));
             setBadgeCount(unreadCount);
             setInitialized(true);
         } catch (err) {
-            // ✅ Suppress errors that happen mid-logout
             if (!isAuthed()) return;
             console.error("Failed to fetch notifications:", err);
         }
     }, [userId, setNotifications, setBadgeCount, setInitialized]);
 
-    // ── SignalR socket listeners ──────────────────────────────────────────
     useEffect(() => {
         if (!userId) return;
-        if (!isAuthed()) return;          // ✅ guard added
+        if (!isAuthed()) return;
 
         notificationSocket.connect();
 
         const onNew = (notif) => {
-            if (!isAuthed()) return;      // ✅ guard added
+            if (!isAuthed()) return;
             addNotification(normalizeNotification(notif));
         };
 
         const onBadgeCount = (count) => {
-            if (!isAuthed()) return;      // ✅ guard added
+            if (!isAuthed()) return;
             setBadgeCount(count);
         };
 
         const onAllRead = () => {
-            if (!isAuthed()) return;      // ✅ guard added
+            if (!isAuthed()) return;
             markAllReadLocal();
             setBadgeCount(0);
         };
@@ -105,17 +110,14 @@ export function useNotifications(userId) {
             notificationSocket.off("receivenotification", onNew);
             notificationSocket.off("receivebadgecount", onBadgeCount);
             notificationSocket.off("allnotificationsread", onAllRead);
-            // ✅ Disconnect socket on cleanup (logout navigates away,
-            //    unmounting the component that owns this hook)
-            notificationSocket.disconnect();
+            // ✅ DO NOT disconnect here — disconnecting on navigation unmount
+            //    kills the socket for all screens and causes duplicate
+            //    re-registrations on reconnect. Only disconnect on logout.
         };
     }, [userId, isInitialized]);
 
-    // ── Re-fetch when app comes to foreground ─────────────────────────────
     useEffect(() => {
         const sub = AppState.addEventListener("change", (state) => {
-            // ✅ isAuthed() check was completely missing here — this was
-            //    the primary crash trigger after a background→foreground cycle
             if (state === "active" && userId && isAuthed()) {
                 useNotificationStore.getState().setInitialized(false);
                 fetchInitial();
@@ -124,20 +126,20 @@ export function useNotifications(userId) {
         return () => sub.remove();
     }, [userId, fetchInitial]);
 
-    // ── Actions ───────────────────────────────────────────────────────────
     const markRead = useCallback(async (id) => {
-        if (!isAuthed()) return;          // ✅ guard added
+        if (!isAuthed()) return;
+        useNotificationStore.getState().markReadLocal(id);
         try {
             await notificationService.markRead(id);
-            useNotificationStore.getState().markReadLocal(id);
         } catch (err) {
             if (!isAuthed()) return;
+            if (err?.response?.status === 404) return;
             console.error("markRead failed:", err);
         }
     }, []);
 
     const markAllRead = useCallback(async () => {
-        if (!isAuthed()) return;          // ✅ guard added
+        if (!isAuthed()) return;
         try {
             await notificationService.markAllRead();
             markAllReadLocal();
@@ -149,10 +151,10 @@ export function useNotifications(userId) {
     }, [markAllReadLocal, setBadgeCount]);
 
     const loadMore = useCallback(async (page) => {
-        if (!userId || !isAuthed()) return;   // ✅ guard added
+        if (!userId || !isAuthed()) return;
         try {
             const res = await notificationService.getNotifications({ page, limit: 20 });
-            if (!res || !isAuthed()) return;  // ✅ post-await check
+            if (!res || !isAuthed()) return;
             const items = Array.isArray(res.data?.data?.items) ? res.data.data.items : [];
             useNotificationStore.getState().appendNotifications(
                 items.map(normalizeNotification)

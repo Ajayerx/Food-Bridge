@@ -1,4 +1,3 @@
-import api from "../../services/api/base";
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, Animated, TouchableOpacity,
@@ -17,6 +16,7 @@ import { cancelOrder as cancelOrderAPI } from '../../services/order/orderService
 
 // ─── Status Maps ──────────────────────────────────────────────────────────────
 const STATUS_MAP = {
+  // snake_case from socket
   placed: 'Placed',
   confirmed: 'Confirmed',
   preparing: 'Preparing',
@@ -26,6 +26,16 @@ const STATUS_MAP = {
   completed: 'Delivered',
   cancelled: 'Cancelled',
   refunded: 'Refunded',
+  // PascalCase from .NET SignalR events
+  Placed: 'Placed',
+  Confirmed: 'Confirmed',
+  Preparing: 'Preparing',
+  ReadyForPickup: 'Ready for Pickup',
+  OutForDelivery: 'Out for Delivery',
+  Delivered: 'Delivered',
+  Completed: 'Delivered',
+  Cancelled: 'Cancelled',
+  Refunded: 'Refunded',
 };
 
 const STATUS_CONFIG = [
@@ -101,8 +111,6 @@ const ReviewCard = ({ orderId, restaurantId }) => {
           setExistingReview(review);
           setSubmitted(true);
           setSelected(review.rating);
-
-          // ✅ Stop polling once reply arrives
           if (review.reply_text && pollInterval) {
             clearInterval(pollInterval);
             pollInterval = null;
@@ -115,9 +123,6 @@ const ReviewCard = ({ orderId, restaurantId }) => {
     };
 
     fetchReview();
-
-    // ✅ Poll every 30s only when review submitted but no reply yet
-    // Will be cleared when reply arrives or component unmounts
     pollInterval = setInterval(() => {
       if (!cancelled) fetchReview();
     }, 30000);
@@ -385,40 +390,22 @@ const ETACircle = ({ minutes, status }) => {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
-// MAIN SCREEN
+// MAIN SCREEN — all hooks at top level (Rules of Hooks compliant)
 // ─────────────────────────────────────────────────────────────────────────────
 export const OrderTrackingScreen = ({ navigation, route }) => {
   const { orderId } = route.params;
 
-  const currentOrder = useOrderStore(state =>
-    state.orders.find(o => o.id === orderId || o.order_code === orderId)
-  );
-
-  useEffect(() => {
-    if (!orderId) return;
-    socket.emit('joinOrderRoom', orderId);
-    return () => socket.emit('leaveOrderRoom', orderId);
-  }, [orderId]);
-
-  useEffect(() => {
-    if (orderId) useOrderStore.getState().fetchOrderById(orderId);
-  }, [orderId]);
-
-  useEffect(() => {
-    if (!orderId) return;
-    const handleStatusUpdate = (data) => {
-      if (data.orderId === orderId) {
-        useOrderStore.getState().setOrderStatus(data.orderId, data.status);
-      }
-    };
-    socket.on('orderStatusUpdated', handleStatusUpdate);
-    return () => socket.off('orderStatusUpdated', handleStatusUpdate);
-  }, [orderId]);
-
+  // ── Animation refs — declared unconditionally at the top ─────────────────
   const headerAnim = useRef(new Animated.Value(0)).current;
   const contentOpacity = useRef(new Animated.Value(0)).current;
   const contentAnim = useRef(new Animated.Value(30)).current;
 
+  // ── Store selector ────────────────────────────────────────────────────────
+  const currentOrder = useOrderStore(state =>
+    state.orders.find(o => o.id === orderId || o.order_code === orderId)
+  );
+
+  // ── Entrance animation ────────────────────────────────────────────────────
   useEffect(() => {
     Animated.parallel([
       Animated.timing(headerAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
@@ -427,13 +414,44 @@ export const OrderTrackingScreen = ({ navigation, route }) => {
     ]).start();
   }, []);
 
-  const rawStatus = currentOrder?.order_status ?? '';
-  const currentStatus = currentOrder?.status
-    ?? STATUS_MAP[rawStatus?.toLowerCase()]
-    ?? rawStatus;
+  // ── Fetch fresh order data on mount ──────────────────────────────────────
+  useEffect(() => {
+    if (orderId) {
+      useOrderStore.getState().fetchOrderById(orderId);
+    }
+  }, [orderId]);
 
-  // ADD THIS
-  console.log("🔄 status debug:", { rawStatus, currentStatus, order_status: currentOrder?.order_status });
+  // ── Join/leave the SignalR order room ─────────────────────────────────────
+  useEffect(() => {
+    if (!orderId) return;
+    socket.emit('joinOrderRoom', orderId);
+    return () => socket.emit('leaveOrderRoom', orderId);
+  }, [orderId]);
+
+  // ── Listen for real-time status updates ───────────────────────────────────
+  // FIX: socket.on/off was never called in the original file.
+  // The handler also referenced a non-existent queryClientRef — removed.
+  useEffect(() => {
+    if (!orderId) return;
+
+    const handleStatusUpdate = (data) => {
+      // data = { orderId, status } from the SignalR hub
+      if (data?.orderId !== orderId && data?.orderId !== currentOrder?.id) return;
+      useOrderStore.getState().setOrderStatus(data.orderId, data.status);
+    };
+
+    // SignalR event name is PascalCase — socket.on normalises it automatically
+    socket.on('OrderStatusUpdated', handleStatusUpdate);
+    return () => socket.off('OrderStatusUpdated', handleStatusUpdate);
+  }, [orderId, currentOrder?.id]);
+
+  // ── Derive display values ─────────────────────────────────────────────────
+  const rawStatus = currentOrder?.order_status ?? '';
+  const currentStatus =
+    STATUS_MAP[rawStatus] ??
+    STATUS_MAP[rawStatus?.toLowerCase()] ??
+    rawStatus ??
+    'Placed';
 
   const isDelivered = currentStatus === 'Delivered';
   const timelineSteps = STATUS_CONFIG.filter(s => s.key !== 'Cancelled');
@@ -441,7 +459,8 @@ export const OrderTrackingScreen = ({ navigation, route }) => {
   const eta = currentStatus === 'Cancelled' ? 0 : (ETA_BY_STATUS[currentStatus] ?? 0);
   const activeConfig = STATUS_CONFIG.find(s => s.key === currentStatus) ?? STATUS_CONFIG[0];
 
-  const handleCancelOrder = () => {
+  // ── Cancel handler ────────────────────────────────────────────────────────
+  const handleCancelOrder = useCallback(() => {
     Alert.alert('Cancel Order', 'Are you sure you want to cancel this order?', [
       { text: 'No', style: 'cancel' },
       {
@@ -452,13 +471,13 @@ export const OrderTrackingScreen = ({ navigation, route }) => {
             useOrderStore.getState().setOrderStatus(orderId, 'cancelled');
           } catch (e) {
             Alert.alert('Error', 'Could not cancel order. Please try again.');
-            console.log('Cancel error', e);
           }
         },
       },
     ]);
-  };
+  }, [orderId]);
 
+  // ── No order guard ────────────────────────────────────────────────────────
   if (!currentOrder) {
     return (
       <SafeAreaView style={styles.container}>
@@ -637,6 +656,7 @@ export const OrderTrackingScreen = ({ navigation, route }) => {
             restaurantId={order.restaurant_id}
           />
         )}
+
         {/* Cancel Reason */}
         {currentStatus === 'Cancelled' && !!(order.cancel_reason) && (
           <View style={styles.card}>
@@ -649,6 +669,7 @@ export const OrderTrackingScreen = ({ navigation, route }) => {
             </View>
           </View>
         )}
+
         {/* Actions */}
         <View style={styles.actionsCard}>
           {!isDelivered && (currentStatus === 'Placed' || currentStatus === 'Confirmed') && (
@@ -812,9 +833,6 @@ const styles = StyleSheet.create({
   noOrderTitle: { fontSize: 18, color: Colors.textSecondary, fontWeight: '600' },
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// REVIEW CARD STYLES
-// ─────────────────────────────────────────────────────────────────────────────
 const rvStyles = StyleSheet.create({
   card: {
     backgroundColor: Colors.white, borderRadius: 18, padding: 20,

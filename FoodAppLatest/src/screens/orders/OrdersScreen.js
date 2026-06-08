@@ -25,17 +25,27 @@ import { useCartStore } from '../../store/cartStore';
 
 // ─── Constants ────────────────────────────────────────────
 const STATUS_MAP = {
+  // snake_case (from socket via store)
   placed: 'Placed',
-  confirmed: 'Confirmed',        // ← was 'accepted' ❌
+  confirmed: 'Confirmed',
   preparing: 'Preparing',
-  ready_for_pickup: 'Ready for Pickup', // ← was 'ready' ❌
+  ready_for_pickup: 'Ready for Pickup',
   out_for_delivery: 'Out for Delivery',
   delivered: 'Delivered',
   completed: 'Delivered',
   cancelled: 'Cancelled',
   refunded: 'Refunded',
+  // PascalCase (from .NET socket events stored in order_status)
+  Placed: 'Placed',
+  Confirmed: 'Confirmed',
+  Preparing: 'Preparing',
+  ReadyForPickup: 'Ready for Pickup',
+  OutForDelivery: 'Out for Delivery',
+  Delivered: 'Delivered',
+  Completed: 'Delivered',
+  Cancelled: 'Cancelled',
+  Refunded: 'Refunded',
 };
-
 const TABS = [
   { id: 'all', label: 'All Orders' },
   { id: 'active', label: 'Active' },
@@ -44,9 +54,9 @@ const TABS = [
 
 const STATUS_STYLE = {
   Placed: { color: '#3498DB', bg: '#EBF5FB', icon: 'receipt-long' },
-  Confirmed: { color: '#9B59B6', bg: '#F5EEF8', icon: 'check-circle' }, // ← was 'Accepted' ❌
+  Confirmed: { color: '#9B59B6', bg: '#F5EEF8', icon: 'check-circle' },
   Preparing: { color: '#E67E22', bg: '#FEF9E7', icon: 'restaurant' },
-  'Ready for Pickup': { color: '#F39C12', bg: '#FEF9E7', icon: 'hourglass-empty' }, // ← was 'Waiting...' ❌
+  'Ready for Pickup': { color: '#F39C12', bg: '#FEF9E7', icon: 'hourglass-empty' },
   'Out for Delivery': { color: Colors.primary, bg: Colors.primaryLight, icon: 'delivery-dining' },
   Delivered: { color: Colors.success, bg: '#EAFAF1', icon: 'check-circle' },
   Cancelled: { color: Colors.error, bg: '#FDEDEC', icon: 'cancel' },
@@ -92,6 +102,21 @@ const countActiveFilters = (statusFilter, dateFilter) => {
   return n;
 };
 
+// ─── Resolve mapped status for an order ───────────────────
+// Checks both `status` (already mapped, set by setOrderStatus) and
+// `order_status` (raw field from API/socket) so that both update paths
+// produce a correct display label.
+const getMappedStatus = (order) => {
+  if (order.status && STATUS_MAP[order.status]) return order.status;
+  return STATUS_MAP[order.order_status] ?? order.order_status ?? 'Placed';
+};
+
+// ─── Check if an order is "live" active ──────────────────
+const isLiveActive = (order) => {
+  const s = getMappedStatus(order);
+  return ACTIVE_STATUSES.includes(s);
+};
+
 // ─── Status Badge ─────────────────────────────────────────
 const StatusBadge = ({ status }) => {
   const s = STATUS_STYLE[status] ?? STATUS_STYLE.Placed;
@@ -115,7 +140,6 @@ const FilterChipsRow = ({ statusFilter, setStatusFilter, dateFilter, setDateFilt
         contentContainerStyle={chipStyles.scroll}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Clear all — only when filters active */}
         {activeCount > 0 && (
           <TouchableOpacity style={chipStyles.clearChip} onPress={onClearAll} activeOpacity={0.75}>
             <Icon name="close" size={13} color={Colors.error} />
@@ -123,7 +147,6 @@ const FilterChipsRow = ({ statusFilter, setStatusFilter, dateFilter, setDateFilt
           </TouchableOpacity>
         )}
 
-        {/* Date presets */}
         {DATE_PRESETS.filter(p => p.id !== 'all_time').map((preset) => {
           const active = dateFilter === preset.id;
           return (
@@ -141,10 +164,8 @@ const FilterChipsRow = ({ statusFilter, setStatusFilter, dateFilter, setDateFilt
           );
         })}
 
-        {/* Divider */}
         <View style={chipStyles.divider} />
 
-        {/* Status chips */}
         {STATUS_FILTER_OPTIONS.map((f) => {
           const active = statusFilter === f.id;
           const ss = STATUS_STYLE[f.id];
@@ -179,7 +200,7 @@ const FilterChipsRow = ({ statusFilter, setStatusFilter, dateFilter, setDateFilt
   );
 };
 
-// ─── Active Order Banner ──────────────────────────────────
+// ─── Active Order Banner (single) ─────────────────────────
 const ActiveOrderBanner = ({ order, onPress }) => {
   const pulseAnim = useRef(new Animated.Value(1)).current;
   React.useEffect(() => {
@@ -188,7 +209,7 @@ const ActiveOrderBanner = ({ order, onPress }) => {
       Animated.timing(pulseAnim, { toValue: 1, duration: 700, useNativeDriver: true }),
     ])).start();
   }, []);
-  const mappedStatus = STATUS_MAP[order.order_status] ?? order.order_status ?? 'Placed';
+  const mappedStatus = getMappedStatus(order);
   const ss = STATUS_STYLE[mappedStatus] ?? STATUS_STYLE.Placed;
   return (
     <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
@@ -216,6 +237,25 @@ const ActiveOrderBanner = ({ order, onPress }) => {
   );
 };
 
+// ─── Active Orders Banner Section ─────────────────────────
+const ActiveOrdersBannerSection = ({ activeOrders, navigation }) => {
+  if (!activeOrders.length) return null;
+  return (
+    <View style={styles.activeBannerWrapper}>
+      {activeOrders.map((order) => (
+        <View key={order.id} style={styles.activeBannerItem}>
+          <ActiveOrderBanner
+            order={order}
+            onPress={() =>
+              navigation.navigate('OrderTrackingScreen', { orderId: order.id })
+            }
+          />
+        </View>
+      ))}
+    </View>
+  );
+};
+
 // ─── Order Card ───────────────────────────────────────────
 const OrderCard = ({ order, onPress, onReorder, isReordering }) => {
   const scaleAnim = useRef(new Animated.Value(0.97)).current;
@@ -223,9 +263,9 @@ const OrderCard = ({ order, onPress, onReorder, isReordering }) => {
     Animated.spring(scaleAnim, { toValue: 1, friction: 6, tension: 50, useNativeDriver: true }).start();
   }, []);
 
-  const mappedStatus = STATUS_MAP[order.order_status] ?? order.order_status ?? 'Placed';
+  const mappedStatus = getMappedStatus(order);
   const orderAge = Date.now() - new Date(order.placed_at || order.created_at).getTime();
-  const isActive = ACTIVE_STATUSES.includes(mappedStatus) && orderAge < 2 * 60 * 60 * 1000;
+  const showTrack = ACTIVE_STATUSES.includes(mappedStatus) && orderAge < 2 * 60 * 60 * 1000;
   const isDelivered = mappedStatus === 'Delivered';
   const ss = STATUS_STYLE[mappedStatus] ?? STATUS_STYLE.Placed;
   const itemNames = order.items?.map(i => i.name ?? i.item_name_snapshot).filter(Boolean).join(', ');
@@ -274,7 +314,7 @@ const OrderCard = ({ order, onPress, onReorder, isReordering }) => {
             </Text>
           </View>
           <View style={styles.orderActions}>
-            {isActive ? (
+            {showTrack ? (
               <TouchableOpacity
                 style={[styles.orderActionBtn, { borderColor: ss.color }]}
                 onPress={onPress}
@@ -326,30 +366,57 @@ export const OrdersScreen = ({ navigation }) => {
   const [reorderingId, setReorderingId] = useState(null);
   const tabIndicatorAnim = useRef(new Animated.Value(0)).current;
 
-  const { data, isLoading, refetch, isRefetching } = useOrders();
-  const orders = Array.isArray(data) ? data : [];
+  const { data: queryOrders, refetch, isRefetching, isLoading } = useOrders();
 
-  const activeOrder = orders.find(o => {
-    const s = STATUS_MAP[o.order_status] ?? o.order_status ?? '';
-    return ACTIVE_STATUSES.includes(s);
-  });
+  // FIX: Use React Query data as the primary source of truth.
+  //
+  // Previously the screen called useOrders() but discarded query.data,
+  // reading only from the Zustand store:
+  //   const data = useOrderStore(state => state.orders);
+  //
+  // The socket handler in useOrders updates React Query cache first and the
+  // store second. If only the store was subscribed to, a stale React Query
+  // cache could overwrite the store on the next refetch and the screen would
+  // show the old status until a manual pull-to-refresh.
+  //
+  // Now: query.data is used when available (kept fresh by the socket handler
+  // and React Query's own refetch logic). The store is the fallback for the
+  // brief window before the first fetch completes (data is in AsyncStorage).
+  const storeOrders = useOrderStore(state => state.orders);
+  const orders = queryOrders ?? storeOrders;
+
+  const activeOrders = useMemo(
+    () => orders.filter(isLiveActive),
+    [orders],
+  );
+
+  const activeOrderIdSet = useMemo(
+    () => new Set(activeOrders.map(o => o.id)),
+    [activeOrders],
+  );
 
   // ── Filtered + sorted orders ──────────────────────────
   const filteredOrders = useMemo(() => {
     const datePreset = DATE_PRESETS.find(p => p.id === dateFilter);
     return orders
       .filter(o => {
-        const s = STATUS_MAP[o.order_status] ?? o.order_status ?? '';
+        const s = getMappedStatus(o);
 
-        // Tab
-        if (activeTab === 'active') return activeOrder && o.id === activeOrder.id;
-        if (activeTab === 'past') return ['Delivered', 'Cancelled'].includes(s);
-        if (activeTab === 'all' && activeOrder && o.id === activeOrder.id) return false;
+        if (activeTab === 'active') {
+          return activeOrderIdSet.has(o.id);
+        }
 
-        // Status chip
+        if (activeTab === 'past') {
+          return ['Delivered', 'Cancelled'].includes(s);
+        }
+
+        // 'all' tab — exclude active orders to avoid duplication with banners
+        if (activeOrderIdSet.has(o.id)) return false;
+
+        // Status chip filter
         if (statusFilter !== 'all_status' && s !== statusFilter) return false;
 
-        // Date chip
+        // Date chip filter
         if (!isWithinDays(o.placed_at || o.created_at, datePreset?.days ?? null)) return false;
 
         return true;
@@ -357,7 +424,7 @@ export const OrdersScreen = ({ navigation }) => {
       .sort((a, b) =>
         new Date(b.placed_at || b.created_at) - new Date(a.placed_at || a.created_at)
       );
-  }, [orders, activeTab, statusFilter, dateFilter, activeOrder]);
+  }, [orders, activeTab, statusFilter, dateFilter, activeOrderIdSet]);
 
   const activeFilterCount = countActiveFilters(statusFilter, dateFilter);
 
@@ -435,22 +502,17 @@ export const OrdersScreen = ({ navigation }) => {
 
   const ListHeader = useCallback(() => (
     <View>
-      {activeOrder && activeTab !== 'past' && (
-        <View style={styles.activeBannerWrapper}>
-          <ActiveOrderBanner
-            order={activeOrder}
-            onPress={() => {
-              useOrderStore.setState({ currentOrder: activeOrder });
-              navigation.navigate('OrderTrackingScreen', { orderId: activeOrder.id });
-            }}
-          />
-        </View>
+      {activeOrders.length > 0 && activeTab !== 'past' && (
+        <ActiveOrdersBannerSection
+          activeOrders={activeOrders}
+          navigation={navigation}
+        />
       )}
       {filteredOrders.length > 0 && (
         <View style={styles.listLabelRow}>
           <Text style={styles.listLabel}>
             {activeTab === 'all' && `All Orders (${filteredOrders.length})`}
-            {activeTab === 'active' && 'Active Orders'}
+            {activeTab === 'active' && `Active Orders (${filteredOrders.length})`}
             {activeTab === 'past' && `Past Orders (${filteredOrders.length})`}
           </Text>
           {activeFilterCount > 0 && (
@@ -464,7 +526,7 @@ export const OrdersScreen = ({ navigation }) => {
         </View>
       )}
     </View>
-  ), [activeOrder, filteredOrders.length, activeTab, activeFilterCount]);
+  ), [activeOrders, filteredOrders.length, activeTab, activeFilterCount, navigation]);
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -491,6 +553,9 @@ export const OrdersScreen = ({ navigation }) => {
             >
               <Text style={[styles.tabText, activeTab === tab.id && styles.tabTextActive]}>
                 {tab.label}
+                {tab.id === 'active' && activeOrders.length > 0
+                  ? ` (${activeOrders.length})`
+                  : ''}
               </Text>
             </TouchableOpacity>
           ))}
@@ -507,7 +572,7 @@ export const OrdersScreen = ({ navigation }) => {
       />
 
       {/* List */}
-      {isLoading ? (
+      {isLoading && !storeOrders.length ? (
         <Loader />
       ) : (
         <FlatList
@@ -518,7 +583,7 @@ export const OrdersScreen = ({ navigation }) => {
               order={item}
               isReordering={reorderingId === item.id}
               onPress={() => {
-                const s = STATUS_MAP[item.order_status] ?? item.order_status ?? '';
+                const s = getMappedStatus(item);
                 if (ACTIVE_STATUSES.includes(s)) {
                   navigation.navigate('OrderTrackingScreen', { orderId: item.id });
                 } else {
@@ -562,7 +627,7 @@ export const OrdersScreen = ({ navigation }) => {
   );
 };
 
-// ─── Chip styles (separate for reuse) ─────────────────────
+// ─── Chip styles ──────────────────────────────────────────
 const chipStyles = StyleSheet.create({
   wrapper: {
     backgroundColor: Colors.white,
@@ -645,7 +710,13 @@ const styles = StyleSheet.create({
   },
   filterActivePillText: { fontSize: 11, fontWeight: '700', color: Colors.primary },
 
-  activeBannerWrapper: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 8 },
+  activeBannerWrapper: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 8,
+    gap: 10,
+  },
+  activeBannerItem: {},
   activeBanner: {
     flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.white,
     borderRadius: 16, borderWidth: 1.5, overflow: 'hidden', elevation: 3,

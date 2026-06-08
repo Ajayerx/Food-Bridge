@@ -6,6 +6,9 @@ import {
     ScrollView, Animated, Share,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Colors } from '../../constants/colors';
+import Icon from 'react-native-vector-icons/MaterialIcons';
+
 
 // ── Numeric enum → string key mapper ─────────────────────────────────────────
 const NUMERIC_TO_KEY = {
@@ -161,8 +164,7 @@ export default function NotificationDetailScreen({ route, navigation }) {
 
     // ── What info rows to show per type ──────────────────────────────────────
     // Each type shows only what's relevant — no generic dump of all fields
-    const showOrderId = !!orderId && typeKey !== "NEW_REVIEW" && typeKey !== "PROMO_OFFER";
-    const showOrderNo = !!orderNo && typeKey !== "NEW_REVIEW" && typeKey !== "PROMO_OFFER";
+    const showOrderCode = !!(orderCode ?? orderNo) && typeKey !== "NEW_REVIEW" && typeKey !== "PROMO_OFFER";
     const showAmount = !!amount;
     const showPromoCode = !!promoCode;
     const showDiscount = !!discount;
@@ -170,7 +172,7 @@ export default function NotificationDetailScreen({ route, navigation }) {
     const showReply = !!replyText && typeKey === "NEW_REVIEW";
     const showReplyOrderId = !!orderId && typeKey === "NEW_REVIEW";
 
-    const hasAnyInfo = showOrderId || showOrderNo || showAmount || showPromoCode
+    const hasAnyInfo = showOrderCode || showAmount || showPromoCode
         || showDiscount || showRestaurant || showReply || showReplyOrderId;
 
     // ── CTA: only for order-related types ────────────────────────────────────
@@ -185,12 +187,12 @@ export default function NotificationDetailScreen({ route, navigation }) {
         <View style={[styles.container, { paddingTop: insets.top }]}>
             {/* Header */}
             <View style={styles.header}>
-                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-                    <Text style={styles.backIcon}>←</Text>
+                <TouchableOpacity onPress={() => navigation.goBack()}>
+                    <Icon name="arrow-back-ios" size={20} color={Colors.textPrimary} />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Notification</Text>
-                <TouchableOpacity onPress={handleShare} style={styles.shareBtn}>
-                    <Text style={styles.shareIcon}>⬆</Text>
+                <TouchableOpacity onPress={handleShare}>
+                    <Icon name="share" size={22} color={Colors.textPrimary} />
                 </TouchableOpacity>
             </View>
 
@@ -229,8 +231,7 @@ export default function NotificationDetailScreen({ route, navigation }) {
                             {showReplyOrderId && <InfoRow label="Order" value={orderCode ?? orderNo ?? orderId} accent={config.accent} />}
 
                             {/* Order-based types */}
-                            {showOrderId && <InfoRow label="Order ID" value={orderId} accent={config.accent} />}
-                            {showOrderNo && <InfoRow label="Order No." value={orderNo} />}
+                            {showOrderCode && <InfoRow label="Order" value={orderCode ?? orderNo} accent={config.accent} />}
                             {showAmount && <InfoRow label="Amount" value={`₹${amount}`} accent="#22c55e" />}
 
                             {/* Promo types */}
@@ -246,7 +247,7 @@ export default function NotificationDetailScreen({ route, navigation }) {
                     {showViewOrder && (
                         <TouchableOpacity
                             style={[styles.ctaBtn, { backgroundColor: config.accent }]}
-                            onPress={() => navigation.getParent()?.navigate("OrderDetailScreen", { orderId })}
+                            onPress={() => navigation.navigate("OrderDetailScreen", { orderId })}
                             activeOpacity={0.85}
                         >
                             <Text style={styles.ctaBtnText}>View Order →</Text>

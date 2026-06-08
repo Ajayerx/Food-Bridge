@@ -69,7 +69,7 @@ class NotificationSocket {
     }
 
     on(event, handler) {
-        const key = event.toLowerCase();
+        const key = event;   // ← remove .toLowerCase()
         if (!this._listeners[key]) this._listeners[key] = [];
         if (this._listeners[key].includes(handler)) return;
         this._listeners[key].push(handler);
@@ -83,7 +83,7 @@ class NotificationSocket {
     }
 
     off(event, handler) {
-        const key = event.toLowerCase();
+        const key = event;   // ← remove .toLowerCase()
         if (this._listeners[key]) {
             this._listeners[key] = this._listeners[key].filter(h => h !== handler);
         }

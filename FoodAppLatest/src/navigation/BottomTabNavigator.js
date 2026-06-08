@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import Icon from 'react-native-vector-icons/MaterialIcons';
@@ -11,9 +11,11 @@ import { Colors } from '../constants/colors';
 const Tab = createBottomTabNavigator();
 
 // ─── Cart Badge ───────────────────────────────────────────
-const CartBadge = ({ color, size }) => {
-  const items = useCartStore(s => s.items);
-  const itemCount = items.reduce((sum, i) => sum + i.quantity, 0);
+// REPLACE CartBadge:
+const CartBadge = React.memo(({ color, size }) => {
+  const itemCount = useCartStore(
+    useCallback(s => s.items.reduce((sum, i) => sum + i.quantity, 0), [])
+  );
 
   return (
     <View style={styles.iconWrapper}>
@@ -27,7 +29,7 @@ const CartBadge = ({ color, size }) => {
       )}
     </View>
   );
-};
+});
 
 // ─── Navigator ────────────────────────────────────────────
 export const BottomTabNavigator = () => {

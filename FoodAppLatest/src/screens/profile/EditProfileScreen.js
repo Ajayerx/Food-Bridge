@@ -60,7 +60,15 @@ export const EditProfileScreen = ({ navigation }) => {
             ]);
         } catch (e) {
             const msg = e?.response?.data?.error?.message || 'Failed to update profile';
-            Alert.alert('Error', msg);
+
+            const isEmailConflict = e?.response?.status === 400 && msg.toLowerCase().includes('email');
+
+            Alert.alert(
+                'Error',
+                isEmailConflict
+                    ? `${msg}\n\nPlease try a different email address.`
+                    : msg
+            );
         } finally {
             setLoading(false);
         }

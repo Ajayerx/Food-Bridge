@@ -5,9 +5,14 @@ import { useNotificationStore } from "../../store/notificationStore";
 
 // ── Normalise raw DB row → frontend shape ──────────────────────────────────
 export function normalizeNotification(n) {
-    var rawData = n.data;
-    var parsedData = null;
+    // Support both API (snake_case) and socket (camelCase) payloads
+    const rawId = n.id ?? n.Id;
+    const rawUserId = n.user_id ?? n.userId ?? n.UserId;
+    const rawIsRead = n.is_read ?? n.isRead ?? false;
+    const rawCreatedAt = n.created_at ?? n.createdAt;
+    const rawData = n.data ?? n.Data;
 
+    var parsedData = null;
     if (rawData) {
         if (typeof rawData === "string") {
             try { parsedData = JSON.parse(rawData); } catch (e) { parsedData = null; }
@@ -16,19 +21,18 @@ export function normalizeNotification(n) {
         }
     }
 
-    // channel is embedded inside data.channel (schema has no channel column)
     var channel = (parsedData && parsedData.channel) ? parsedData.channel : "in_app";
 
     return {
-        id: String(n.id),
-        userId: String(n.user_id),
-        title: n.title,
-        body: n.body,
-        type: n.type,
+        id: String(rawId),
+        userId: rawUserId ? String(rawUserId) : null,
+        title: n.title ?? n.Title,
+        body: n.body ?? n.Body,
+        type: n.type ?? n.Type,
         channel: channel,
-        isRead: n.is_read === 1 || n.is_read === true,
+        isRead: rawIsRead === 1 || rawIsRead === true,
         data: parsedData,
-        createdAt: n.created_at,
+        createdAt: rawCreatedAt,
     };
 }
 

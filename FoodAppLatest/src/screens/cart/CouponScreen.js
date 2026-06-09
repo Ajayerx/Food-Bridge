@@ -17,18 +17,22 @@ import { formatCurrency } from '../../utils/formatCurrency';
 import api from '../../services/api/base';
 
 // ─── Coupon Card ──────────────────────────────────────────
-// REPLACE the entire CouponCard component:
-
 const CouponCard = ({ coupon, cartTotal, onApply, applying }) => {
     const [expanded, setExpanded] = useState(false);
-    const expandAnim = useRef(new Animated.Value(0)).current;
 
-    // ✅ CouponDto fields: coupon_type ('Percentage'|'Flat'), max_discount_amount, min_order_amount
-    // ✅ Eligibility calculated locally — CouponDto has no 'eligible' or 'shortfall' field
+    // BUG 7 FIX: expandAnim was animated from 0→1 but never connected to any style.
+    // The description was always fully visible regardless of expanded state.
+    // Fix: interpolate expandAnim to maxHeight so description actually collapses.
+    // useNativeDriver: false is required because maxHeight is a layout property.
+    const expandAnim = useRef(new Animated.Value(0)).current;
+    const maxHeightInterp = expandAnim.interpolate({
+        inputRange: [0, 1],
+        outputRange: [0, 200],  // 0 = collapsed, 200 = enough for ~8 lines of description
+    });
+
     const isEligible = cartTotal >= (coupon.min_order_amount ?? 0);
     const shortfall = isEligible ? 0 : (coupon.min_order_amount ?? 0) - cartTotal;
 
-    // ✅ coupon_type not discount_type, max_discount_amount not max_discount
     const discountLabel = coupon.coupon_type === 'Percentage'
         ? `${coupon.discount_value}% OFF${coupon.max_discount_amount
             ? ` (max ₹${coupon.max_discount_amount})`
@@ -41,7 +45,7 @@ const CouponCard = ({ coupon, cartTotal, onApply, applying }) => {
         Animated.timing(expandAnim, {
             toValue,
             duration: 220,
-            useNativeDriver: false,
+            useNativeDriver: false,  // layout property — cannot use native driver
         }).start();
     };
 
@@ -96,7 +100,6 @@ const CouponCard = ({ coupon, cartTotal, onApply, applying }) => {
                     </TouchableOpacity>
                 </View>
 
-                {/* ✅ min_order_amount not min_order_value */}
                 {(coupon.min_order_amount ?? 0) > 0 && (
                     <Text style={[styles.couponMinOrder, !isEligible && styles.textDisabled]}>
                         Min order: {formatCurrency(coupon.min_order_amount)}
@@ -105,16 +108,19 @@ const CouponCard = ({ coupon, cartTotal, onApply, applying }) => {
 
                 <View style={styles.couponDivider} />
 
-                <TouchableOpacity style={styles.moreRow} onPress={toggleExpand} activeOpacity={0.7}>
-                    <Text style={styles.couponDescription} numberOfLines={expanded ? 10 : 1}>
-                        Use code {coupon.code} & get {discountLabel}
-                        {(coupon.min_order_amount ?? 0) > 0
-                            ? ` on orders above ₹${coupon.min_order_amount}`
-                            : ''}.
-                        {coupon.max_discount_amount  // ✅ was max_discount ❌
-                            ? ` Maximum discount: ₹${coupon.max_discount_amount}.`
-                            : ''}
-                    </Text>
+                {/* BUG 7 FIX: Wrap description in Animated.View with interpolated maxHeight */}
+                <TouchableOpacity onPress={toggleExpand} activeOpacity={0.7}>
+                    <Animated.View style={{ maxHeight: maxHeightInterp, overflow: 'hidden' }}>
+                        <Text style={styles.couponDescription}>
+                            Use code {coupon.code} & get {discountLabel}
+                            {(coupon.min_order_amount ?? 0) > 0
+                                ? ` on orders above ₹${coupon.min_order_amount}`
+                                : ''}.
+                            {coupon.max_discount_amount
+                                ? ` Maximum discount: ₹${coupon.max_discount_amount}.`
+                                : ''}
+                        </Text>
+                    </Animated.View>
                 </TouchableOpacity>
 
                 <TouchableOpacity onPress={toggleExpand} activeOpacity={0.7}>
@@ -132,8 +138,20 @@ export const CouponScreen = ({ route, navigation }) => {
     const [coupons, setCoupons] = useState([]);
     const [loading, setLoading] = useState(true);
     const [manualCode, setManualCode] = useState('');
-    const [applying, setApplying] = useState(null); // coupon code being applied
+
+    // BUG 8 FIX: Split applying state into two independent flags.
+    // Old: a single `applying` string was used for BOTH the manual input spinner
+    // (`applying === manualCode.toUpperCase()`) AND card-level spinners
+    // (`applying === item.code`). If the typed code happened to match a listed
+    // coupon's code, BOTH spinners showed at once.
+    //
+    // Fix: `cardApplying` tracks which card's code is being validated (string | null).
+    // `manualApplying` is a simple boolean for the manual input row.
+    const [cardApplying, setCardApplying] = useState(null);
+    const [manualApplying, setManualApplying] = useState(false);
+
     const [error, setError] = useState('');
+    const [fetchError, setFetchError] = useState('');
 
     useEffect(() => {
         fetchCoupons();
@@ -141,6 +159,7 @@ export const CouponScreen = ({ route, navigation }) => {
 
     const fetchCoupons = async () => {
         setLoading(true);
+        setFetchError('');
         try {
             const res = await api.get('/coupons', {
                 params: {
@@ -152,30 +171,71 @@ export const CouponScreen = ({ route, navigation }) => {
             });
             setCoupons(res.data.data || []);
         } catch (e) {
-            console.log('Fetch coupons error:', e?.response?.data);
+            // BUG 9 FIX: Distinguish auth/network failures from empty-list.
+            // Old: catch silently set setCoupons([]) for ALL errors — a 401 or
+            // network failure looked identical to "no coupons available".
+            // Fix: surface a fetchError string for non-empty-list failures so the
+            // UI can show "Failed to load" with a retry instead of "No coupons".
+            const status = e?.response?.status;
+            if (status === 401 || status === 403) {
+                setFetchError('Session expired. Please log in again.');
+            } else if (!e?.response) {
+                setFetchError('Network error. Check your connection.');
+            } else {
+                setFetchError('Failed to load coupons. Tap to retry.');
+            }
             setCoupons([]);
         } finally {
             setLoading(false);
         }
     };
 
-    const applyCode = async (code) => {
+    // BUG 6 NOTE: onCouponApplied is a callback passed via route.params.
+    // React Navigation captures the param reference at navigation time. If CartScreen
+    // re-renders and the callback identity changes, the captured ref here goes stale.
+    // The current usage (overrideCoupon from useAutoCoupon) is stable via useCallback
+    // in the hook, so this is safe — but document the dependency for future maintainers.
+    // A more robust pattern would be to write to a shared store instead of a callback.
+    // Only the applyCode function needs to change in CouponScreen.js
+    // Replace your existing applyCode with this:
+
+    const applyCode = async (code, isManual = false) => {
         const trimmed = code.trim().toUpperCase();
         if (!trimmed) { setError('Please enter a coupon code'); return; }
 
-        setApplying(trimmed);
+        if (isManual) {
+            setManualApplying(true);
+        } else {
+            setCardApplying(trimmed);
+        }
         setError('');
 
         try {
             const res = await api.post('/coupons/validate', {
                 code: trimmed,
                 restaurant_id: restaurantId,
-                order_amount: cartTotal,    // ✅ ValidateCouponRequestDto field
+                order_amount: cartTotal,
             });
 
-            const { discount_amount } = res.data.data;
+            const { is_valid, discount_amount, message } = res.data.data;
 
-            // Pass result back to CartScreen via callback
+            // ✅ FIX: Check is_valid before applying.
+            // Previously read only discount_amount and called onCouponApplied
+            // unconditionally — so an invalid coupon (wrong restaurant, expired,
+            // usage limit hit) would still show as "applied" with ₹0 savings.
+            if (!is_valid) {
+                // Show the backend's rejection reason (e.g. "Coupon is not valid
+                // for this restaurant") instead of silently applying with ₹0.
+                setError(message || 'Coupon is not valid');
+                return;
+            }
+
+            if (discount_amount <= 0) {
+                // Coupon technically valid but gives no discount for this order amount
+                setError('This coupon gives no discount on your current cart');
+                return;
+            }
+
             onCouponApplied({
                 code: trimmed,
                 discount_amount,
@@ -188,7 +248,11 @@ export const CouponScreen = ({ route, navigation }) => {
             const msg = e?.response?.data?.error?.message || 'Invalid or expired coupon';
             setError(msg);
         } finally {
-            setApplying(null);
+            if (isManual) {
+                setManualApplying(false);
+            } else {
+                setCardApplying(null);
+            }
         }
     };
 
@@ -223,14 +287,16 @@ export const CouponScreen = ({ route, navigation }) => {
                         placeholderTextColor={Colors.textLight}
                         autoCapitalize="characters"
                         returnKeyType="done"
-                        onSubmitEditing={() => applyCode(manualCode)}
+                        onSubmitEditing={() => applyCode(manualCode, true)}
                     />
                     <TouchableOpacity
                         style={[styles.inputApplyBtn, !manualCode && styles.inputApplyBtnDisabled]}
-                        onPress={() => applyCode(manualCode)}
-                        disabled={!manualCode || !!applying}
+                        onPress={() => applyCode(manualCode, true)}
+                        // BUG 8 FIX: disabled now uses manualApplying, not the shared applying string
+                        disabled={!manualCode || manualApplying}
                     >
-                        {applying === manualCode.toUpperCase() ? (
+                        {/* BUG 8 FIX: spinner uses manualApplying boolean */}
+                        {manualApplying ? (
                             <ActivityIndicator size="small" color={Colors.primary} />
                         ) : (
                             <Text style={[styles.inputApplyText, !manualCode && styles.inputApplyTextDisabled]}>
@@ -252,6 +318,16 @@ export const CouponScreen = ({ route, navigation }) => {
                 <View style={styles.loadingBox}>
                     <ActivityIndicator size="large" color={Colors.primary} />
                     <Text style={styles.loadingText}>Fetching offers...</Text>
+                </View>
+            ) : fetchError ? (
+                // BUG 9 FIX: Show error + retry instead of empty state for real failures
+                <View style={styles.emptyBox}>
+                    <Text style={styles.emptyEmoji}>⚠️</Text>
+                    <Text style={styles.emptyTitle}>Couldn't load coupons</Text>
+                    <Text style={styles.emptySub}>{fetchError}</Text>
+                    <TouchableOpacity onPress={fetchCoupons} style={styles.retryBtn}>
+                        <Text style={styles.retryBtnText}>Retry</Text>
+                    </TouchableOpacity>
                 </View>
             ) : sortedCoupons.length === 0 ? (
                 <View style={styles.emptyBox}>
@@ -276,8 +352,10 @@ export const CouponScreen = ({ route, navigation }) => {
                         <CouponCard
                             coupon={item}
                             cartTotal={cartTotal}
-                            onApply={applyCode}
-                            applying={applying === item.code}
+                            // BUG 8 FIX: pass onApply with isManual=false for card taps
+                            onApply={(code) => applyCode(code, false)}
+                            // BUG 8 FIX: spinner driven by cardApplying, not shared string
+                            applying={cardApplying === item.code}
                         />
                     )}
                     ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
@@ -352,7 +430,16 @@ const styles = StyleSheet.create({
     emptyBox: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 10 },
     emptyEmoji: { fontSize: 52 },
     emptyTitle: { fontSize: 18, fontWeight: '700', color: Colors.textPrimary },
-    emptySub: { fontSize: 13, color: Colors.textSecondary },
+    emptySub: { fontSize: 13, color: Colors.textSecondary, textAlign: 'center', paddingHorizontal: 32 },
+    retryBtn: {
+        marginTop: 8,
+        paddingHorizontal: 24,
+        paddingVertical: 10,
+        borderRadius: 8,
+        borderWidth: 1.5,
+        borderColor: Colors.primary,
+    },
+    retryBtnText: { fontSize: 14, fontWeight: '700', color: Colors.primary },
 
     // List
     listContent: { padding: 16, paddingBottom: 40 },
@@ -430,7 +517,7 @@ const styles = StyleSheet.create({
         borderStyle: 'dashed',
         marginVertical: 8,
     },
-    couponDescription: { fontSize: 12, color: Colors.textSecondary, lineHeight: 18, flex: 1 },
+    couponDescription: { fontSize: 12, color: Colors.textSecondary, lineHeight: 18 },
     moreRow: { flexDirection: 'row' },
     moreText: { fontSize: 12, fontWeight: '700', color: Colors.primary, marginTop: 4 },
     textDisabled: { color: Colors.textLight },

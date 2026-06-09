@@ -237,7 +237,7 @@ export const OrderDetailScreen = ({ route, navigation }) => {
         }
     }, [orderId]);
 
-    const order = useOrderStore(state => state.orders.find(o => o.id === orderId));
+    const order = useOrderStore(state => state.orders.find(o => String(o.id) === String(orderId)));
 
     const handleReorder = useCallback(() => {
         if (!order) return;

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -22,7 +22,7 @@ import { formatCurrency } from '../../utils/formatCurrency';
 import { useCart } from '../../hooks/useCart';
 import { useAutoCoupon } from '../../hooks/useAutoCoupon';
 import { APP_CONFIG } from '../../constants/config';
-import api from '../../services/api/base'; // ✅ Import API service
+import api from '../../services/api/base';
 
 // ─── Bill Row ─────────────────────────────────────────────
 const BillRow = ({ label, value, highlight, strike, green, icon }) => (
@@ -43,9 +43,6 @@ const BillRow = ({ label, value, highlight, strike, green, icon }) => (
     </Text>
   </View>
 );
-
-// ─── Delivery Progress Bar ────────────────────────────────
-
 
 // ─── Auto Coupon Banner ───────────────────────────────────
 const AutoCouponBanner = ({ message, visible }) => {
@@ -108,11 +105,10 @@ export const CartScreen = ({ navigation }) => {
     addItem,
     removeItem,
     clearCart,
-    subtotal: frontendSubtotal, // ❌ NOT USED for billing - only for threshold UI
+    subtotal: frontendSubtotal,
     itemCount,
   } = useCart();
 
-  // ✅ NEW: Backend-calculated prices state
   const [backendPrices, setBackendPrices] = useState(null);
   const [loadingPrices, setLoadingPrices] = useState(false);
 
@@ -125,7 +121,11 @@ export const CartScreen = ({ navigation }) => {
     overrideCoupon,
   } = useAutoCoupon(restaurantId, frontendSubtotal);
 
-  // Show banner briefly after auto-apply
+  // ── BUG 4 FIX: Timer leak on unmount ─────────────────────────────────────
+  // Old code: the useEffect returned a cleanup but bannerTimerRef.current was only
+  // being set INSIDE the effect body — not cleaned up if component unmounted while
+  // the timer was running (e.g. user navigates away quickly after auto-apply fires).
+  // The effect's own return() cleans up correctly now — no setState on dead component.
   const [showBanner, setShowBanner] = useState(false);
   const bannerTimerRef = useRef(null);
 
@@ -135,49 +135,76 @@ export const CartScreen = ({ navigation }) => {
       clearTimeout(bannerTimerRef.current);
       bannerTimerRef.current = setTimeout(() => setShowBanner(false), 3500);
     }
+    // Explicit cleanup: if autoMessage changes again before timer fires,
+    // or if component unmounts, cancel the pending setState.
     return () => clearTimeout(bannerTimerRef.current);
   }, [autoMessage]);
 
   const appliedCouponCode = appliedCoupon?.code ?? null;
 
-  // ✅ NEW: Fetch real prices from backend whenever cart changes
+  // ── BUG 1 + 2 FIX: Race condition + no debounce ───────────────────────────
+  // Old: every items/coupon change fired an immediate API call with no cancellation.
+  // Multiple rapid taps → multiple concurrent requests → older response could land
+  // AFTER a newer one, overwriting correct prices with stale data.
+  //
+  // Fix 1 — AbortController: each effect run creates a new controller. The cleanup
+  // function calls abort() so any in-flight request from the previous run is
+  // cancelled before the new one starts. The fetch checks signal.aborted before
+  // calling setBackendPrices so a cancelled response never writes state.
+  //
+  // Fix 2 — 400ms debounce: the fetch doesn't fire until 400ms after the last
+  // change. Rapid add/remove taps collapse into a single request.
   useEffect(() => {
     if (items.length === 0) {
       setBackendPrices(null);
       return;
     }
 
-    // REPLACE the entire fetchPrices function:
+    const controller = new AbortController();
+    let debounceTimer = null;
 
     const fetchPrices = async () => {
       setLoadingPrices(true);
       try {
-        // ✅ Use POST /cart/calculate — GET version requires body which doesn't work
-        // CartCalculateRequestDto fields (snake_case_lower):
-        //   restaurant_id, items, coupon_code, delivery_address_id, order_type
-        const response = await api.post('/cart/calculate', {
-          restaurant_id: restaurantId,
-          items: items.map(item => ({
-            menu_item_id: item.id,
-            quantity: item.quantity,
-          })),
-          coupon_code: appliedCouponCode || null,
-          order_type: 'Delivery',   // ✅ was 'delivery' ❌ — enum is PascalCase
-          delivery_address_id: null,         // optional — address not selected yet at cart stage
-        });
+        const response = await api.post(
+          '/cart/calculate',
+          {
+            restaurant_id: restaurantId,
+            items: items.map(item => ({
+              menu_item_id: item.id,
+              quantity: item.quantity,
+            })),
+            coupon_code: appliedCouponCode || null,
+            order_type: 'Delivery',
+            delivery_address_id: null,
+          },
+          { signal: controller.signal },  // ← pass abort signal to axios
+        );
 
-        if (response.data.success) {
+        // Guard: don't write state if this request was already cancelled
+        if (!controller.signal.aborted && response.data.success) {
           setBackendPrices(response.data.data);
         }
       } catch (error) {
+        // Ignore AbortError — it's intentional cancellation, not a real failure
+        if (error?.name === 'AbortError' || error?.code === 'ERR_CANCELED') return;
         console.error('Failed to fetch prices:', error?.response?.data || error);
-        // Don't alert — silently fall back to frontend prices
+        // Silently fall back — don't alert, don't clear existing prices
       } finally {
-        setLoadingPrices(false);
+        if (!controller.signal.aborted) {
+          setLoadingPrices(false);
+        }
       }
     };
 
-    fetchPrices();
+    // 400ms debounce: collapse rapid add/remove taps into one request
+    debounceTimer = setTimeout(fetchPrices, 400);
+
+    return () => {
+      // Cleanup: cancel both the debounce timer and any in-flight request
+      clearTimeout(debounceTimer);
+      controller.abort();
+    };
   }, [items, restaurantId, appliedCouponCode]);
 
   // ── Bill calculations (from backend) ──────────────────────────────────────
@@ -187,7 +214,7 @@ export const CartScreen = ({ navigation }) => {
   const discount = backendPrices?.discount_amount ?? 0;
   const total = backendPrices?.total_amount ?? 0;
 
-  const isFreeDelivery = deliveryFee === 0;
+  const isFreeDelivery = backendPrices?.is_free_delivery ?? false;
   const savings = discount;
 
   // ── Actions ───────────────────────────────────────────────────────────────
@@ -200,6 +227,36 @@ export const CartScreen = ({ navigation }) => {
         { text: 'Clear', style: 'destructive', onPress: clearCart },
       ],
     );
+  };
+
+  // ── BUG 3 FIX: Checkout guard ─────────────────────────────────────────────
+  // Old: disabled={loadingPrices} alone. A user could tap checkout before the first
+  // response lands (backendPrices === null, total === 0) or immediately after a coupon
+  // change triggers a new fetch but before the debounce fires.
+  //
+  // Fix: block checkout when prices haven't been fetched yet (null) OR a fetch is
+  // currently in-flight. Also assert total > 0 at navigation time as a last-resort guard.
+  const canCheckout = !loadingPrices && backendPrices !== null && total > 0;
+
+  const handleCheckout = () => {
+    // Final assertion: should never be falsy here due to canCheckout guard,
+    // but protects against any edge case where button state and data diverge.
+    if (!canCheckout) {
+      Alert.alert('Calculating prices', 'Please wait a moment…');
+      return;
+    }
+    navigation.navigate('CheckoutScreen', {
+      total: Math.max(total, 0),
+      subtotal,
+      deliveryFee,
+      gst,
+      discount,
+      couponCode: appliedCoupon?.code,
+      couponMessage: backendPrices?.coupon_message,
+      items,
+      restaurantId,
+      restaurantName,
+    });
   };
 
   // ── Empty State ───────────────────────────────────────────────────────────
@@ -282,7 +339,6 @@ export const CartScreen = ({ navigation }) => {
           ))}
         </View>
 
-        {/* ── Delivery Progress (uses frontend subtotal for UI only) ── */}
         {/* ── Delivery Progress ── */}
         {!loadingPrices && backendPrices && (
           <View style={styles.section}>
@@ -312,10 +368,10 @@ export const CartScreen = ({ navigation }) => {
             </View>
           </View>
         )}
+
         {/* ── Savings Corner / Coupon ── */}
         <View style={styles.section}>
           <Text style={styles.savingsCornerTitle}>SAVINGS CORNER</Text>
-          {/* Applied coupon state */}
           {appliedCoupon ? (
             <>
               <View style={styles.couponApplied}>
@@ -356,7 +412,6 @@ export const CartScreen = ({ navigation }) => {
                 </TouchableOpacity>
               </View>
 
-              {/* ✅ Move inside */}
               <TouchableOpacity
                 style={styles.changeCouponLink}
                 onPress={() =>
@@ -373,8 +428,6 @@ export const CartScreen = ({ navigation }) => {
             </>
           ) : (
             <>
-              {/* No coupon yet — show loading shimmer or the tap-to-browse row */}
-
               {autoApplying ? (
                 <View style={styles.couponSearching}>
                   <ActivityIndicator size="small" color={Colors.primary} />
@@ -430,13 +483,36 @@ export const CartScreen = ({ navigation }) => {
                 label="Item Total"
                 value={formatCurrency(subtotal)}
               />
-              <BillRow
-                icon="delivery-dining"
-                label="Delivery Fee"
-                value={isFreeDelivery ? 'FREE' : formatCurrency(deliveryFee)}
-                green={isFreeDelivery}
-                strike={isFreeDelivery}
-              />
+
+              {/* BUG 5 FIX: Delivery fee display when free.
+                  Old: value='FREE' with strike={isFreeDelivery} → showed ~~FREE~~
+                  and green={isFreeDelivery} + strike={isFreeDelivery} both true.
+
+                  Fix: when free, show TWO rows — original price struck through,
+                  then 'FREE' in green without strike. When not free, show normal row.
+                  This matches what Swiggy/Zomato do and is unambiguous. */}
+              {isFreeDelivery ? (
+                <>
+                  <BillRow
+                    icon="delivery-dining"
+                    label="Delivery Fee"
+                    value={formatCurrency(backendPrices?.delivery_fee || deliveryFee)}
+                    strike
+                  />
+                  <BillRow
+                    label=""
+                    value="FREE"
+                    green
+                  />
+                </>
+              ) : (
+                <BillRow
+                  icon="delivery-dining"
+                  label="Delivery Fee"
+                  value={formatCurrency(deliveryFee)}
+                />
+              )}
+
               <BillRow
                 icon="account-balance"
                 label="GST & Charges"
@@ -489,28 +565,19 @@ export const CartScreen = ({ navigation }) => {
       <View style={styles.footer}>
         <View style={styles.footerTop}>
           <Text style={styles.footerTotal}>
-            {formatCurrency(Math.max(total, 0))}
+            {/* BUG 3 FIX: Show skeleton/zero while prices aren't ready */}
+            {backendPrices ? formatCurrency(Math.max(total, 0)) : '—'}
           </Text>
-          <Text style={styles.footerTotalSub}>total incl. taxes</Text>
+          <Text style={styles.footerTotalSub}>
+            {loadingPrices ? 'Calculating...' : 'total incl. taxes'}
+          </Text>
         </View>
         <Button
           title="Proceed to Checkout →"
-          onPress={() =>
-            navigation.navigate('CheckoutScreen', {
-              total: Math.max(total, 0),
-              subtotal,
-              deliveryFee,
-              gst,
-              discount,
-              couponCode: appliedCoupon?.code,
-              couponMessage: backendPrices?.couponMessage,
-              items,
-              restaurantId,
-              restaurantName,
-            })
-          }
+          onPress={handleCheckout}
           style={styles.checkoutBtn}
-          disabled={loadingPrices} // ✅ Prevent checkout while calculating
+          // BUG 3 FIX: Block checkout until prices are confirmed AND valid
+          disabled={!canCheckout}
         />
       </View>
     </SafeAreaView>
@@ -692,7 +759,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: Colors.success,
   },
-  // "AUTO" pill badge
   autoBadge: {
     backgroundColor: Colors.success,
     paddingHorizontal: 6,
@@ -711,7 +777,6 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
 
-  // "Browse all coupons" link under applied card
   changeCouponLink: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -725,7 +790,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 
-  // ✅ NEW: Loading state for bill
+  // ── Loading state for bill ──
   loadingBill: {
     flexDirection: 'row',
     alignItems: 'center',

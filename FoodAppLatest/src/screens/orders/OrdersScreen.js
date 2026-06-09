@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useRef, useCallback, useMemo, useEffect } from 'react';
 import {
   View,
   Text,
@@ -19,7 +19,8 @@ import { Colors } from '../../constants/colors';
 import { EmptyState } from '../../components/common/EmptyState';
 import { Loader } from '../../components/common/Loader';
 import { formatCurrency } from '../../utils/formatCurrency';
-import { useOrders } from '../../hooks/useOrders';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { socket } from '../../services/socket/socket';
 import { useOrderStore } from '../../store/orderStore';
 import { useCartStore } from '../../store/cartStore';
 
@@ -366,24 +367,37 @@ export const OrdersScreen = ({ navigation }) => {
   const [reorderingId, setReorderingId] = useState(null);
   const tabIndicatorAnim = useRef(new Animated.Value(0)).current;
 
-  const { data: queryOrders, refetch, isRefetching, isLoading } = useOrders();
+  const { data: queryOrders, refetch, isRefetching, isLoading } = useQuery({
+    queryKey: ['orders'],
+    enabled: false,   // root useOrders in RootNavigator owns fetching
+  });
 
-  // FIX: Use React Query data as the primary source of truth.
-  //
-  // Previously the screen called useOrders() but discarded query.data,
-  // reading only from the Zustand store:
-  //   const data = useOrderStore(state => state.orders);
-  //
-  // The socket handler in useOrders updates React Query cache first and the
-  // store second. If only the store was subscribed to, a stale React Query
-  // cache could overwrite the store on the next refetch and the screen would
-  // show the old status until a manual pull-to-refresh.
-  //
-  // Now: query.data is used when available (kept fresh by the socket handler
-  // and React Query's own refetch logic). The store is the fallback for the
-  // brief window before the first fetch completes (data is in AsyncStorage).
   const storeOrders = useOrderStore(state => state.orders);
-  const orders = queryOrders ?? storeOrders;
+
+
+  const orders = useMemo(() => {
+    if (!Array.isArray(queryOrders) || queryOrders.length === 0) return storeOrders;
+
+    const storeByStrId = new Map(storeOrders.map(o => [String(o.id), o]));
+    const merged = queryOrders.map(qo => {
+      const so = storeByStrId.get(String(qo.id));
+      if (!so) return qo;
+      // Overlay store fields on top of query data so real-time status
+      // updates (from setOrderStatus) are reflected. Keep query items
+      // — store orders from fetchOrderById may not have items.
+      return {
+        ...qo,
+        restaurantName: so?.restaurantName || qo.restaurantName || qo.restaurant_name,
+        deliveryAddress: so?.deliveryAddress || null,
+        platform_fee: so?.platform_fee ?? 5,
+        items: qo.items?.length ? qo.items : so?.items,
+      };
+    });
+
+    const queryStrIds = new Set(queryOrders.map(o => String(o.id)));
+    const extras = storeOrders.filter(o => !queryStrIds.has(String(o.id)));
+    return extras.length > 0 ? [...extras, ...merged] : merged;
+  }, [queryOrders, storeOrders]);
 
   const activeOrders = useMemo(
     () => orders.filter(isLiveActive),
@@ -451,10 +465,10 @@ export const OrdersScreen = ({ navigation }) => {
         items.forEach((item) => {
           const dish = {
             id: item.menu_item_id ?? item.id,
-            name: item.name ?? item.item_name_snapshot,
-            base_price: item.unit_price_snapshot ?? item.price ?? 0,
-            price: item.unit_price_snapshot ?? item.price ?? 0,
-            image_url: item.image ?? null,
+            name: item.name ?? item.item_name ?? item.item_name_snapshot ?? '',
+            base_price: item.unit_price ?? item.unit_price_snapshot ?? item.base_price ?? item.price ?? 0,
+            price: item.unit_price ?? item.unit_price_snapshot ?? item.base_price ?? item.price ?? 0,
+            image_url: item.image ?? item.image_url ?? null,
             dietary_tag: item.dietary_tag ?? null,
           };
           const qty = item.quantity ?? 1;

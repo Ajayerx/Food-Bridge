@@ -1,4 +1,4 @@
-// screens/NotificationsScreen.js
+// screens/notification/NotificationsScreen.js
 import React, { useState, useCallback } from "react";
 import {
     View,
@@ -8,47 +8,27 @@ import {
     StyleSheet,
     ActivityIndicator,
     RefreshControl,
-    Animated,
 } from "react-native";
 import { useNotificationStore } from "../../store/notificationStore";
 import { useNotifications } from "../../hooks/useNotifications";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { notificationService } from "../../services/notification/notificationService";
-import { useNavigation } from '@react-navigation/native';
-import Icon from 'react-native-vector-icons/MaterialIcons';
-import { Colors } from '../../constants/colors';
+import Icon from "react-native-vector-icons/MaterialIcons";
+import { Colors } from "../../constants/colors";
+import NotificationCard from "../../components/cards/NotificationCard";
 
-
-// ── Type config ──────────────────────────────────────────────────────────
-const TYPE_CONFIG = {
-    // ── Order statuses (these come from backend) ──
-    ORDER_CONFIRMED: { icon: "✅", accent: "#22c55e", label: "Confirmed" },
-    ORDER_PREPARING: { icon: "👨‍🍳", accent: "#f97316", label: "Preparing" },
-    ORDER_READY: { icon: "🎁", accent: "#8b5cf6", label: "Ready" },
-    OUT_FOR_DELIVERY: { icon: "🛵", accent: "#3b82f6", label: "On the way" },
-    ORDER_DELIVERED: { icon: "🎉", accent: "#22c55e", label: "Delivered" },
-    ORDER_CANCELLED: { icon: "❌", accent: "#ef4444", label: "Cancelled" },
-    ORDER_CANCELLED_BY_VENDOR: { icon: "😔", accent: "#ef4444", label: "Cancelled" },
-    REFUND_INITIATED: { icon: "🔄", accent: "#6366f1", label: "Refund" },
-    REFUND_COMPLETED: { icon: "💸", accent: "#22c55e", label: "Refund Done" },
-    PAYMENT_RECEIVED: { icon: "💰", accent: "#22c55e", label: "Payment" },
-    REVIEW_REQUEST: { icon: "✍️", accent: "#eab308", label: "Rate us" },
-    NEW_ORDER: { icon: "🛎️", accent: "#f97316", label: "New Order" },
-    NEW_REVIEW: { icon: "⭐", accent: "#eab308", label: "Review" },
-    PROMO_OFFER: { icon: "🎟️", accent: "#ec4899", label: "Promo" },
-    SYSTEM: { icon: "🔔", accent: "#f97316", label: "Notification" },
-};
-const DEFAULT_CONFIG = { icon: "🔔", accent: "#f97316", label: "Notification" };
-
+// ── Filter helpers ───────────────────────────────────────────────────────
 const FILTERS = ["All", "Orders", "Promos", "Unread"];
 
 function filterNotifs(notifs, filter) {
     switch (filter) {
         case "Orders":
             return notifs.filter((n) =>
-                ["ORDER_CONFIRMED", "ORDER_PREPARING", "ORDER_READY",
+                [
+                    "ORDER_CONFIRMED", "ORDER_PREPARING", "ORDER_READY",
                     "OUT_FOR_DELIVERY", "ORDER_DELIVERED", "ORDER_CANCELLED",
-                    "ORDER_CANCELLED_BY_VENDOR"].includes(n.type)
+                    "ORDER_CANCELLED_BY_VENDOR",
+                ].includes(n.type)
             );
         case "Promos":
             return notifs.filter((n) =>
@@ -60,43 +40,6 @@ function filterNotifs(notifs, filter) {
             return notifs;
     }
 }
-
-function timeAgo(dateStr) {
-    const diff = (Date.now() - new Date(dateStr).getTime()) / 1000;
-    if (diff < 60) return "just now";
-    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-    return `${Math.floor(diff / 86400)}d ago`;
-}
-
-// ── Single row ───────────────────────────────────────────────────────────
-const NotifRow = React.memo(function NotifRow({ item, onPress }) {
-    const config = TYPE_CONFIG[item.type] ?? DEFAULT_CONFIG;
-    return (
-        <TouchableOpacity
-            style={[styles.row, !item.isRead && styles.rowUnread]}
-            onPress={() => onPress(item)}
-            activeOpacity={0.7}
-        >
-            {!item.isRead && <View style={styles.unreadDot} />}
-            <View style={[styles.iconBox, { backgroundColor: config.accent + "18" }]}>
-                <Text style={styles.iconText}>{config.icon}</Text>
-            </View>
-            <View style={styles.rowContent}>
-                <View style={styles.rowHeader}>
-                    <Text style={[styles.rowTitle, item.isRead && styles.rowTitleRead]} numberOfLines={1}>
-                        {item.title}
-                    </Text>
-                    <Text style={styles.rowTime}>{timeAgo(item.createdAt)}</Text>
-                </View>
-                <Text style={styles.rowBody} numberOfLines={2}>{item.body}</Text>
-                <View style={[styles.tag, { backgroundColor: config.accent + "15" }]}>
-                    <Text style={[styles.tagText, { color: config.accent }]}>{config.label}</Text>
-                </View>
-            </View>
-        </TouchableOpacity>
-    );
-});
 
 // ── Main screen ──────────────────────────────────────────────────────────
 export default function NotificationsScreen({ route, navigation }) {
@@ -110,7 +53,6 @@ export default function NotificationsScreen({ route, navigation }) {
 
     const filtered = filterNotifs(notifications, activeFilter);
 
-    // REPLACE this entire function in NotificationsScreen.js
     const handleRefresh = useCallback(async () => {
         setRefreshing(true);
         setPage(1);
@@ -129,7 +71,9 @@ export default function NotificationsScreen({ route, navigation }) {
                     type: n.type,
                     channel: n.channel ?? "in_app",
                     isRead: n.is_read === 1 || n.is_read === true,
-                    data: n.data ? (typeof n.data === "string" ? JSON.parse(n.data) : n.data) : null,
+                    data: n.data
+                        ? typeof n.data === "string" ? JSON.parse(n.data) : n.data
+                        : null,
                     createdAt: n.created_at,
                 }))
             );
@@ -141,10 +85,13 @@ export default function NotificationsScreen({ route, navigation }) {
         }
     }, []);
 
-    const handlePress = useCallback((item) => {
-        if (!item.isRead) markRead(item.id);
-        navigation.navigate("NotificationDetailScreen", { notification: item });
-    }, [markRead, navigation]);
+    const handlePress = useCallback(
+        (item) => {
+            if (!item.isRead) markRead(item.id);
+            navigation.navigate("NotificationDetailScreen", { notification: item });
+        },
+        [markRead, navigation]
+    );
 
     const handleEndReached = useCallback(() => {
         const next = page + 1;
@@ -162,28 +109,47 @@ export default function NotificationsScreen({ route, navigation }) {
 
     return (
         <View style={[styles.container, { paddingTop: insets.top }]}>
-            {/* Header */}
+            {/* ── Header ── */}
             <View style={styles.header}>
-                <TouchableOpacity onPress={() => navigation?.goBack()}>
+                <TouchableOpacity
+                    onPress={() => navigation?.goBack()}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    style={styles.headerSide}
+                >
                     <Icon name="arrow-back-ios" size={20} color={Colors.textPrimary} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Notifications</Text>
-                {badgeCount > 0 && (
-                    <TouchableOpacity onPress={markAllRead} style={styles.markAllBtn}>
-                        <Text style={styles.markAllText}>Mark all read</Text>
-                    </TouchableOpacity>
-                )}
+
+                {/* Absolutely centred title — never pushed by side elements */}
+                <Text style={styles.headerTitle} pointerEvents="none">
+                    Notifications
+                </Text>
+
+                <View style={[styles.headerSide, { alignItems: "flex-end" }]}>
+                    {badgeCount > 0 && (
+                        <TouchableOpacity onPress={markAllRead} style={styles.markAllBtn}>
+                            <Text style={styles.markAllText}>Mark all read</Text>
+                        </TouchableOpacity>
+                    )}
+                </View>
             </View>
 
-            {/* Filter chips */}
+            {/* ── Filter chips ── */}
             <View style={styles.filterRow}>
                 {FILTERS.map((f) => (
                     <TouchableOpacity
                         key={f}
-                        style={[styles.filterChip, activeFilter === f && styles.filterChipActive]}
+                        style={[
+                            styles.filterChip,
+                            activeFilter === f && styles.filterChipActive,
+                        ]}
                         onPress={() => setActiveFilter(f)}
                     >
-                        <Text style={[styles.filterText, activeFilter === f && styles.filterTextActive]}>
+                        <Text
+                            style={[
+                                styles.filterText,
+                                activeFilter === f && styles.filterTextActive,
+                            ]}
+                        >
                             {f}
                             {f === "Unread" && badgeCount > 0 ? ` (${badgeCount})` : ""}
                         </Text>
@@ -191,7 +157,7 @@ export default function NotificationsScreen({ route, navigation }) {
                 ))}
             </View>
 
-            {/* List */}
+            {/* ── List ── */}
             {isLoading && filtered.length === 0 ? (
                 <View style={styles.loadingContainer}>
                     <ActivityIndicator size="large" color="#f97316" />
@@ -200,7 +166,9 @@ export default function NotificationsScreen({ route, navigation }) {
                 <FlatList
                     data={filtered}
                     keyExtractor={(item) => item.id}
-                    renderItem={({ item }) => <NotifRow item={item} onPress={handlePress} />}
+                    renderItem={({ item }) => (
+                        <NotificationCard item={item} onPress={handlePress} />
+                    )}
                     ListEmptyComponent={renderEmpty}
                     onEndReached={handleEndReached}
                     onEndReachedThreshold={0.3}
@@ -212,7 +180,10 @@ export default function NotificationsScreen({ route, navigation }) {
                             tintColor="#f97316"
                         />
                     }
-                    contentContainerStyle={filtered.length === 0 && styles.emptyFill}
+                    contentContainerStyle={[
+                        styles.listContent,
+                        filtered.length === 0 && styles.emptyFill,
+                    ]}
                     showsVerticalScrollIndicator={false}
                 />
             )}
@@ -223,113 +194,90 @@ export default function NotificationsScreen({ route, navigation }) {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: "#f9fafb",
+        backgroundColor: "#f3f4f6",
     },
+
+    // ── Header ──
     header: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: 16,
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        paddingHorizontal: 16,
+        paddingVertical: 12,
         backgroundColor: Colors.white,
         borderBottomWidth: 1,
-        borderColor: Colors.border,   // ← was borderBottomColor: "#f3f4f6"
+        borderBottomColor: "#f0f0f0",
+    },
+    // Both side slots are equal width so the title is always centred
+    headerSide: {
+        minWidth: 90,
     },
     headerTitle: {
+        position: "absolute",
+        left: 0,
+        right: 0,
+        textAlign: "center",
         fontSize: 18,
-        fontWeight: '700',
-        color: Colors.textPrimary,    // ← was "#111827"
+        fontWeight: "700",
+        color: Colors.textPrimary,
     },
-    backBtn: {
-        width: 36,
-        height: 36,
-        alignItems: "center",
-        justifyContent: "center",
-        borderRadius: 10,
-        backgroundColor: "#f3f4f6",
-        marginRight: 10,
-    },
-    backIcon: { fontSize: 20, color: "#374151" },
     markAllBtn: {
         backgroundColor: "#fff7ed",
         paddingHorizontal: 12,
         paddingVertical: 6,
         borderRadius: 20,
+        borderWidth: 1,
+        borderColor: "#fed7aa",
     },
     markAllText: { fontSize: 12, fontWeight: "600", color: "#f97316" },
 
+    // ── Filters ──
     filterRow: {
         flexDirection: "row",
-        paddingHorizontal: 16,
+        paddingHorizontal: 14,
         paddingVertical: 10,
         gap: 8,
         backgroundColor: "#ffffff",
         borderBottomWidth: 1,
-        borderBottomColor: "#f3f4f6",
+        borderBottomColor: "#f0f0f0",
     },
     filterChip: {
         paddingHorizontal: 14,
-        paddingVertical: 6,
+        paddingVertical: 7,
         borderRadius: 20,
         backgroundColor: "#f3f4f6",
     },
-    filterChipActive: { backgroundColor: "#f97316" },
+    filterChipActive: {
+        backgroundColor: "#f97316",
+        shadowColor: "#f97316",
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.35,
+        shadowRadius: 6,
+        elevation: 4,
+    },
     filterText: { fontSize: 13, fontWeight: "500", color: "#6b7280" },
-    filterTextActive: { color: "#ffffff", fontWeight: "600" },
+    filterTextActive: { color: "#ffffff", fontWeight: "700" },
 
+    // ── List ──
     loadingContainer: {
         flex: 1,
         alignItems: "center",
         justifyContent: "center",
     },
+    listContent: {
+        paddingTop: 10,
+        paddingBottom: 24,
+    },
 
-    row: {
-        flexDirection: "row",
-        alignItems: "flex-start",
-        padding: 14,
-        backgroundColor: "#ffffff",
-        borderBottomWidth: 1,
-        borderBottomColor: "#f9fafb",
-        position: "relative",
-    },
-    rowUnread: { backgroundColor: "#fff7ed" },
-    unreadDot: {
-        position: "absolute",
-        left: 5,
-        top: "50%",
-        width: 6,
-        height: 6,
-        borderRadius: 3,
-        backgroundColor: "#f97316",
-        marginTop: -3,
-    },
-    iconBox: {
-        width: 44,
-        height: 44,
-        borderRadius: 12,
+    // ── Empty state ──
+    emptyContainer: {
+        flex: 1,
         alignItems: "center",
         justifyContent: "center",
-        marginRight: 12,
-        flexShrink: 0,
+        padding: 40,
     },
-    iconText: { fontSize: 20 },
-    rowContent: { flex: 1, minWidth: 0 },
-    rowHeader: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        alignItems: "flex-start",
-        marginBottom: 3,
-        gap: 8,
-    },
-    rowTitle: { flex: 1, fontSize: 13.5, fontWeight: "700", color: "#111827" },
-    rowTitleRead: { fontWeight: "500", color: "#6b7280" },
-    rowTime: { fontSize: 11, color: "#9ca3af", flexShrink: 0 },
-    rowBody: { fontSize: 12.5, color: "#6b7280", lineHeight: 18, marginBottom: 6 },
-    tag: { alignSelf: "flex-start", paddingHorizontal: 8, paddingVertical: 2, borderRadius: 20 },
-    tagText: { fontSize: 10.5, fontWeight: "600" },
-
-    emptyContainer: { flex: 1, alignItems: "center", justifyContent: "center", padding: 40 },
     emptyFill: { flex: 1 },
-    emptyIcon: { fontSize: 48, marginBottom: 12, opacity: 0.3 },
+    emptyIcon: { fontSize: 52, marginBottom: 14, opacity: 0.25 },
     emptyTitle: { fontSize: 16, fontWeight: "700", color: "#374151", marginBottom: 4 },
-    emptySub: { fontSize: 13, color: "#9ca3af" },
+    emptySub: { fontSize: 13, color: "#9ca3af", textAlign: "center" },
 });

@@ -10,7 +10,7 @@ import { Colors } from '../../constants/colors';
 import { Button } from '../../components/common/Button';
 import { formatCurrency } from '../../utils/formatCurrency';
 import { useOrderStore } from '../../store/orderStore';
-import { socket } from '../../services/socket/socket';
+// import { socket } from '../../services/socket/socket';
 import { submitReview, getOrderReview } from '../../services/review/reviewService';
 import { cancelOrder as cancelOrderAPI } from '../../services/order/orderService';
 
@@ -402,7 +402,7 @@ export const OrderTrackingScreen = ({ navigation, route }) => {
 
   // ── Store selector ────────────────────────────────────────────────────────
   const currentOrder = useOrderStore(state =>
-    state.orders.find(o => o.id === orderId || o.order_code === orderId)
+    state.orders.find(o => String(o.id) === String(orderId) || o.order_code === orderId)
   );
 
   // ── Entrance animation ────────────────────────────────────────────────────
@@ -416,34 +416,39 @@ export const OrderTrackingScreen = ({ navigation, route }) => {
 
   // ── Fetch fresh order data on mount ──────────────────────────────────────
   useEffect(() => {
-    if (orderId) {
+    const existing = useOrderStore.getState().orders
+      .find(o => String(o.id) === String(orderId));
+
+    // Order was just placed — store has fresh data, skip the fetch
+    // Only fetch if order is NOT in store (e.g. deep link, app restart)
+    if (!existing) {
       useOrderStore.getState().fetchOrderById(orderId);
     }
   }, [orderId]);
 
   // ── Join/leave the SignalR order room ─────────────────────────────────────
-  useEffect(() => {
-    if (!orderId) return;
-    socket.emit('joinOrderRoom', orderId);
-    return () => socket.emit('leaveOrderRoom', orderId);
-  }, [orderId]);
+  // useEffect(() => {
+  //   if (!orderId) return;
+  //   socket.emit('joinOrderRoom', orderId).catch(() => { });
+  //   return () => socket.emit('leaveOrderRoom', orderId).catch(() => { });
+  // }, [orderId]);
 
   // ── Listen for real-time status updates ───────────────────────────────────
   // FIX: socket.on/off was never called in the original file.
   // The handler also referenced a non-existent queryClientRef — removed.
-  useEffect(() => {
-    if (!orderId) return;
+  // useEffect(() => {
+  //   if (!orderId) return;
 
-    const handleStatusUpdate = (data) => {
-      // data = { orderId, status } from the SignalR hub
-      if (data?.orderId !== orderId && data?.orderId !== currentOrder?.id) return;
-      useOrderStore.getState().setOrderStatus(data.orderId, data.status);
-    };
+  //   const handleStatusUpdate = (data) => {
+  //     // data = { orderId, status } from the SignalR hub
+  //     if (data?.orderId !== orderId && data?.orderId !== currentOrder?.id) return;
+  //     useOrderStore.getState().setOrderStatus(data.orderId, data.status);
+  //   };
 
-    // SignalR event name is PascalCase — socket.on normalises it automatically
-    socket.on('OrderStatusUpdated', handleStatusUpdate);
-    return () => socket.off('OrderStatusUpdated', handleStatusUpdate);
-  }, [orderId, currentOrder?.id]);
+  //   // SignalR event name is PascalCase — socket.on normalises it automatically
+  //   socket.on('OrderStatusUpdated', handleStatusUpdate);
+  //   return () => socket.off('OrderStatusUpdated', handleStatusUpdate);
+  // }, [orderId, currentOrder?.id]);
 
   // ── Derive display values ─────────────────────────────────────────────────
   const rawStatus = currentOrder?.order_status ?? '';

@@ -16,24 +16,27 @@ import { notificationService } from "../../services/notification/notificationSer
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { Colors } from "../../constants/colors";
 import NotificationCard from "../../components/cards/NotificationCard";
+import { resolveTypeKey } from "../../utils/notificationTypes";
 
 // ── Filter helpers ───────────────────────────────────────────────────────
 const FILTERS = ["All", "Orders", "Promos", "Unread"];
 
+const ORDER_TYPE_KEYS = new Set([
+    "ORDER_CONFIRMED", "ORDER_PREPARING", "ORDER_READY",
+    "OUT_FOR_DELIVERY", "ORDER_DELIVERED", "ORDER_CANCELLED",
+    "ORDER_CANCELLED_BY_VENDOR",
+]);
+
+const PROMO_TYPE_KEYS = new Set([
+    "PROMO_OFFER", "REVIEW_REQUEST",
+]);
+
 function filterNotifs(notifs, filter) {
     switch (filter) {
         case "Orders":
-            return notifs.filter((n) =>
-                [
-                    "ORDER_CONFIRMED", "ORDER_PREPARING", "ORDER_READY",
-                    "OUT_FOR_DELIVERY", "ORDER_DELIVERED", "ORDER_CANCELLED",
-                    "ORDER_CANCELLED_BY_VENDOR",
-                ].includes(n.type)
-            );
+            return notifs.filter((n) => ORDER_TYPE_KEYS.has(n.type));
         case "Promos":
-            return notifs.filter((n) =>
-                ["PROMO_OFFER", "REVIEW_REQUEST"].includes(n.type)
-            );
+            return notifs.filter((n) => PROMO_TYPE_KEYS.has(n.type));
         case "Unread":
             return notifs.filter((n) => !n.isRead);
         default:
@@ -68,7 +71,10 @@ export default function NotificationsScreen({ route, navigation }) {
                     userId: n.user_id,
                     title: n.title,
                     body: n.body,
-                    type: n.type,
+                    // ✅ FIX: normalize type so NotificationCard always gets a
+                    // consistent SCREAMING_SNAKE_CASE key, regardless of whether
+                    // the API returns a numeric enum, PascalCase, or snake_case.
+                    type: resolveTypeKey(n.type),
                     channel: n.channel ?? "in_app",
                     isRead: n.is_read === 1 || n.is_read === true,
                     data: n.data

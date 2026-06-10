@@ -7,26 +7,7 @@ import {
     StyleSheet,
     Animated,
 } from "react-native";
-
-// ── Type config ──────────────────────────────────────────────────────────
-export const TYPE_CONFIG = {
-    ORDER_CONFIRMED: { icon: "✅", accent: "#22c55e", bg: "#f0fdf4", label: "Confirmed" },
-    ORDER_PREPARING: { icon: "👨‍🍳", accent: "#f97316", bg: "#fff7ed", label: "Preparing" },
-    ORDER_READY: { icon: "🎁", accent: "#8b5cf6", bg: "#f5f3ff", label: "Ready" },
-    OUT_FOR_DELIVERY: { icon: "🛵", accent: "#3b82f6", bg: "#eff6ff", label: "On the way" },
-    ORDER_DELIVERED: { icon: "🎉", accent: "#22c55e", bg: "#f0fdf4", label: "Delivered" },
-    ORDER_CANCELLED: { icon: "❌", accent: "#ef4444", bg: "#fef2f2", label: "Cancelled" },
-    ORDER_CANCELLED_BY_VENDOR: { icon: "😔", accent: "#ef4444", bg: "#fef2f2", label: "Cancelled" },
-    REFUND_INITIATED: { icon: "🔄", accent: "#6366f1", bg: "#eef2ff", label: "Refund" },
-    REFUND_COMPLETED: { icon: "💸", accent: "#22c55e", bg: "#f0fdf4", label: "Refund Done" },
-    PAYMENT_RECEIVED: { icon: "💰", accent: "#22c55e", bg: "#f0fdf4", label: "Payment" },
-    REVIEW_REQUEST: { icon: "✍️", accent: "#eab308", bg: "#fefce8", label: "Rate us" },
-    NEW_ORDER: { icon: "🛎️", accent: "#f97316", bg: "#fff7ed", label: "New Order" },
-    NEW_REVIEW: { icon: "⭐", accent: "#eab308", bg: "#fefce8", label: "Review" },
-    PROMO_OFFER: { icon: "🎟️", accent: "#ec4899", bg: "#fdf2f8", label: "Promo" },
-    SYSTEM: { icon: "🔔", accent: "#f97316", bg: "#fff7ed", label: "Notification" },
-};
-export const DEFAULT_CONFIG = { icon: "🔔", accent: "#f97316", bg: "#fff7ed", label: "Notification" };
+import { TYPE_CONFIG, DEFAULT_CONFIG, resolveTypeKey } from "../../utils/notificationTypes";
 
 export function timeAgo(dateStr) {
     const diff = (Date.now() - new Date(dateStr).getTime()) / 1000;
@@ -38,7 +19,9 @@ export function timeAgo(dateStr) {
 
 // ── NotificationCard ─────────────────────────────────────────────────────
 const NotificationCard = React.memo(function NotificationCard({ item, onPress }) {
-    const config = TYPE_CONFIG[item.type] ?? DEFAULT_CONFIG;
+    // ✅ FIX: resolve raw type (number / PascalCase) → SCREAMING_SNAKE_CASE key
+    const resolvedType = resolveTypeKey(item.type);
+    const config = TYPE_CONFIG[resolvedType] ?? DEFAULT_CONFIG;
     const scaleAnim = useRef(new Animated.Value(1)).current;
 
     const handlePressIn = () => {

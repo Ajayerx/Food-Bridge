@@ -10,11 +10,11 @@ import api from "../api/base";
 //   image_urls    → required (send empty array if none)
 export async function submitReview(orderId, { rating, comment, restaurantId, menuItemId } = {}) {
     const res = await api.post(`/orders/${orderId}/review`, {
-        restaurant_id: restaurantId,   // ✅ required — pass from order object
+        restaurant_id: restaurantId,
         menu_item_id: menuItemId ?? null,
         rating,
         comment: comment || null,
-        image_urls: [],             // ✅ required — empty array if no images
+        image_urls: [],
     });
     return res.data.data;
 }

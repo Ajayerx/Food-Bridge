@@ -34,6 +34,7 @@ import AddCardScreen from "../screens/payment/AddCardScreen";
 import { LocationSelectScreen } from "../screens/location/LocationSelectScreen";
 import NotificationsScreen from '../screens/notification/NotificationsScreen';
 import NotificationDetailScreen from '../screens/notification/NotificationDetailScreen';
+import ReviewScreen from '../screens/reviews/ReviewScreen';
 import { NotificationToast } from "../components/common/NotificationToast";
 import { useOrders } from '../hooks/useOrders';
 
@@ -84,6 +85,7 @@ const AuthenticatedNavigator = React.memo(() => {
         <Stack.Screen name="LocationSelectScreen" component={LocationSelectScreen} />
         <Stack.Screen name="NotificationsScreen" component={NotificationsScreen} />
         <Stack.Screen name="NotificationDetailScreen" component={NotificationDetailScreen} />
+        <Stack.Screen name="ReviewScreen" component={ReviewScreen} options={{ headerShown: false }} />
       </Stack.Navigator>
       <ToastWithNavigation />
     </View>

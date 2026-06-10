@@ -6,7 +6,6 @@ import {
     TouchableOpacity,
     SafeAreaView,
     ActivityIndicator,
-    TextInput,
     Alert,
     ScrollView,
     StatusBar,
@@ -16,7 +15,6 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 import { Colors } from '../../constants/colors';
 import { useOrderStore } from '../../store/orderStore';
 import { formatCurrency } from '../../utils/formatCurrency';
-import { submitReview, getOrderReview } from '../../services/review/reviewService';
 import { useCartStore } from '../../store/cartStore';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -44,180 +42,6 @@ const STATUS_CONFIG = {
     Delivered: { color: '#27AE60', icon: 'check-circle' },
     Cancelled: { color: '#E53935', icon: 'cancel' },
     Refunded: { color: '#7F8C8D', icon: 'replay' },
-};
-
-// ─────────────────────────────────────────────────────────────────────────────
-// REVIEW CARD
-// ─────────────────────────────────────────────────────────────────────────────
-const ReviewCard = ({ orderId, restaurantId }) => {
-    const [selected, setSelected] = useState(0);
-    const [comment, setComment] = useState('');
-    const [submitting, setSubmitting] = useState(false);
-    const [submitted, setSubmitted] = useState(false);
-    const [existingReview, setExistingReview] = useState(null);
-    const [loadingExisting, setLoadingExisting] = useState(true);
-
-    useEffect(() => {
-        let cancelled = false;
-        let pollInterval = null;
-
-        const fetchReview = async () => {
-            try {
-                const review = await getOrderReview(orderId);
-                if (cancelled) return;
-                if (review) {
-                    setExistingReview(review);
-                    setSubmitted(true);
-                    setSelected(review.rating);
-                    if (review.vendor_reply && pollInterval) {
-                        clearInterval(pollInterval);
-                        pollInterval = null;
-                    }
-                }
-            } catch (e) { }
-            finally {
-                if (!cancelled) setLoadingExisting(false);
-            }
-        };
-
-        fetchReview();
-        pollInterval = setInterval(() => {
-            if (!cancelled) fetchReview();
-        }, 30000);
-
-        return () => {
-            cancelled = true;
-            if (pollInterval) clearInterval(pollInterval);
-        };
-    }, [orderId]);
-
-    const handleSubmit = useCallback(async () => {
-        if (selected === 0) {
-            Alert.alert('Rate your experience', 'Please select at least 1 star before submitting.');
-            return;
-        }
-        setSubmitting(true);
-        try {
-            await submitReview(orderId, {
-                rating: selected,
-                comment: comment.trim() || undefined,
-                restaurantId,
-            });
-            const review = await getOrderReview(orderId);
-            if (review) setExistingReview(review);
-            setSubmitted(true);
-        } catch (err) {
-            const msg = err?.response?.data?.error?.message ?? 'Failed to submit review. Please try again.';
-            Alert.alert('Error', msg);
-        } finally {
-            setSubmitting(false);
-        }
-    }, [orderId, selected, comment]);
-
-    if (loadingExisting) {
-        return <View style={rvStyles.card}><ActivityIndicator color={Colors.primary} /></View>;
-    }
-
-    if (submitted && existingReview) {
-        return (
-            <View style={rvStyles.card}>
-                <View style={rvStyles.thankRow}>
-                    <Text style={rvStyles.thankEmoji}>🙏</Text>
-                    <Text style={rvStyles.thankTitle}>Thanks for your review!</Text>
-                </View>
-                <View style={rvStyles.starsRowSmall}>
-                    {[1, 2, 3, 4, 5].map(s => (
-                        <Icon key={s} name={s <= existingReview.rating ? 'star' : 'star-border'}
-                            size={22} color={s <= existingReview.rating ? '#F39C12' : Colors.border} />
-                    ))}
-                </View>
-                {existingReview.comment ? (
-                    <Text style={rvStyles.savedComment}>"{existingReview.comment}"</Text>
-                ) : null}
-                {existingReview.vendor_reply ? (
-                    <View style={rvStyles.replyBox}>
-                        <View style={rvStyles.replyHeader}>
-                            <View style={rvStyles.replyIconCircle}>
-                                <Icon name="store" size={13} color="#fff" />
-                            </View>
-                            <View>
-                                <Text style={rvStyles.replyFrom}>Restaurant's Response</Text>
-                                {existingReview.replied_at && (
-                                    <Text style={rvStyles.replyDate}>
-                                        {new Date(existingReview.replied_at).toLocaleDateString('en-IN', {
-                                            day: 'numeric', month: 'short', year: 'numeric',
-                                        })}
-                                    </Text>
-                                )}
-                            </View>
-                        </View>
-                        <View style={rvStyles.replyDivider} />
-                        <Text style={rvStyles.replyText}>"{existingReview.vendor_reply}"</Text>
-                    </View>
-                ) : (
-                    <View style={rvStyles.awaitingBox}>
-                        <Icon name="hourglass-empty" size={14} color={Colors.textLight} />
-                        <Text style={rvStyles.awaitingReply}>Awaiting restaurant reply</Text>
-                    </View>
-                )}
-            </View>
-        );
-    }
-
-    if (submitted) {
-        return (
-            <View style={rvStyles.card}>
-                <View style={rvStyles.thankRow}>
-                    <Text style={rvStyles.thankEmoji}>🎉</Text>
-                    <Text style={rvStyles.thankTitle}>Review submitted!</Text>
-                </View>
-                <Text style={rvStyles.thankSub}>The restaurant has been notified.</Text>
-            </View>
-        );
-    }
-
-    return (
-        <View style={rvStyles.card}>
-            <Text style={rvStyles.title}>How was your experience?</Text>
-            <Text style={rvStyles.sub}>Your feedback helps others make better choices.</Text>
-            <View style={rvStyles.starsRow}>
-                {[1, 2, 3, 4, 5].map(star => (
-                    <TouchableOpacity key={star} onPress={() => setSelected(star)} activeOpacity={0.7}>
-                        <Icon name={star <= selected ? 'star' : 'star-border'}
-                            size={40} color={star <= selected ? '#F39C12' : Colors.border} />
-                    </TouchableOpacity>
-                ))}
-            </View>
-            {selected > 0 && (
-                <Text style={rvStyles.starLabel}>
-                    {['', 'Poor 😞', 'Fair 😐', 'Good 🙂', 'Great 😄', 'Excellent 🤩'][selected]}
-                </Text>
-            )}
-            <TextInput
-                style={rvStyles.commentInput}
-                placeholder="Share details about your experience (optional)"
-                placeholderTextColor="#bbb"
-                value={comment}
-                onChangeText={setComment}
-                multiline
-                numberOfLines={3}
-                maxLength={300}
-                textAlignVertical="top"
-            />
-            <Text style={rvStyles.charCount}>{comment.length}/300</Text>
-            <TouchableOpacity
-                style={[rvStyles.submitBtn, submitting && { opacity: 0.7 }]}
-                onPress={handleSubmit}
-                disabled={submitting}
-                activeOpacity={0.8}
-            >
-                {submitting
-                    ? <ActivityIndicator color="#fff" size="small" />
-                    : <><Icon name="send" size={18} color="#fff" /><Text style={rvStyles.submitText}>Submit Review</Text></>
-                }
-            </TouchableOpacity>
-        </View>
-    );
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -311,6 +135,21 @@ export const OrderDetailScreen = ({ route, navigation }) => {
     const restaurantName = (order.restaurantName && order.restaurantName !== 'Restaurant')
         ? order.restaurantName
         : (order.restaurant_name || 'Restaurant');
+
+    const handleReviewNavigate = () => {
+        // Extract first item's menu_item_id so the review row in DB is populated
+        const firstItem = (order.items ?? [])[0];
+        const menuItemId = firstItem?.menu_item_id ?? firstItem?.id ?? null;
+
+        navigation.navigate('ReviewScreen', {
+            orderId: String(order.id),
+            restaurantId: order.restaurant_id,
+            restaurantName,
+            orderCode: order.order_code ?? order.id,
+            menuItemId,
+            fromScreen: 'orderDetail',
+        });
+    };
 
     return (
         <View style={[styles.root, { backgroundColor: sc.color }]}>
@@ -434,14 +273,28 @@ export const OrderDetailScreen = ({ route, navigation }) => {
                     </View>
                 )}
 
-                {/* ── Review ───────────────────────────────────────────────── */}
+                {/* ── Review — Navigate to ReviewScreen ──────────────────── */}
                 {isCompleted && (
                     <View style={styles.section}>
                         <Text style={styles.sectionTitle}>Your Review</Text>
-                        <ReviewCard
-                            orderId={String(order.id)}
-                            restaurantId={order.restaurant_id}
-                        />
+                        <TouchableOpacity
+                            style={styles.reviewNavCard}
+                            onPress={handleReviewNavigate}
+                            activeOpacity={0.8}
+                        >
+                            <View style={styles.reviewNavLeft}>
+                                <View style={styles.reviewNavIconBox}>
+                                    <Icon name="star" size={22} color="#F39C12" />
+                                </View>
+                                <View style={styles.reviewNavText}>
+                                    <Text style={styles.reviewNavTitle}>Rate Your Order</Text>
+                                    <Text style={styles.reviewNavSub}>
+                                        Share your experience with {restaurantName}
+                                    </Text>
+                                </View>
+                            </View>
+                            <Icon name="chevron-right" size={24} color={Colors.textLight} />
+                        </TouchableOpacity>
                     </View>
                 )}
 
@@ -553,70 +406,42 @@ const styles = StyleSheet.create({
     },
     cancelReasonText: { flex: 1, fontSize: 13, color: '#E53935', lineHeight: 20 },
 
+    // ── Review navigation card (replaces inline ReviewCard) ──
+    reviewNavCard: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        backgroundColor: Colors.white,
+        borderRadius: 14,
+        paddingHorizontal: 16,
+        paddingVertical: 16,
+        elevation: 1,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 4,
+    },
+    reviewNavLeft: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+        flex: 1,
+    },
+    reviewNavIconBox: {
+        width: 44,
+        height: 44,
+        borderRadius: 14,
+        backgroundColor: '#FFF8E1',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    reviewNavText: { flex: 1, gap: 2 },
+    reviewNavTitle: { fontSize: 15, fontWeight: '700', color: Colors.textPrimary },
+    reviewNavSub: { fontSize: 12, color: Colors.textSecondary },
+
     reorderBtn: {
         flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
         paddingVertical: 15, borderRadius: 14,
     },
     reorderText: { color: '#fff', fontSize: 16, fontWeight: '700' },
-});
-
-const rvStyles = StyleSheet.create({
-    card: {
-        backgroundColor: Colors.white, borderRadius: 16, padding: 20,
-        elevation: 1, shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 4,
-        alignItems: 'center', gap: 10,
-    },
-    title: { fontSize: 16, fontWeight: '800', color: Colors.textPrimary },
-    sub: { fontSize: 12, color: Colors.textSecondary, textAlign: 'center' },
-    starsRow: { flexDirection: 'row', gap: 6, marginVertical: 4 },
-    starsRowSmall: { flexDirection: 'row', gap: 3 },
-    starLabel: { fontSize: 14, fontWeight: '600', color: Colors.textPrimary },
-    commentInput: {
-        width: '100%', borderWidth: 1, borderColor: Colors.border,
-        borderRadius: 12, padding: 12, fontSize: 13,
-        color: Colors.textPrimary, minHeight: 80,
-    },
-    charCount: { alignSelf: 'flex-end', fontSize: 11, color: Colors.textLight },
-    submitBtn: {
-        flexDirection: 'row', alignItems: 'center', gap: 8,
-        backgroundColor: Colors.primary,
-        paddingVertical: 13, paddingHorizontal: 28,
-        borderRadius: 14, marginTop: 4,
-    },
-    submitText: { color: '#fff', fontWeight: '700', fontSize: 15 },
-    thankRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-    thankEmoji: { fontSize: 28 },
-    thankTitle: { fontSize: 16, fontWeight: '800', color: Colors.textPrimary },
-    thankSub: { fontSize: 13, color: Colors.textSecondary, textAlign: 'center' },
-    savedComment: { fontSize: 13, color: Colors.textSecondary, fontStyle: 'italic', textAlign: 'center' },
-    replyBox: {
-        alignSelf: 'stretch', marginTop: 8, borderRadius: 14,
-        borderWidth: 1, borderColor: '#E0EDFF',
-        backgroundColor: '#F5F9FF', overflow: 'hidden',
-    },
-    replyHeader: {
-        flexDirection: 'row', alignItems: 'center', gap: 10,
-        paddingHorizontal: 14, paddingVertical: 10, backgroundColor: '#EAF2FF',
-    },
-    replyIconCircle: {
-        width: 26, height: 26, borderRadius: 13,
-        backgroundColor: Colors.primary,
-        justifyContent: 'center', alignItems: 'center',
-    },
-    replyFrom: { fontSize: 12, fontWeight: '700', color: Colors.primary, letterSpacing: 0.2 },
-    replyDate: { fontSize: 10, color: '#7aA8D8', marginTop: 1 },
-    replyDivider: { height: 1, backgroundColor: '#D8EAFF' },
-    replyText: {
-        fontSize: 13, color: '#2C4A6E', fontStyle: 'italic',
-        lineHeight: 20, paddingHorizontal: 14, paddingVertical: 12,
-    },
-    awaitingBox: {
-        flexDirection: 'row', alignItems: 'center', gap: 6,
-        alignSelf: 'stretch', marginTop: 8,
-        paddingVertical: 10, paddingHorizontal: 14,
-        backgroundColor: '#FAFAFA', borderRadius: 10,
-        borderWidth: 1, borderColor: Colors.border, borderStyle: 'dashed',
-    },
-    awaitingReply: { fontSize: 12, color: Colors.textLight, fontStyle: 'italic' },
 });

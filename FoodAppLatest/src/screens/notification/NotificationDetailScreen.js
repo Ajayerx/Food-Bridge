@@ -7,60 +7,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Colors } from "../../constants/colors";
 import Icon from "react-native-vector-icons/MaterialIcons";
-
-// ── Numeric enum → string key mapper ─────────────────────────────────────
-const NUMERIC_TO_KEY = {
-    0: "SYSTEM", 1: "PROMO_OFFER", 2: "SYSTEM",
-    3: "ORDER_CONFIRMED", 4: "ORDER_PREPARING", 5: "ORDER_READY",
-    6: "OUT_FOR_DELIVERY", 7: "ORDER_DELIVERED", 8: "ORDER_CANCELLED",
-    9: "ORDER_CANCELLED_BY_VENDOR", 10: "REFUND_INITIATED",
-    11: "REFUND_COMPLETED", 12: "PAYMENT_RECEIVED", 13: "REVIEW_REQUEST",
-    14: "NEW_ORDER", 15: "NEW_REVIEW", 16: "ORDER_CONFIRMED",
-};
-
-const STRING_TO_KEY = {
-    System: "SYSTEM", Promotion: "PROMO_OFFER", Support: "SYSTEM",
-    OrderConfirmed: "ORDER_CONFIRMED", OrderPreparing: "ORDER_PREPARING",
-    OrderReady: "ORDER_READY", OutForDelivery: "OUT_FOR_DELIVERY",
-    OrderDelivered: "ORDER_DELIVERED", OrderCancelled: "ORDER_CANCELLED",
-    OrderCancelledByVendor: "ORDER_CANCELLED_BY_VENDOR",
-    RefundInitiated: "REFUND_INITIATED", RefundCompleted: "REFUND_COMPLETED",
-    PaymentReceived: "PAYMENT_RECEIVED", ReviewRequest: "REVIEW_REQUEST",
-    NewOrder: "NEW_ORDER", NewReview: "NEW_REVIEW", OrderUpdate: "ORDER_CONFIRMED",
-    ORDER_CONFIRMED: "ORDER_CONFIRMED", ORDER_PREPARING: "ORDER_PREPARING",
-    ORDER_READY: "ORDER_READY", OUT_FOR_DELIVERY: "OUT_FOR_DELIVERY",
-    ORDER_DELIVERED: "ORDER_DELIVERED", ORDER_CANCELLED: "ORDER_CANCELLED",
-    ORDER_CANCELLED_BY_VENDOR: "ORDER_CANCELLED_BY_VENDOR",
-    REFUND_INITIATED: "REFUND_INITIATED", REFUND_COMPLETED: "REFUND_COMPLETED",
-    PAYMENT_RECEIVED: "PAYMENT_RECEIVED", REVIEW_REQUEST: "REVIEW_REQUEST",
-    NEW_ORDER: "NEW_ORDER", NEW_REVIEW: "NEW_REVIEW",
-    PROMO_OFFER: "PROMO_OFFER", SYSTEM: "SYSTEM",
-};
-
-function resolveTypeKey(type) {
-    if (type === null || type === undefined) return "SYSTEM";
-    if (typeof type === "number") return NUMERIC_TO_KEY[type] ?? "SYSTEM";
-    return STRING_TO_KEY[String(type)] ?? "SYSTEM";
-}
-
-// ── Type config ───────────────────────────────────────────────────────────
-const TYPE_CONFIG = {
-    ORDER_CONFIRMED: { icon: "✅", accent: "#22c55e", label: "Order Confirmed", bg: "#f0fdf4" },
-    ORDER_PREPARING: { icon: "👨‍🍳", accent: "#f97316", label: "Being Prepared", bg: "#fff7ed" },
-    ORDER_READY: { icon: "🎁", accent: "#8b5cf6", label: "Ready for Pickup", bg: "#faf5ff" },
-    OUT_FOR_DELIVERY: { icon: "🛵", accent: "#3b82f6", label: "Out for Delivery", bg: "#eff6ff" },
-    ORDER_DELIVERED: { icon: "🎉", accent: "#22c55e", label: "Delivered", bg: "#f0fdf4" },
-    ORDER_CANCELLED: { icon: "❌", accent: "#ef4444", label: "Order Cancelled", bg: "#fef2f2" },
-    ORDER_CANCELLED_BY_VENDOR: { icon: "😔", accent: "#ef4444", label: "Cancelled by Vendor", bg: "#fef2f2" },
-    REFUND_INITIATED: { icon: "🔄", accent: "#6366f1", label: "Refund Initiated", bg: "#eef2ff" },
-    REFUND_COMPLETED: { icon: "💸", accent: "#22c55e", label: "Refund Completed", bg: "#f0fdf4" },
-    PAYMENT_RECEIVED: { icon: "💰", accent: "#22c55e", label: "Payment Received", bg: "#f0fdf4" },
-    REVIEW_REQUEST: { icon: "✍️", accent: "#eab308", label: "Rate Your Order", bg: "#fefce8" },
-    NEW_ORDER: { icon: "🛎️", accent: "#f97316", label: "New Order", bg: "#fff7ed" },
-    NEW_REVIEW: { icon: "⭐", accent: "#eab308", label: "New Review", bg: "#fefce8" },
-    PROMO_OFFER: { icon: "🎟️", accent: "#ec4899", label: "Promo & Offer", bg: "#fdf2f8" },
-    SYSTEM: { icon: "🔔", accent: "#f97316", label: "Notification", bg: "#fff7ed" },
-};
+import { resolveTypeKey, TYPE_CONFIG } from "../../utils/notificationTypes";
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 function formatDate(dateStr) {
@@ -133,6 +80,7 @@ export default function NotificationDetailScreen({ route, navigation }) {
     const promoCode = notification?.data?.promoCode ?? notification?.data?.promo_code ?? null;
     const discount = notification?.data?.discount ?? null;
     const restaurantName = notification?.data?.restaurantName ?? notification?.data?.restaurant_name ?? null;
+    const restaurantId = notification?.data?.restaurantId ?? notification?.data?.restaurant_id ?? null;
     const replyText = notification?.data?.replyText ?? notification?.data?.reply_text ?? null;
 
     // ── What to show ──────────────────────────────────────────────────────
@@ -163,10 +111,18 @@ export default function NotificationDetailScreen({ route, navigation }) {
         } catch (_) { }
     };
 
-    const goToOrder = (scrollToReview = false) => {
-        navigation.navigate("OrderDetailScreen", {
-            orderId,
-            scrollToReview,   // OrderDetailScreen reads this to auto-scroll to the review section
+    // ── FIX: Navigate directly to ReviewScreen instead of scrolling ───────
+    const goToOrder = () => {
+        navigation.navigate("OrderDetailScreen", { orderId });
+    };
+
+    const goToReview = () => {
+        navigation.navigate("ReviewScreen", {
+            orderId: String(orderId),
+            restaurantId: restaurantId ?? undefined,
+            restaurantName: restaurantName ?? "Restaurant",
+            orderCode: orderCode ?? orderNo ?? undefined,
+            fromScreen: "notification",
         });
     };
 
@@ -292,11 +248,11 @@ export default function NotificationDetailScreen({ route, navigation }) {
                     {/* ── CTAs ───────────────────────────────────────────── */}
                     <View style={styles.ctaGroup}>
 
-                        {/* Review CTA — delivered orders get a star-highlighted button */}
+                        {/* Review CTA — now navigates directly to ReviewScreen */}
                         {showReviewCta && (
                             <TouchableOpacity
                                 style={[styles.ctaBtn, styles.ctaBtnReview]}
-                                onPress={() => goToOrder(true)}
+                                onPress={goToReview}
                                 activeOpacity={0.85}
                             >
                                 <View style={styles.ctaBtnInner}>
@@ -314,7 +270,7 @@ export default function NotificationDetailScreen({ route, navigation }) {
                         {showViewOrder && (
                             <TouchableOpacity
                                 style={[styles.ctaBtn, { backgroundColor: config.accent }]}
-                                onPress={() => goToOrder(false)}
+                                onPress={goToOrder}
                                 activeOpacity={0.85}
                             >
                                 <View style={styles.ctaBtnInner}>

@@ -8,7 +8,7 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 import { Colors } from '../../constants/colors';
 import { submitReview, getOrderReview } from '../../services/review/reviewService';
 
-export const ReviewCard = ({ orderId, restaurantId, style }) => {
+export const ReviewCard = ({ orderId, restaurantId, menuItemId, style }) => {
     const [selected, setSelected] = useState(0);
     const [comment, setComment] = useState('');
     const [submitting, setSubmitting] = useState(false);
@@ -70,6 +70,7 @@ export const ReviewCard = ({ orderId, restaurantId, style }) => {
                 rating: selected,
                 comment: comment.trim() || undefined,
                 restaurantId,
+                menuItemId,
             });
             const review = await getOrderReview(orderId);
             if (review) setExistingReview(review);
@@ -80,7 +81,7 @@ export const ReviewCard = ({ orderId, restaurantId, style }) => {
         } finally {
             setSubmitting(false);
         }
-    }, [orderId, selected, comment, restaurantId]);
+    }, [orderId, selected, comment, restaurantId, menuItemId]);
 
     if (loadingExisting) {
         return <View style={[rvStyles.card, style]}><ActivityIndicator color={Colors.primary} size="small" /></View>;

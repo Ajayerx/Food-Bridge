@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -22,35 +22,69 @@ import { Divider } from '../../components/common/Divider';
 import { VegNonVegIcon } from '../../components/common/VegNonVegIcon';
 import { useRestaurantDetail, useRestaurantMenu } from '../../hooks/useRestaurants';
 import { useCart } from '../../hooks/useCart';
-import { FlashList } from "@shopify/flash-list";
+import { FlashList } from '@shopify/flash-list';
 
 const safe = (v) => {
-  if (v === null || v === undefined) return "";
-  if (typeof v === "object") return "";
+  if (v === null || v === undefined) return '';
+  if (typeof v === 'object') return '';
   return String(v);
 };
 
 const { width } = Dimensions.get('window');
 const STATUS_BAR_HEIGHT = Platform.OS === 'android' ? StatusBar.currentHeight || 24 : 44;
-const HERO_HEIGHT = 220;
+const HERO_HEIGHT = 240;
 const NAVBAR_HEIGHT = 56;
 const TAB_BAR_HEIGHT = 48;
 const COLLAPSE_AT = HERO_HEIGHT - NAVBAR_HEIGHT - STATUS_BAR_HEIGHT;
 
-// ─── Category Tab ─────────────────────────────────────────
-const CategoryTab = ({ label, active, onPress }) => (
-  <TouchableOpacity
-    style={[styles.tab, active && styles.tabActive]}
-    onPress={onPress}
-    activeOpacity={0.7}>
-    <Text style={[styles.tabText, active && styles.tabTextActive]}>
-      {String(label ?? '')}
-    </Text>
-  </TouchableOpacity>
-);
-// ─── Main ─────────────────────────────────────────────────
+const ListDivider = () => <Divider />;
+
+const CategoryTab = ({ label, active, onPress }) => {
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+
+  const handlePressIn = useCallback(() => {
+    Animated.spring(scaleAnim, {
+      toValue: 0.92,
+      useNativeDriver: true,
+      speed: 60,
+      bounciness: 0,
+    }).start();
+  }, []);
+
+  const handlePressOut = useCallback(() => {
+    Animated.spring(scaleAnim, {
+      toValue: 1,
+      useNativeDriver: true,
+      speed: 50,
+      bounciness: 10,
+    }).start();
+  }, []);
+
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
+      activeOpacity={0.7}
+    >
+      <Animated.View
+        style={[
+          styles.tab,
+          active && styles.tabActive,
+          { transform: [{ scale: scaleAnim }] },
+        ]}
+      >
+        <Text style={[styles.tabText, active && styles.tabTextActive]}>
+          {String(label ?? '')}
+        </Text>
+      </Animated.View>
+    </TouchableOpacity>
+  );
+};
+
 export const RestaurantDetailScreen = ({ route, navigation }) => {
   const restaurantId = route?.params?.restaurantId;
+
   if (!restaurantId) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
@@ -72,11 +106,32 @@ export const RestaurantDetailScreen = ({ route, navigation }) => {
     restaurantName,
   } = useCart();
 
-  // ── Cart conflict modal state ──────────────────────────
   const [conflictModal, setConflictModal] = useState(false);
   const [pendingDish, setPendingDish] = useState(null);
+  const [activeCategory, setActiveCategory] = useState(0);
 
-  const handleRemove = useCallback((id) => removeItem(id), [removeItem]);
+  const scrollY = useRef(new Animated.Value(0)).current;
+  const sectionListRef = useRef(null);
+  const tabScrollRef = useRef(null);
+  const activeCategoryRef = useRef(0);
+  const isScrollingProgrammatically = useRef(false);
+  const categoriesRef = useRef([]);
+  const scrollResetTimer = useRef(null);
+
+  const categories = React.useMemo(() => (Array.isArray(menu) ? menu : []), [menu]);
+  categoriesRef.current = categories;
+
+  const listData = React.useMemo(() => {
+    if (!Array.isArray(menu) || menu.length === 0) return [];
+    const result = [];
+    menu.forEach(category => {
+      result.push({ type: 'header', title: category.name, id: category.id });
+      category.items?.forEach(item => {
+        result.push({ type: 'item', ...item, category: category.name });
+      });
+    });
+    return result;
+  }, [menu]);
 
   const getQuantity = useCallback(
     (dishId) => {
@@ -85,6 +140,8 @@ export const RestaurantDetailScreen = ({ route, navigation }) => {
     },
     [items]
   );
+
+  const handleRemove = useCallback((id) => removeItem(id), [removeItem]);
 
   const handleAddItem = useCallback((dish) => {
     const result = addItem(dish, restaurant?.id, restaurant?.name);
@@ -107,66 +164,141 @@ export const RestaurantDetailScreen = ({ route, navigation }) => {
     setPendingDish(null);
   }, []);
 
-  const [activeCategory, setActiveCategory] = useState(0);
-  const scrollY = useRef(new Animated.Value(0)).current;
-  const sectionListRef = useRef(null);
-  const tabScrollRef = useRef(null);
-
-  const listData = React.useMemo(() => {
-    if (!Array.isArray(menu) || menu.length === 0) return [];
-    const result = [];
-    menu.forEach(category => {
-      result.push({ type: "header", title: category.name, id: category.id }); // ← add id
-      category.items?.forEach(item => {
-        result.push({ type: "item", ...item, category: category.name });
-      });
-    });
-    return result;
-  }, [menu]);
-
-  const categories = React.useMemo(() => (Array.isArray(menu) ? menu : []), [menu]);
   // ── Animated values ──────────────────────────────────────
   const heroOpacity = scrollY.interpolate({
-    inputRange: [0, COLLAPSE_AT], outputRange: [1, 0], extrapolate: 'clamp',
-  });
-  const heroTranslate = scrollY.interpolate({
-    inputRange: [0, COLLAPSE_AT], outputRange: [0, -COLLAPSE_AT / 3], extrapolate: 'clamp',
-  });
-  const navBgOpacity = scrollY.interpolate({
-    inputRange: [COLLAPSE_AT - 30, COLLAPSE_AT], outputRange: [0, 1], extrapolate: 'clamp',
-  });
-  const btnBgColor = scrollY.interpolate({
-    inputRange: [0, COLLAPSE_AT], outputRange: ['rgba(0,0,0,0.4)', 'rgba(0,0,0,0)'], extrapolate: 'clamp',
+    inputRange: [0, COLLAPSE_AT * 0.6, COLLAPSE_AT],
+    outputRange: [1, 0.5, 0],
+    extrapolate: 'clamp',
   });
 
-  const scrollToSection = (index) => {
+  const heroTranslate = scrollY.interpolate({
+    inputRange: [0, COLLAPSE_AT],
+    outputRange: [0, -COLLAPSE_AT / 2.5],
+    extrapolate: 'clamp',
+  });
+
+  const heroScale = scrollY.interpolate({
+    inputRange: [0, COLLAPSE_AT],
+    outputRange: [1, 1.08],
+    extrapolate: 'clamp',
+  });
+
+  const navBgOpacity = scrollY.interpolate({
+    inputRange: [COLLAPSE_AT - 40, COLLAPSE_AT],
+    outputRange: [0, 1],
+    extrapolate: 'clamp',
+  });
+
+  const navShadowOpacity = scrollY.interpolate({
+    inputRange: [COLLAPSE_AT - 20, COLLAPSE_AT + 10],
+    outputRange: [0, 0.08],
+    extrapolate: 'clamp',
+  });
+
+  const navTitleOpacity = scrollY.interpolate({
+    inputRange: [COLLAPSE_AT - 10, COLLAPSE_AT + 20],
+    outputRange: [0, 1],
+    extrapolate: 'clamp',
+  });
+
+  const navTitleTranslate = scrollY.interpolate({
+    inputRange: [COLLAPSE_AT - 10, COLLAPSE_AT + 20],
+    outputRange: [10, 0],
+    extrapolate: 'clamp',
+  });
+
+  const btnBgColor = scrollY.interpolate({
+    inputRange: [0, COLLAPSE_AT],
+    outputRange: ['rgba(0,0,0,0.4)', 'rgba(0,0,0,0.0)'],
+    extrapolate: 'clamp',
+  });
+
+  const btnIconColor = scrollY.interpolate({
+    inputRange: [COLLAPSE_AT - 30, COLLAPSE_AT],
+    outputRange: [0, 1],
+    extrapolate: 'clamp',
+  });
+
+  // ── FIX: Animated tabs position — starts below hero, sticks below navbar on scroll
+  const tabsStickyTop = scrollY.interpolate({
+    inputRange: [0, COLLAPSE_AT],
+    outputRange: [HERO_HEIGHT + STATUS_BAR_HEIGHT, NAVBAR_HEIGHT + STATUS_BAR_HEIGHT],
+    extrapolate: 'clamp',
+  });
+
+  const tabsElevation = scrollY.interpolate({
+    inputRange: [COLLAPSE_AT - 10, COLLAPSE_AT],
+    outputRange: [0, 6],
+    extrapolate: 'clamp',
+  });
+
+  const estimatedItemSize = 120;
+
+  // ── Scroll to section using scrollToIndex ──────────────
+  const scrollToSection = useCallback((index) => {
+    const category = categoriesRef.current[index];
+    if (!category) return;
+
     setActiveCategory(index);
-    const categoryName = categories[index]?.name;
-    if (!categoryName) return;
-    const itemIndex = listData.findIndex(item => item.type === "header" && item.title === categoryName);
-    if (itemIndex !== -1) {
-      sectionListRef.current?.scrollToIndex({ index: itemIndex, animated: true });
-    }
-    tabScrollRef.current?.scrollTo({ x: index * 120, animated: true });
-  };
+    activeCategoryRef.current = index;
+    isScrollingProgrammatically.current = true;
+
+    const headerIndex = listData.findIndex(
+      (item) =>
+        item.type === 'header' &&
+        (item.id === category.id || item.title === category.name)
+    );
+
+    if (headerIndex === -1) return;
+
+    sectionListRef.current?.scrollToIndex({
+      index: headerIndex,
+      animated: true,
+    });
+
+    tabScrollRef.current?.scrollTo({
+      x: Math.max(0, index * 120 - 40),
+      animated: true,
+    });
+
+    if (scrollResetTimer.current) clearTimeout(scrollResetTimer.current);
+    scrollResetTimer.current = setTimeout(() => {
+      isScrollingProgrammatically.current = false;
+    }, 700);
+  }, [listData]);
 
   const onViewableItemsChanged = useRef(({ viewableItems }) => {
+    if (isScrollingProgrammatically.current) return;
     if (!viewableItems?.length) return;
-    const headerItem = viewableItems.find(v => v.item?.type === "header");
+
+    const headerItem = viewableItems.find(v => v.item?.type === 'header');
     if (!headerItem) return;
-    const index = categories.findIndex(c => c.name === headerItem.item.title);
-    if (index !== -1 && index !== activeCategory) {
+
+    const headerData = headerItem.item;
+    const cats = categoriesRef.current;
+
+    const index = cats.findIndex(c =>
+      (c.id && c.id === headerData.id) || c.name === headerData.title
+    );
+
+    if (index !== -1 && index !== activeCategoryRef.current) {
+      activeCategoryRef.current = index;
       setActiveCategory(index);
     }
   }).current;
 
   const viewabilityConfig = { itemVisiblePercentThreshold: 40 };
 
+  useEffect(() => {
+    return () => {
+      if (scrollResetTimer.current) clearTimeout(scrollResetTimer.current);
+    };
+  }, []);
+
   if (loadingR) return <Loader fullScreen />;
   if (loadingM) return <Loader />;
   if (!restaurant) return null;
 
-  // ── List Header ──────────────────────────────────────────
   const ListHeader = () => (
     <View style={styles.infoContainer}>
       <View style={styles.nameRow}>
@@ -190,7 +322,7 @@ export const RestaurantDetailScreen = ({ route, navigation }) => {
             {restaurant?.avg_rating ? Number(restaurant.avg_rating).toFixed(1) : 'New'}
           </Text>
           {restaurant?.total_ratings > 0 && (
-            <Text style={styles.ratingCount}>({restaurant.total_ratings}+)</Text>
+            <Text style={styles.ratingCount}>({restaurant.total_ratings}+) </Text>
           )}
         </View>
         <View style={styles.statDot} />
@@ -233,8 +365,7 @@ export const RestaurantDetailScreen = ({ route, navigation }) => {
     <View style={styles.root}>
       <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
 
-      {/* ── Hero Image ── */}
-      <Animated.View style={[styles.hero, { opacity: heroOpacity, transform: [{ translateY: heroTranslate }] }]}>
+      <Animated.View style={[styles.hero, { opacity: heroOpacity, transform: [{ translateY: heroTranslate }, { scale: heroScale }] }]}>
         <Image
           source={
             restaurant?.cover_image_url || restaurant?.coverImageUrl || restaurant?.image
@@ -244,19 +375,35 @@ export const RestaurantDetailScreen = ({ route, navigation }) => {
           style={styles.heroImg}
           resizeMode="cover"
         />
-        <View style={styles.heroOverlay} />
+        <View style={styles.heroGradientOverlay} />
       </Animated.View>
 
-      {/* ── FlashList ── */}
       <FlashList
         ref={sectionListRef}
         data={listData}
         extraData={items}
-        estimatedItemSize={120}
+        estimatedItemSize={estimatedItemSize}
+        drawDistance={500}
+        getItemType={(item) => item.type}
         onViewableItemsChanged={onViewableItemsChanged}
         viewabilityConfig={viewabilityConfig}
+        onScrollToIndexFailed={(info) => {
+          const offset = info.averageItemLength * info.index;
+          sectionListRef.current?.scrollToOffset({
+            offset: Math.max(0, offset),
+            animated: true,
+          });
+          setTimeout(() => {
+            sectionListRef.current?.scrollToIndex({
+              index: info.index,
+              animated: true,
+            });
+          }, 100);
+        }}
         keyExtractor={(item, index) =>
-          item.type === "header" ? `header-${item.id || item.title}-${index}` : item.id?.toString() || index.toString()
+          item.type === 'header'
+            ? `header-${item.id || item.title}-${index}`
+            : item.id?.toString() || index.toString()
         }
         ListHeaderComponent={ListHeader}
         contentContainerStyle={{
@@ -265,7 +412,7 @@ export const RestaurantDetailScreen = ({ route, navigation }) => {
           backgroundColor: Colors.white,
         }}
         renderItem={({ item }) => {
-          if (item.type === "header") {
+          if (item.type === 'header') {
             return (
               <View style={{ paddingHorizontal: 16 }}>
                 <View style={styles.sectionHeader}>
@@ -286,48 +433,64 @@ export const RestaurantDetailScreen = ({ route, navigation }) => {
             </View>
           );
         }}
-        ItemSeparatorComponent={() => <Divider />}
-        onScroll={(e) => { scrollY.setValue(e.nativeEvent.contentOffset.y); }}
+        ItemSeparatorComponent={ListDivider}
+        onScroll={(e) => {
+          scrollY.setValue(e.nativeEvent.contentOffset.y);
+        }}
+        onMomentumScrollEnd={() => {
+          isScrollingProgrammatically.current = false;
+        }}
         scrollEventThrottle={16}
       />
 
-      {/* ── Navbar (ABOVE list) ── */}
       <View style={[styles.navbar, { paddingTop: STATUS_BAR_HEIGHT }]}>
-        <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: Colors.white, opacity: navBgOpacity, borderBottomWidth: 1, borderBottomColor: Colors.border }]} />
+        <Animated.View style={[StyleSheet.absoluteFill, {
+          backgroundColor: Colors.white,
+          opacity: navBgOpacity,
+          borderBottomWidth: StyleSheet.hairlineWidth,
+          borderBottomColor: Colors.border,
+        }]} />
+        <Animated.View style={[styles.navShadow, { opacity: navShadowOpacity }]} />
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.navBtn}>
           <Animated.View style={[styles.navBtnInner, { backgroundColor: btnBgColor }]}>
             <Icon name="arrow-back-ios" size={18} color={Colors.white} />
           </Animated.View>
+          <Animated.View style={[styles.navBtnInnerDark, { opacity: btnIconColor }]}>
+            <Icon name="arrow-back-ios" size={18} color={Colors.textPrimary} />
+          </Animated.View>
         </TouchableOpacity>
-        <Animated.Text style={[styles.navTitle, { opacity: navBgOpacity }]} numberOfLines={1}>
+        <Animated.Text
+          style={[
+            styles.navTitle,
+            { opacity: navTitleOpacity, transform: [{ translateY: navTitleTranslate }] },
+          ]}
+          numberOfLines={1}
+        >
           {restaurant.name}
         </Animated.Text>
         <TouchableOpacity style={styles.navBtn}>
           <Animated.View style={[styles.navBtnInner, { backgroundColor: btnBgColor }]}>
             <Icon name="search" size={20} color={Colors.white} />
           </Animated.View>
+          <Animated.View style={[styles.navBtnInnerDark, { opacity: btnIconColor }]}>
+            <Icon name="search" size={20} color={Colors.textPrimary} />
+          </Animated.View>
         </TouchableOpacity>
       </View>
 
-      {/* ── Category Tabs ── */}
+      {/* ── Category Tabs — animated top so they stick properly ── */}
       {categories.length > 0 && (
-        <Animated.View style={[styles.tabsBar, {
-          top: scrollY.interpolate({
-            inputRange: [0, COLLAPSE_AT],
-            outputRange: [HERO_HEIGHT + STATUS_BAR_HEIGHT, NAVBAR_HEIGHT + STATUS_BAR_HEIGHT],
-            extrapolate: 'clamp',
-          }),
-        }]}>
-          {/* FIX: was using the FlashList's contentContainerStyle here by mistake */}
+        <Animated.View style={[styles.tabsBar, { top: tabsStickyTop }]}>
+          <Animated.View pointerEvents="none" style={[styles.tabsBarShadow, { elevation: tabsElevation }]} />
           <ScrollView
             ref={tabScrollRef}
             horizontal
             showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.tabsContent}  // ← FIXED
+            contentContainerStyle={styles.tabsContent}
           >
             {categories.map((c, i) => (
               <CategoryTab
-                key={c.id}
+                key={c.id ?? c.name ?? String(i)}
                 label={c.name}
                 active={activeCategory === i}
                 onPress={() => scrollToSection(i)}
@@ -337,7 +500,6 @@ export const RestaurantDetailScreen = ({ route, navigation }) => {
         </Animated.View>
       )}
 
-      {/* ── Cart Bar ── */}
       <CartBar
         itemCount={itemCount}
         total={subtotal}
@@ -345,7 +507,6 @@ export const RestaurantDetailScreen = ({ route, navigation }) => {
         onPress={() => navigation.navigate('CartScreen')}
       />
 
-      {/* ── Cart Conflict Modal ── */}
       <Modal
         visible={conflictModal}
         transparent
@@ -362,7 +523,7 @@ export const RestaurantDetailScreen = ({ route, navigation }) => {
               Your cart contains dishes from{' '}
               <Text style={styles.modalRestName}>{restaurantName}</Text>
               {'. Do you want to discard the selection and add dishes from '}
-              <Text style={styles.modalRestName}>{restaurant?.name}</Text>{'?'}
+              <Text style={styles.modalRestName}>{restaurant?.name}</Text>?
             </Text>
             <View style={styles.modalBtns}>
               <TouchableOpacity style={styles.modalBtnNo} onPress={handleCancelReplace} activeOpacity={0.8}>
@@ -382,87 +543,282 @@ export const RestaurantDetailScreen = ({ route, navigation }) => {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: Colors.white },
 
-  // ── Hero ──
-  hero: { position: 'absolute', top: 0, left: 0, right: 0, height: HERO_HEIGHT + STATUS_BAR_HEIGHT, zIndex: 1 },
-  heroImg: { width: '100%', height: '100%' },
-  heroOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.15)' },
-
-  // ── Navbar ──
-  navbar: { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 20, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingBottom: 10, height: NAVBAR_HEIGHT + STATUS_BAR_HEIGHT },
-  navBtn: { padding: 4 },
-  navBtnInner: { width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center' },
-  navTitle: { flex: 1, fontSize: 17, fontWeight: '700', color: Colors.textPrimary, textAlign: 'center', marginHorizontal: 4 },
-
-  // ── Tabs ──
-  tabsBar: {
+  hero: {
     position: 'absolute',
-    left: 0, right: 0,
-    zIndex: 15,
-    backgroundColor: Colors.white,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-    height: TAB_BAR_HEIGHT,
-    elevation: 4,
+    top: 0,
+    left: 0,
+    right: 0,
+    height: HERO_HEIGHT + STATUS_BAR_HEIGHT,
+    zIndex: 1,
+    overflow: 'hidden',
+  },
+  heroImg: { width: '100%', height: '100%' },
+  heroGradientOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'transparent',
+  },
+
+  navbar: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingBottom: 10,
+    height: NAVBAR_HEIGHT + STATUS_BAR_HEIGHT,
+  },
+  navShadow: {
+    position: 'absolute',
+    bottom: -4,
+    left: 0,
+    right: 0,
+    height: 4,
+    backgroundColor: 'transparent',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
+    shadowOpacity: 1,
     shadowRadius: 4,
+  },
+  navBtn: { padding: 4, position: 'relative' },
+  navBtnInner: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  navBtnInnerDark: {
+    position: 'absolute',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  navTitle: {
+    flex: 1,
+    fontSize: 17,
+    fontWeight: '700',
+    color: Colors.textPrimary,
+    textAlign: 'center',
+    marginHorizontal: 4,
+  },
+
+  tabsBar: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    zIndex: 15,
+    backgroundColor: Colors.white,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: Colors.border,
+    height: TAB_BAR_HEIGHT,
     justifyContent: 'center',
   },
-  // FIX: correct style for the tab ScrollView's contentContainerStyle
-  // Previously a copy of FlashList's contentContainerStyle was used here —
-  // that caused the tabs to render with massive top padding and be invisible.
+  tabsBarShadow: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: TAB_BAR_HEIGHT,
+    backgroundColor: Colors.white,
+  },
   tabsContent: {
     paddingHorizontal: 12,
     alignItems: 'center',
-    gap: 6,
+    gap: 8,
     height: TAB_BAR_HEIGHT,
   },
-  tab: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 999, borderWidth: 1.5, borderColor: Colors.border, backgroundColor: Colors.white },
-  tabActive: { borderColor: Colors.primary, backgroundColor: Colors.primaryLight },
-  tabText: { fontSize: 13, fontWeight: '500', color: Colors.textSecondary },
-  tabTextActive: { color: Colors.primary, fontWeight: '700' },
+  tab: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 999,
+    borderWidth: 1.5,
+    borderColor: Colors.border,
+    backgroundColor: Colors.white,
+  },
+  tabActive: {
+    borderColor: Colors.primary,
+    backgroundColor: Colors.primaryLight,
+    elevation: 2,
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+  },
+  tabText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: Colors.textSecondary,
+  },
+  tabTextActive: {
+    color: Colors.primary,
+    fontWeight: '700',
+  },
 
-  // ── Info Card ──
-  infoContainer: { backgroundColor: Colors.white, paddingHorizontal: 16, paddingTop: 16, paddingBottom: 12 },
-  nameRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 },
-  restaurantName: { fontSize: 22, fontWeight: '800', color: Colors.textPrimary, flex: 1, marginRight: 8 },
-  vegBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#E8F5E9', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
+  infoContainer: {
+    backgroundColor: Colors.white,
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 14,
+  },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
+  restaurantName: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: Colors.textPrimary,
+    flex: 1,
+    marginRight: 8,
+  },
+  vegBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#E8F5E9',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
   vegBadgeText: { fontSize: 11, fontWeight: '700', color: '#2E7D32' },
-  cuisinesText: { fontSize: 13, color: Colors.textSecondary, marginBottom: 10 },
-  statsRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 8 },
-  ratingBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#2E7D32', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, gap: 3 },
+  cuisinesText: {
+    fontSize: 13,
+    color: Colors.textSecondary,
+    marginBottom: 12,
+  },
+  statsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 10,
+    marginBottom: 10,
+    backgroundColor: '#F8F9FB',
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+  },
+  ratingBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#2E7D32',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    gap: 3,
+  },
   ratingText: { color: '#fff', fontWeight: '800', fontSize: 13 },
   ratingCount: { color: 'rgba(255,255,255,0.8)', fontSize: 11 },
   statDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: Colors.border },
   statItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  metaText: { fontSize: 13, color: Colors.textSecondary },
-  statText: { fontSize: 13, color: Colors.textSecondary },
-  addressRow: { flexDirection: 'row', alignItems: 'center', gap: 3, marginBottom: 12 },
-  addressText: { fontSize: 12, color: Colors.textLight },
-  offerRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.primaryLight, padding: 12, borderRadius: 12, marginBottom: 8, gap: 10, borderWidth: 1, borderColor: Colors.primary + '30' },
-  offerTexts: { flex: 1 },
-  offerTitle: { fontSize: 13, fontWeight: '700', color: Colors.primary },
-  offerSub: { fontSize: 11, color: Colors.textSecondary, marginTop: 1 },
-  minOrderRow: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingVertical: 6 },
+  metaText: { fontSize: 13, color: Colors.textSecondary, fontWeight: '500' },
+  statText: { fontSize: 13, color: Colors.textSecondary, fontWeight: '500' },
+  addressRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginBottom: 12,
+    paddingTop: 2,
+  },
+  addressText: { fontSize: 12, color: Colors.textLight, flex: 1 },
+  minOrderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingVertical: 6,
+  },
   minOrderText: { fontSize: 12, color: Colors.textLight },
 
-  // ── Section Headers ──
-  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14, backgroundColor: Colors.background },
-  sectionTitle: { fontSize: 17, fontWeight: '800', color: Colors.textPrimary },
-  sectionCountBadge: { backgroundColor: Colors.border, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10 },
-  sectionCount: { fontSize: 12, color: Colors.textSecondary, fontWeight: '600' },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 0,
+    paddingVertical: 14,
+    backgroundColor: Colors.background,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+  },
+  sectionTitle: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: Colors.textPrimary,
+  },
 
-  // ── Cart Conflict Modal ──
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', paddingHorizontal: 24 },
-  modalSheet: { backgroundColor: Colors.white, borderRadius: 20, paddingHorizontal: 20, paddingTop: 20, paddingBottom: 24, width: '100%', elevation: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 12 },
-  modalClose: { position: 'absolute', top: 12, right: 12, padding: 4 },
-  modalTitle: { fontSize: 18, fontWeight: '800', color: Colors.textPrimary, marginBottom: 8, marginTop: 4, paddingRight: 24 },
-  modalMessage: { fontSize: 13, color: Colors.textSecondary, textAlign: 'left', lineHeight: 20, marginBottom: 24 },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+  },
+  modalSheet: {
+    backgroundColor: Colors.white,
+    borderRadius: 20,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 24,
+    width: '100%',
+    elevation: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+  },
+  modalClose: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    padding: 4,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: Colors.textPrimary,
+    marginBottom: 8,
+    marginTop: 4,
+    paddingRight: 24,
+  },
+  modalMessage: {
+    fontSize: 13,
+    color: Colors.textSecondary,
+    textAlign: 'left',
+    lineHeight: 20,
+    marginBottom: 24,
+  },
   modalRestName: { fontWeight: '700', color: Colors.textPrimary },
-  modalBtns: { flexDirection: 'row', gap: 10, width: '100%' },
-  modalBtnNo: { flex: 1, paddingVertical: 13, borderRadius: 12, backgroundColor: '#FFF3E0', alignItems: 'center', borderWidth: 1.5, borderColor: '#FFCC80' },
+  modalBtns: {
+    flexDirection: 'row',
+    gap: 10,
+    width: '100%',
+  },
+  modalBtnNo: {
+    flex: 1,
+    paddingVertical: 13,
+    borderRadius: 12,
+    backgroundColor: '#FFF3E0',
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: '#FFCC80',
+  },
   modalBtnNoText: { fontSize: 14, fontWeight: '700', color: Colors.primary },
-  modalBtnReplace: { flex: 1, paddingVertical: 13, borderRadius: 12, backgroundColor: Colors.primary, alignItems: 'center' },
+  modalBtnReplace: {
+    flex: 1,
+    paddingVertical: 13,
+    borderRadius: 12,
+    backgroundColor: Colors.primary,
+    alignItems: 'center',
+    elevation: 2,
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+  },
   modalBtnReplaceText: { fontSize: 14, fontWeight: '700', color: Colors.white },
 });

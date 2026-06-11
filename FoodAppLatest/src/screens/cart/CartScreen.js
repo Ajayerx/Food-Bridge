@@ -188,7 +188,7 @@ export const CartScreen = ({ navigation }) => {
       } catch (error) {
         // Ignore AbortError — it's intentional cancellation, not a real failure
         if (error?.name === 'AbortError' || error?.code === 'ERR_CANCELED') return;
-        console.error('Failed to fetch prices:', error?.response?.data || error);
+        console.error('Failed to fetch prices:', error?.message ?? String(error));
         // Silently fall back — don't alert, don't clear existing prices
       } finally {
         if (!controller.signal.aborted) {

@@ -12,6 +12,9 @@ import {
   Alert,
   ActivityIndicator,
   ScrollView,
+  Modal,
+  Platform,
+  Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialIcons';
@@ -24,9 +27,18 @@ import { socket } from '../../services/socket/socket';
 import { useOrderStore } from '../../store/orderStore';
 import { useCartStore } from '../../store/cartStore';
 
+// ── Safe import: try native date picker ──
+let NativeDateTimePicker = null;
+try {
+  NativeDateTimePicker = require('@react-native-community/datetimepicker').default;
+} catch (_e) {
+  NativeDateTimePicker = null;
+}
+
+const HAS_NATIVE_PICKER = NativeDateTimePicker !== null;
+
 // ─── Constants ────────────────────────────────────────────
 const STATUS_MAP = {
-  // snake_case (from socket via store)
   placed: 'Placed',
   confirmed: 'Confirmed',
   preparing: 'Preparing',
@@ -36,7 +48,6 @@ const STATUS_MAP = {
   completed: 'Delivered',
   cancelled: 'Cancelled',
   refunded: 'Refunded',
-  // PascalCase (from .NET socket events stored in order_status)
   Placed: 'Placed',
   Confirmed: 'Confirmed',
   Preparing: 'Preparing',
@@ -47,10 +58,10 @@ const STATUS_MAP = {
   Cancelled: 'Cancelled',
   Refunded: 'Refunded',
 };
+
 const TABS = [
   { id: 'all', label: 'All Orders' },
   { id: 'active', label: 'Active' },
-  { id: 'past', label: 'Past' },
 ];
 
 const STATUS_STYLE = {
@@ -67,52 +78,81 @@ const ACTIVE_STATUSES = [
   'Placed', 'Confirmed', 'Preparing', 'Ready for Pickup', 'Out for Delivery',
 ];
 
-// ── Filter definitions ────────────────────────────────────
 const STATUS_FILTER_OPTIONS = [
   { id: 'Delivered', label: 'Delivered', icon: 'check-circle' },
   { id: 'Cancelled', label: 'Cancelled', icon: 'cancel' },
-  { id: 'Preparing', label: 'Preparing', icon: 'restaurant' },
-  { id: 'Out for Delivery', label: 'Out for Delivery', icon: 'delivery-dining' },
 ];
 
 const DATE_PRESETS = [
   { id: 'all_time', label: 'All Time', days: null },
   { id: 'today', label: 'Today', days: 0 },
-  { id: 'week', label: 'This Week', days: 7 },
-  { id: 'month', label: 'This Month', days: 30 },
-  { id: 'three_months', label: 'Last 3 Months', days: 90 },
+  { id: 'yesterday', label: 'Yesterday', days: 'yesterday' },
+  { id: 'week', label: 'This Week', days: 'week' },
+  { id: 'custom', label: 'Pick Date', days: 'custom' },
+];
+
+const WEEKDAY_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+const MONTH_NAMES = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
 ];
 
 // ─── Helpers ──────────────────────────────────────────────
-const isWithinDays = (dateStr, days) => {
+const isWithinDays = (dateStr, days, customDate) => {
   if (days === null) return true;
   const orderDate = new Date(dateStr);
   const now = new Date();
+
   if (days === 0) {
     const startOfDay = new Date(now);
     startOfDay.setHours(0, 0, 0, 0);
     return orderDate >= startOfDay;
   }
+
+  if (days === 'yesterday') {
+    const startOfToday = new Date(now);
+    startOfToday.setHours(0, 0, 0, 0);
+    const startOfYesterday = new Date(startOfToday);
+    startOfYesterday.setDate(startOfYesterday.getDate() - 1);
+    return orderDate >= startOfYesterday && orderDate < startOfToday;
+  }
+
+  if (days === 'week') {
+    const startOfWeek = new Date(now);
+    const day = startOfWeek.getDay();
+    const diff = day === 0 ? 6 : day - 1;
+    startOfWeek.setDate(startOfWeek.getDate() - diff);
+    startOfWeek.setHours(0, 0, 0, 0);
+    return orderDate >= startOfWeek;
+  }
+
+  if (days === 'custom' && customDate) {
+    const start = new Date(customDate);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(customDate);
+    end.setHours(23, 59, 59, 999);
+    return orderDate >= start && orderDate <= end;
+  }
+
   return orderDate >= new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
 };
 
 const countActiveFilters = (statusFilter, dateFilter) => {
   let n = 0;
   if (statusFilter !== 'all_status') n++;
-  if (dateFilter !== 'all_time') n++;
+  if (dateFilter !== 'all_time' && dateFilter !== '') n++;
   return n;
 };
 
-// ─── Resolve mapped status for an order ───────────────────
-// Checks both `status` (already mapped, set by setOrderStatus) and
-// `order_status` (raw field from API/socket) so that both update paths
-// produce a correct display label.
+const formatDateShort = (date) => {
+  return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
+};
+
 const getMappedStatus = (order) => {
   if (order.status && STATUS_MAP[order.status]) return order.status;
   return STATUS_MAP[order.order_status] ?? order.order_status ?? 'Placed';
 };
 
-// ─── Check if an order is "live" active ──────────────────
 const isLiveActive = (order) => {
   const s = getMappedStatus(order);
   return ACTIVE_STATUSES.includes(s);
@@ -129,8 +169,347 @@ const StatusBadge = ({ status }) => {
   );
 };
 
+// ─── Enhanced Calendar Date Picker Modal ──────────────────
+// Production-quality calendar grid — no native dependencies.
+// Swiggy/Zomato-style with quick picks, month nav, day grid.
+const CalendarDatePickerModal = ({ visible, onConfirm, onCancel, currentDate }) => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const [selectedDate, setSelectedDate] = useState(currentDate || today);
+  const [viewYear, setViewYear] = useState((currentDate || today).getFullYear());
+  const [viewMonth, setViewMonth] = useState((currentDate || today).getMonth());
+
+  // Slide animation for month transitions
+  const slideAnim = useRef(new Animated.Value(0)).current;
+  const slideDir = useRef(1); // 1 = right, -1 = left
+
+  useEffect(() => {
+    if (visible) {
+      const d = currentDate || new Date();
+      setSelectedDate(d);
+      setViewYear(d.getFullYear());
+      setViewMonth(d.getMonth());
+    }
+  }, [visible, currentDate]);
+
+  // Generate calendar grid for the viewed month
+  const calendarDays = useMemo(() => {
+    const firstDay = new Date(viewYear, viewMonth, 1);
+    const lastDay = new Date(viewYear, viewMonth + 1, 0);
+    const startPad = firstDay.getDay(); // 0=Sun
+    const totalDays = lastDay.getDate();
+
+    const days = [];
+    // Padding before 1st
+    for (let i = 0; i < startPad; i++) days.push(null);
+    // Actual days
+    for (let d = 1; d <= totalDays; d++) {
+      days.push(new Date(viewYear, viewMonth, d));
+    }
+    // Padding to fill last row
+    while (days.length % 7 !== 0) days.push(null);
+    return days;
+  }, [viewYear, viewMonth]);
+
+  // Week rows for rendering (chunked by 7)
+  const weekRows = useMemo(() => {
+    const rows = [];
+    for (let i = 0; i < calendarDays.length; i += 7) {
+      rows.push(calendarDays.slice(i, i + 7));
+    }
+    return rows;
+  }, [calendarDays]);
+
+  const goToPrevMonth = () => {
+    slideDir.current = -1;
+    slideAnim.setValue(-1);
+    Animated.spring(slideAnim, {
+      toValue: 0,
+      friction: 9,
+      tension: 80,
+      useNativeDriver: true,
+    }).start();
+    if (viewMonth === 0) {
+      setViewMonth(11);
+      setViewYear(y => y - 1);
+    } else {
+      setViewMonth(m => m - 1);
+    }
+  };
+
+  const goToNextMonth = () => {
+    const next = new Date(viewYear, viewMonth + 1, 1);
+    if (next > today) return;
+    slideDir.current = 1;
+    slideAnim.setValue(1);
+    Animated.spring(slideAnim, {
+      toValue: 0,
+      friction: 9,
+      tension: 80,
+      useNativeDriver: true,
+    }).start();
+    if (viewMonth === 11) {
+      setViewMonth(0);
+      setViewYear(y => y + 1);
+    } else {
+      setViewMonth(m => m + 1);
+    }
+  };
+
+  const isToday = (d) => d && d.getTime() === today.getTime();
+  const isSelected = (d) => d && selectedDate && d.getTime() === selectedDate.getTime();
+  const isFuture = (d) => d && d > today;
+  const isCurrentMonth = viewYear === today.getFullYear() && viewMonth === today.getMonth();
+
+  const handleDayPress = (d) => {
+    if (!d || isFuture(d)) return;
+    setSelectedDate(d);
+  };
+
+  const handleConfirm = () => {
+    onConfirm(selectedDate);
+  };
+
+  const handleQuickPick = (date) => {
+    setSelectedDate(date);
+    setViewYear(date.getFullYear());
+    setViewMonth(date.getMonth());
+  };
+
+  const monthLabel = `${MONTH_NAMES[viewMonth]} ${viewYear}`;
+
+  // Yesterday date helper
+  const yesterday = useMemo(() => {
+    const d = new Date(today);
+    d.setDate(d.getDate() - 1);
+    return d;
+  }, []);
+
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel}>
+      <View style={calStyles.overlay}>
+        <TouchableOpacity
+          style={calStyles.overlayTouch}
+          activeOpacity={1}
+          onPress={onCancel}
+        />
+        <View style={calStyles.container}>
+          {/* ── Header ── */}
+          <View style={calStyles.header}>
+            <View style={calStyles.headerLeft}>
+              <Icon name="event" size={20} color={Colors.primary} />
+              <Text style={calStyles.headerTitle}>Select Date</Text>
+            </View>
+            <TouchableOpacity onPress={onCancel} style={calStyles.closeBtn} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+              <Icon name="close" size={22} color={Colors.textSecondary} />
+            </TouchableOpacity>
+          </View>
+
+          {/* ── Quick picks ── */}
+          <View style={calStyles.quickRow}>
+            <TouchableOpacity
+              style={[
+                calStyles.quickChip,
+                isToday(selectedDate) && calStyles.quickChipActive,
+              ]}
+              onPress={() => handleQuickPick(today)}
+              activeOpacity={0.7}
+            >
+              <Text style={[
+                calStyles.quickChipText,
+                isToday(selectedDate) && calStyles.quickChipTextActive,
+              ]}>Today</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                calStyles.quickChip,
+                selectedDate && yesterday.getTime() === selectedDate.getTime() && calStyles.quickChipActive,
+              ]}
+              onPress={() => handleQuickPick(yesterday)}
+              activeOpacity={0.7}
+            >
+              <Text style={[
+                calStyles.quickChipText,
+                selectedDate && yesterday.getTime() === selectedDate.getTime() && calStyles.quickChipTextActive,
+              ]}>Yesterday</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* ── Divider ── */}
+          <View style={calStyles.divider} />
+
+          {/* ── Month Navigation ── */}
+          <View style={calStyles.monthNav}>
+            <TouchableOpacity onPress={goToPrevMonth} style={calStyles.monthArrow} activeOpacity={0.7}>
+              <Icon name="chevron-left" size={26} color={Colors.textPrimary} />
+            </TouchableOpacity>
+            <View style={calStyles.monthLabelWrap}>
+              <Text style={calStyles.monthLabel}>{monthLabel}</Text>
+            </View>
+            <TouchableOpacity
+              onPress={goToNextMonth}
+              style={[calStyles.monthArrow, isCurrentMonth && calStyles.monthArrowDisabled]}
+              disabled={isCurrentMonth}
+              activeOpacity={0.7}
+            >
+              <Icon
+                name="chevron-right"
+                size={26}
+                color={isCurrentMonth ? '#D1D5DB' : Colors.textPrimary}
+              />
+            </TouchableOpacity>
+          </View>
+
+          {/* ── Weekday headers ── */}
+          <View style={calStyles.weekRow}>
+            {WEEKDAY_LABELS.map((wd, i) => (
+              <View key={i} style={calStyles.weekCell}>
+                <Text style={[
+                  calStyles.weekText,
+                  i === 0 && calStyles.weekTextWeekend,
+                  i === 6 && calStyles.weekTextWeekend,
+                ]}>
+                  {wd}
+                </Text>
+              </View>
+            ))}
+          </View>
+
+          {/* ── Calendar grid ── */}
+          <View style={calStyles.calendarBody}>
+            {weekRows.map((week, wIdx) => (
+              <View key={wIdx} style={calStyles.weekDayRow}>
+                {week.map((day, dIdx) => {
+                  const _isToday = isToday(day);
+                  const _isSelected = isSelected(day);
+                  const _isFuture = isFuture(day);
+                  const empty = !day;
+
+                  return (
+                    <TouchableOpacity
+                      key={dIdx}
+                      style={[
+                        calStyles.dayCell,
+                        _isSelected && calStyles.dayCellSelected,
+                        _isToday && !_isSelected && calStyles.dayCellToday,
+                      ]}
+                      onPress={() => handleDayPress(day)}
+                      disabled={empty || _isFuture}
+                      activeOpacity={0.6}
+                    >
+                      {!empty && (
+                        <Text style={[
+                          calStyles.dayText,
+                          _isToday && !_isSelected && calStyles.dayTextToday,
+                          _isSelected && calStyles.dayTextSelected,
+                          _isFuture && calStyles.dayTextFuture,
+                        ]}>
+                          {day.getDate()}
+                        </Text>
+                      )}
+                      {/* Today dot indicator */}
+                      {_isToday && !_isSelected && (
+                        <View style={calStyles.todayDot} />
+                      )}
+                      {/* Selected check ring */}
+                      {_isSelected && (
+                        <View style={calStyles.selectedRing} />
+                      )}
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            ))}
+          </View>
+
+          {/* ── Selected date preview + Apply ── */}
+          <View style={calStyles.footer}>
+            <View style={calStyles.selectedPreview}>
+              <Icon name="calendar-today" size={16} color={Colors.primary} />
+              <Text style={calStyles.selectedPreviewText}>
+                {selectedDate.toLocaleDateString('en-IN', {
+                  weekday: 'short', day: '2-digit', month: 'short', year: 'numeric',
+                })}
+              </Text>
+            </View>
+            <TouchableOpacity style={calStyles.applyBtn} onPress={handleConfirm} activeOpacity={0.8}>
+              <Text style={calStyles.applyBtnText}>Apply</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+};
+
+// ─── Native iOS Date Picker Modal ─────────────────────────
+const NativeIOSPickerModal = ({ visible, onConfirm, onCancel, currentDate }) => {
+  const [tempDate, setTempDate] = useState(currentDate || new Date());
+
+  useEffect(() => {
+    if (visible) setTempDate(currentDate || new Date());
+  }, [visible, currentDate]);
+
+  if (!NativeDateTimePicker) return null;
+
+  return (
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onCancel}>
+      <View style={iosPickerStyles.overlay}>
+        <TouchableOpacity style={iosPickerStyles.overlayTouchable} activeOpacity={1} onPress={onCancel} />
+        <View style={iosPickerStyles.sheet}>
+          <View style={iosPickerStyles.headerBar}>
+            <TouchableOpacity onPress={onCancel} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+              <Text style={iosPickerStyles.cancelBtn}>Cancel</Text>
+            </TouchableOpacity>
+            <Text style={iosPickerStyles.headerTitle}>Select Date</Text>
+            <TouchableOpacity onPress={() => onConfirm(tempDate)} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+              <Text style={iosPickerStyles.doneBtn}>Done</Text>
+            </TouchableOpacity>
+          </View>
+          <NativeDateTimePicker
+            value={tempDate}
+            mode="date"
+            display="spinner"
+            onChange={(_, date) => date && setTempDate(date)}
+            maximumDate={new Date()}
+            style={iosPickerStyles.picker}
+            themeVariant="light"
+          />
+        </View>
+      </View>
+    </Modal>
+  );
+};
+
+// ─── Android Date Picker Modal ────────────────────────────
+const AndroidDatePickerModal = ({ visible, onConfirm, onCancel, currentDate }) => {
+  if (!NativeDateTimePicker || !visible) return null;
+
+  return (
+    <NativeDateTimePicker
+      value={currentDate || new Date()}
+      mode="date"
+      display="default"
+      onChange={(event, selectedDate) => {
+        if (event.type === 'set' && selectedDate) {
+          onConfirm(selectedDate);
+        } else {
+          onCancel();
+        }
+      }}
+      maximumDate={new Date()}
+    />
+  );
+};
+
 // ─── Filter Chips Row ─────────────────────────────────────
-const FilterChipsRow = ({ statusFilter, setStatusFilter, dateFilter, setDateFilter, onClearAll }) => {
+const FilterChipsRow = ({
+  statusFilter, setStatusFilter,
+  dateFilter, setDateFilter,
+  customDate, setCustomDate,
+  onClearAll, onOpenDatePicker,
+}) => {
   const activeCount = countActiveFilters(statusFilter, dateFilter);
 
   return (
@@ -144,22 +523,37 @@ const FilterChipsRow = ({ statusFilter, setStatusFilter, dateFilter, setDateFilt
         {activeCount > 0 && (
           <TouchableOpacity style={chipStyles.clearChip} onPress={onClearAll} activeOpacity={0.75}>
             <Icon name="close" size={13} color={Colors.error} />
-            <Text style={chipStyles.clearText}>Clear ({activeCount})</Text>
+            <Text style={chipStyles.clearText}>Clear</Text>
           </TouchableOpacity>
         )}
 
         {DATE_PRESETS.filter(p => p.id !== 'all_time').map((preset) => {
-          const active = dateFilter === preset.id;
+          const isActive = dateFilter === preset.id;
+          const isCustomActive = preset.id === 'custom' && dateFilter === 'custom';
+          const active = preset.id === 'custom' ? isCustomActive : isActive;
           return (
             <TouchableOpacity
               key={preset.id}
               style={[chipStyles.chip, active && chipStyles.chipActive]}
-              onPress={() => setDateFilter(active ? 'all_time' : preset.id)}
+              onPress={() => {
+                if (preset.id === 'custom') {
+                  onOpenDatePicker();
+                } else {
+                  setCustomDate(null);
+                  setDateFilter(active ? 'all_time' : preset.id);
+                }
+              }}
               activeOpacity={0.75}
             >
-              <Icon name="date-range" size={13} color={active ? Colors.white : Colors.textSecondary} />
+              <Icon
+                name={preset.id === 'custom' ? 'event' : 'schedule'}
+                size={13}
+                color={active ? Colors.white : Colors.textSecondary}
+              />
               <Text style={[chipStyles.chipText, active && chipStyles.chipTextActive]}>
-                {preset.label}
+                {preset.id === 'custom' && customDate
+                  ? formatDateShort(customDate)
+                  : preset.label}
               </Text>
             </TouchableOpacity>
           );
@@ -197,11 +591,29 @@ const FilterChipsRow = ({ statusFilter, setStatusFilter, dateFilter, setDateFilt
           );
         })}
       </ScrollView>
+
+      {activeCount > 0 && (
+        <View style={chipStyles.summaryRow}>
+          <Icon name="filter-list" size={13} color={Colors.primary} />
+          <Text style={chipStyles.summaryText}>
+            {dateFilter === 'today' && 'Today'}
+            {dateFilter === 'yesterday' && 'Yesterday'}
+            {dateFilter === 'week' && 'This Week'}
+            {dateFilter === 'custom' && customDate && formatDateShort(customDate)}
+            {statusFilter !== 'all_status' && dateFilter !== 'all_time' ? ' · ' : ''}
+            {statusFilter === 'Delivered' && 'Delivered'}
+            {statusFilter === 'Cancelled' && 'Cancelled'}
+          </Text>
+          <TouchableOpacity onPress={onClearAll} activeOpacity={0.7}>
+            <Text style={chipStyles.summaryClear}>Clear all</Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </View>
   );
 };
 
-// ─── Active Order Banner (single) ─────────────────────────
+// ─── Active Order Banner ──────────────────────────────────
 const ActiveOrderBanner = ({ order, onPress }) => {
   const pulseAnim = useRef(new Animated.Value(1)).current;
   React.useEffect(() => {
@@ -364,16 +776,23 @@ export const OrdersScreen = ({ navigation }) => {
   const [activeTab, setActiveTab] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all_status');
   const [dateFilter, setDateFilter] = useState('all_time');
+  const [customDate, setCustomDate] = useState(null);
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [reorderingId, setReorderingId] = useState(null);
   const tabIndicatorAnim = useRef(new Animated.Value(0)).current;
 
+  // ── FIX: Ref to avoid stale closures in cancel handlers ──
+  const customDateRef = useRef(null);
+  useEffect(() => {
+    customDateRef.current = customDate;
+  }, [customDate]);
+
   const { data: queryOrders, refetch, isRefetching, isLoading } = useQuery({
     queryKey: ['orders'],
-    enabled: false,   // root useOrders in RootNavigator owns fetching
+    enabled: false,
   });
 
   const storeOrders = useOrderStore(state => state.orders);
-
 
   const orders = useMemo(() => {
     if (!Array.isArray(queryOrders) || queryOrders.length === 0) return storeOrders;
@@ -382,9 +801,6 @@ export const OrdersScreen = ({ navigation }) => {
     const merged = queryOrders.map(qo => {
       const so = storeByStrId.get(String(qo.id));
       if (!so) return qo;
-      // Overlay store fields on top of query data so real-time status
-      // updates (from setOrderStatus) are reflected. Keep query items
-      // — store orders from fetchOrderById may not have items.
       return {
         ...qo,
         restaurantName: so?.restaurantName || qo.restaurantName || qo.restaurant_name,
@@ -409,6 +825,51 @@ export const OrdersScreen = ({ navigation }) => {
     [activeOrders],
   );
 
+  // ── Date picker handlers ──────────────────────────────
+  const openDatePicker = useCallback(() => {
+    setDatePickerOpen(true);
+  }, []);
+
+  const onAndroidDateChange = useCallback((event, selectedDate) => {
+    setDatePickerOpen(false);
+    if (event.type === 'set' && selectedDate) {
+      setCustomDate(selectedDate);
+      setDateFilter('custom');
+    } else if (event.type === 'dismissed') {
+      if (!customDateRef.current) {
+        setDateFilter('all_time');
+      }
+    }
+  }, []);
+
+  const onIOSConfirm = useCallback((date) => {
+    setCustomDate(date);
+    setDateFilter('custom');
+    setDatePickerOpen(false);
+  }, []);
+
+  const onIOSCancel = useCallback(() => {
+    setDatePickerOpen(false);
+    if (!customDateRef.current) {
+      setDateFilter('all_time');
+    }
+  }, []);
+
+  // Calendar picker confirm (pure JS — no native dep)
+  const onCalendarConfirm = useCallback((date) => {
+    setCustomDate(date);
+    setDateFilter('custom');
+    setDatePickerOpen(false);
+  }, []);
+
+  // Calendar picker cancel
+  const onCalendarCancel = useCallback(() => {
+    setDatePickerOpen(false);
+    if (!customDateRef.current) {
+      setDateFilter('all_time');
+    }
+  }, []);
+
   // ── Filtered + sorted orders ──────────────────────────
   const filteredOrders = useMemo(() => {
     const datePreset = DATE_PRESETS.find(p => p.id === dateFilter);
@@ -420,31 +881,25 @@ export const OrdersScreen = ({ navigation }) => {
           return activeOrderIdSet.has(o.id);
         }
 
-        if (activeTab === 'past') {
-          return ['Delivered', 'Cancelled'].includes(s);
-        }
-
-        // 'all' tab — exclude active orders to avoid duplication with banners
         if (activeOrderIdSet.has(o.id)) return false;
 
-        // Status chip filter
         if (statusFilter !== 'all_status' && s !== statusFilter) return false;
 
-        // Date chip filter
-        if (!isWithinDays(o.placed_at || o.created_at, datePreset?.days ?? null)) return false;
+        if (!isWithinDays(o.placed_at || o.created_at, datePreset?.days ?? null, customDate)) return false;
 
         return true;
       })
       .sort((a, b) =>
         new Date(b.placed_at || b.created_at) - new Date(a.placed_at || a.created_at)
       );
-  }, [orders, activeTab, statusFilter, dateFilter, activeOrderIdSet]);
+  }, [orders, activeTab, statusFilter, dateFilter, customDate, activeOrderIdSet]);
 
   const activeFilterCount = countActiveFilters(statusFilter, dateFilter);
 
   const clearAllFilters = useCallback(() => {
     setStatusFilter('all_status');
     setDateFilter('all_time');
+    setCustomDate(null);
   }, []);
 
   // ── Reorder ───────────────────────────────────────────
@@ -508,15 +963,19 @@ export const OrdersScreen = ({ navigation }) => {
     }).start();
   };
 
-  const tabWidth = 120;
+  const screenWidth = Dimensions.get('window').width;
+  const tabPadding = 16;
+  const trackPadding = 4;
+  const tabWidth = (screenWidth - tabPadding * 2 - trackPadding * 2) / TABS.length;
+  const indicatorWidth = tabWidth - 8;
   const indicatorLeft = tabIndicatorAnim.interpolate({
-    inputRange: [0, 1, 2],
-    outputRange: [4, tabWidth + 4, tabWidth * 2 + 4],
+    inputRange: [0, 1],
+    outputRange: [4, tabWidth + 4],
   });
 
   const ListHeader = useCallback(() => (
     <View>
-      {activeOrders.length > 0 && activeTab !== 'past' && (
+      {activeOrders.length > 0 && (
         <ActiveOrdersBannerSection
           activeOrders={activeOrders}
           navigation={navigation}
@@ -527,7 +986,6 @@ export const OrdersScreen = ({ navigation }) => {
           <Text style={styles.listLabel}>
             {activeTab === 'all' && `All Orders (${filteredOrders.length})`}
             {activeTab === 'active' && `Active Orders (${filteredOrders.length})`}
-            {activeTab === 'past' && `Past Orders (${filteredOrders.length})`}
           </Text>
           {activeFilterCount > 0 && (
             <View style={styles.filterActivePill}>
@@ -541,6 +999,47 @@ export const OrdersScreen = ({ navigation }) => {
       )}
     </View>
   ), [activeOrders, filteredOrders.length, activeTab, activeFilterCount, navigation]);
+
+  // ── Render date picker ────────────────────────────────
+  const renderDatePicker = () => {
+    if (HAS_NATIVE_PICKER) {
+      if (Platform.OS === 'ios') {
+        return (
+          <NativeIOSPickerModal
+            visible={datePickerOpen}
+            onConfirm={onIOSConfirm}
+            onCancel={onIOSCancel}
+            currentDate={customDate || new Date()}
+          />
+        );
+      }
+      return (
+        <AndroidDatePickerModal
+          visible={datePickerOpen}
+          onConfirm={(date) => {
+            setCustomDate(date);
+            setDateFilter('custom');
+            setDatePickerOpen(false);
+          }}
+          onCancel={() => {
+            setDatePickerOpen(false);
+            if (!customDateRef.current) setDateFilter('all_time');
+          }}
+          currentDate={customDate || new Date()}
+        />
+      );
+    }
+
+    // Fallback: pure JS calendar picker — no native dependency
+    return (
+      <CalendarDatePickerModal
+        visible={datePickerOpen}
+        onConfirm={onCalendarConfirm}
+        onCancel={onCalendarCancel}
+        currentDate={customDate}
+      />
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -557,11 +1056,11 @@ export const OrdersScreen = ({ navigation }) => {
       {/* Tabs */}
       <View style={styles.tabsWrapper}>
         <View style={styles.tabsTrack}>
-          <Animated.View style={[styles.tabIndicator, { left: indicatorLeft, width: tabWidth - 8 }]} />
+          <Animated.View style={[styles.tabIndicator, { left: indicatorLeft, width: indicatorWidth }]} />
           {TABS.map((tab, index) => (
             <TouchableOpacity
               key={tab.id}
-              style={[styles.tab, { width: tabWidth }]}
+              style={[styles.tab, { flex: 1 }]}
               onPress={() => switchTab(tab.id, index)}
               activeOpacity={0.7}
             >
@@ -576,14 +1075,22 @@ export const OrdersScreen = ({ navigation }) => {
         </View>
       </View>
 
-      {/* Filter chips */}
-      <FilterChipsRow
-        statusFilter={statusFilter}
-        setStatusFilter={setStatusFilter}
-        dateFilter={dateFilter}
-        setDateFilter={setDateFilter}
-        onClearAll={clearAllFilters}
-      />
+      {/* Filter chips — only on 'all' tab */}
+      {activeTab === 'all' && (
+        <FilterChipsRow
+          statusFilter={statusFilter}
+          setStatusFilter={setStatusFilter}
+          dateFilter={dateFilter}
+          setDateFilter={setDateFilter}
+          customDate={customDate}
+          setCustomDate={setCustomDate}
+          onClearAll={clearAllFilters}
+          onOpenDatePicker={openDatePicker}
+        />
+      )}
+
+      {/* Date Picker */}
+      {renderDatePicker()}
 
       {/* List */}
       {isLoading && !storeOrders.length ? (
@@ -619,7 +1126,7 @@ export const OrdersScreen = ({ navigation }) => {
             />
           }
           ListEmptyComponent={
-            activeFilterCount > 0 ? (
+            activeTab === 'all' && activeFilterCount > 0 ? (
               <FilterEmptyState onClear={clearAllFilters} />
             ) : (
               <EmptyState
@@ -640,6 +1147,268 @@ export const OrdersScreen = ({ navigation }) => {
     </SafeAreaView>
   );
 };
+
+// ─── Calendar Date Picker Styles ──────────────────────────
+const calStyles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  overlayTouch: {
+    flex: 1,
+    width: '100%',
+    position: 'absolute',
+    top: 0, left: 0, right: 0, bottom: 0,
+  },
+  container: {
+    width: '92%',
+    backgroundColor: Colors.white,
+    borderRadius: 24,
+    overflow: 'hidden',
+    elevation: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
+  },
+
+  // Header
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: Colors.textPrimary,
+  },
+  closeBtn: {
+    padding: 4,
+    borderRadius: 20,
+    backgroundColor: Colors.background,
+  },
+
+  // Quick picks
+  quickRow: {
+    flexDirection: 'row',
+    gap: 10,
+    paddingHorizontal: 20,
+    paddingBottom: 14,
+  },
+  quickChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: Colors.background,
+    borderWidth: 1.5,
+    borderColor: Colors.border,
+  },
+  quickChipActive: {
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
+  },
+  quickChipText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: Colors.textSecondary,
+  },
+  quickChipTextActive: {
+    color: Colors.white,
+  },
+
+  // Divider
+  divider: {
+    height: 1,
+    backgroundColor: '#F3F4F6',
+    marginHorizontal: 20,
+  },
+
+  // Month navigation
+  monthNav: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+  },
+  monthArrow: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 12,
+    backgroundColor: Colors.background,
+  },
+  monthArrowDisabled: {
+    opacity: 0.4,
+  },
+  monthLabelWrap: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  monthLabel: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: Colors.textPrimary,
+    letterSpacing: 0.3,
+  },
+
+  // Weekday headers
+  weekRow: {
+    flexDirection: 'row',
+    paddingHorizontal: 12,
+    marginBottom: 4,
+  },
+  weekCell: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 6,
+  },
+  weekText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#9CA3AF',
+  },
+  weekTextWeekend: {
+    color: '#D1D5DB',
+  },
+
+  // Calendar body
+  calendarBody: {
+    paddingHorizontal: 12,
+    paddingBottom: 8,
+  },
+  weekDayRow: {
+    flexDirection: 'row',
+    marginBottom: 2,
+  },
+  dayCell: {
+    flex: 1,
+    aspectRatio: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 12,
+    position: 'relative',
+  },
+  dayCellSelected: {
+    backgroundColor: Colors.primary,
+  },
+  dayCellToday: {
+    backgroundColor: Colors.primaryLight,
+  },
+  dayText: {
+    fontSize: 15,
+    fontWeight: '500',
+    color: Colors.textPrimary,
+  },
+  dayTextToday: {
+    color: Colors.primary,
+    fontWeight: '700',
+  },
+  dayTextSelected: {
+    color: Colors.white,
+    fontWeight: '700',
+  },
+  dayTextFuture: {
+    color: '#E5E7EB',
+  },
+  todayDot: {
+    position: 'absolute',
+    bottom: 4,
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: Colors.primary,
+  },
+  selectedRing: {
+    position: 'absolute',
+    top: 2,
+    right: 2,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: Colors.white,
+  },
+
+  // Footer
+  footer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#F3F4F6',
+  },
+  selectedPreview: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flex: 1,
+  },
+  selectedPreviewText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: Colors.primary,
+  },
+  applyBtn: {
+    backgroundColor: Colors.primary,
+    paddingHorizontal: 28,
+    paddingVertical: 12,
+    borderRadius: 14,
+    elevation: 3,
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+  },
+  applyBtnText: {
+    color: Colors.white,
+    fontSize: 15,
+    fontWeight: '700',
+  },
+});
+
+// ─── iOS Native Picker styles ─────────────────────────────
+const iosPickerStyles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0,0,0,0.4)',
+  },
+  overlayTouchable: {
+    flex: 1,
+  },
+  sheet: {
+    backgroundColor: Colors.white,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingBottom: 34,
+  },
+  headerBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  cancelBtn: { fontSize: 16, fontWeight: '600', color: Colors.textSecondary },
+  headerTitle: { fontSize: 16, fontWeight: '700', color: Colors.textPrimary },
+  doneBtn: { fontSize: 16, fontWeight: '700', color: Colors.primary },
+  picker: { height: 200, width: '100%' },
+});
 
 // ─── Chip styles ──────────────────────────────────────────
 const chipStyles = StyleSheet.create({
@@ -675,6 +1444,25 @@ const chipStyles = StyleSheet.create({
     borderColor: (Colors.error ?? '#E53935') + '44',
   },
   clearText: { fontSize: 12, fontWeight: '700', color: Colors.error ?? '#E53935' },
+  summaryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 2,
+  },
+  summaryText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: Colors.textSecondary,
+    flex: 1,
+  },
+  summaryClear: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: Colors.error ?? '#E53935',
+  },
   badge: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
     paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8,

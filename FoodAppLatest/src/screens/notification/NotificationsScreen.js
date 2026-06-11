@@ -71,9 +71,6 @@ export default function NotificationsScreen({ route, navigation }) {
                     userId: n.user_id,
                     title: n.title,
                     body: n.body,
-                    // ✅ FIX: normalize type so NotificationCard always gets a
-                    // consistent SCREAMING_SNAKE_CASE key, regardless of whether
-                    // the API returns a numeric enum, PascalCase, or snake_case.
                     type: resolveTypeKey(n.type),
                     channel: n.channel ?? "in_app",
                     isRead: n.is_read === 1 || n.is_read === true,
@@ -120,17 +117,16 @@ export default function NotificationsScreen({ route, navigation }) {
                 <TouchableOpacity
                     onPress={() => navigation?.goBack()}
                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                    style={styles.headerSide}
+                    style={styles.headerLeft}
                 >
                     <Icon name="arrow-back-ios" size={20} color={Colors.textPrimary} />
                 </TouchableOpacity>
 
-                {/* Absolutely centred title — never pushed by side elements */}
-                <Text style={styles.headerTitle} pointerEvents="none">
-                    Notifications
-                </Text>
+                <View style={styles.headerCenter}>
+                    <Text style={styles.headerTitle}>Notifications</Text>
+                </View>
 
-                <View style={[styles.headerSide, { alignItems: "flex-end" }]}>
+                <View style={styles.headerRight}>
                     {badgeCount > 0 && (
                         <TouchableOpacity onPress={markAllRead} style={styles.markAllBtn}>
                             <Text style={styles.markAllText}>Mark all read</Text>
@@ -207,35 +203,45 @@ const styles = StyleSheet.create({
     header: {
         flexDirection: "row",
         alignItems: "center",
-        justifyContent: "space-between",
         paddingHorizontal: 16,
         paddingVertical: 12,
         backgroundColor: Colors.white,
         borderBottomWidth: 1,
         borderBottomColor: "#f0f0f0",
     },
-    // Both side slots are equal width so the title is always centred
-    headerSide: {
-        minWidth: 90,
+    headerLeft: {
+        width: 40,
+        justifyContent: "center",
+        alignItems: "flex-start",
+    },
+    headerCenter: {
+        flex: 1,
+        alignItems: "center",
+    },
+    headerRight: {
+        minWidth: 40,
+        justifyContent: "center",
+        alignItems: "flex-end",
     },
     headerTitle: {
-        position: "absolute",
-        left: 0,
-        right: 0,
-        textAlign: "center",
         fontSize: 18,
         fontWeight: "700",
         color: Colors.textPrimary,
     },
     markAllBtn: {
         backgroundColor: "#fff7ed",
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 20,
+        paddingHorizontal: 10,
+        paddingVertical: 5,
+        borderRadius: 16,
         borderWidth: 1,
         borderColor: "#fed7aa",
     },
-    markAllText: { fontSize: 12, fontWeight: "600", color: "#f97316" },
+    markAllText: {
+        fontSize: 11,
+        fontWeight: "600",
+        color: "#f97316",
+        letterSpacing: -0.2,
+    },
 
     // ── Filters ──
     filterRow: {

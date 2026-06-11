@@ -17,6 +17,8 @@ import {
   Dimensions,
   StatusBar,
   Image,
+  PanResponder,
+  Easing,
 } from 'react-native';
 import { useAddressStore } from "../../store/addressStore";
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -47,7 +49,8 @@ const BANNERS = [
   { id: 'b4', title: 'New Arrivals', subtitle: 'Try 20+ new restaurants', cta: 'Discover', emoji: '✨', tag: 'NEW', colors: ['#F857A6', '#FF5858', '#FF8C42'] },
 ];
 
-const LOOP_BANNERS = [...BANNERS, ...BANNERS, ...BANNERS];
+// Clone last at start + clone first at end for seamless infinite loop
+const EXTENDED_BANNERS = [BANNERS[BANNERS.length - 1], ...BANNERS, BANNERS[0]];
 
 const CAT_GRADIENTS = [
   ['#FFF3E0', '#FFE0B2'], ['#FCE4EC', '#F8BBD0'], ['#E8F5E9', '#C8E6C9'],
@@ -63,10 +66,7 @@ const SORT_OPTIONS = [
   { id: 'price_high', label: 'Cost: High to Low', icon: 'trending-down' },
 ];
 
-const BANNER_KEY_EXTRACTOR = (item, index) => item.id + '-' + index;
-const BANNER_GET_ITEM_LAYOUT = (_, index) => ({
-  length: BANNER_WIDTH + 16, offset: (BANNER_WIDTH + 16) * index, index,
-});
+
 
 const sortRestaurants = (restaurants, sortId) => {
   if (!restaurants) return [];
@@ -130,116 +130,126 @@ const DishSkeleton = () => {
 };
 
 // ─────────────────────────────────────────────────────────
-// BannerCard
+// BannerCard — static, no per-card animations
 // ─────────────────────────────────────────────────────────
-const BannerCard = React.memo(({ item, index, scrollX }) => {
-  const floatAnim = useRef(new Animated.Value(0)).current;
-  useEffect(() => {
-    const loop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(floatAnim, { toValue: -10, duration: 1400, useNativeDriver: true, isInteraction: false }),
-        Animated.timing(floatAnim, { toValue: 0, duration: 1400, useNativeDriver: true, isInteraction: false }),
-      ])
-    );
-    loop.start();
-    return () => loop.stop();
-  }, []);
-  const inputRange = [(index - 1) * (BANNER_WIDTH + 16), index * (BANNER_WIDTH + 16), (index + 1) * (BANNER_WIDTH + 16)];
-  const scale = scrollX.interpolate({ inputRange, outputRange: [0.92, 1, 0.92], extrapolate: 'clamp' });
-  return (
-    <Animated.View style={{ transform: [{ scale }] }}>
-      <View style={styles.bannerOuter}>
-        <LinearGradient colors={item.colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.bannerGradient}>
-          <View style={styles.bannerHighlight} />
-          <View style={styles.bannerCircle1} />
-          <View style={styles.bannerCircle2} />
-          <View style={styles.bannerCircle3} />
-          <View style={styles.bannerTag}>
-            <View style={styles.bannerTagDot} />
-            <Text style={styles.bannerTagText}>{item.tag}</Text>
-          </View>
-          <View style={styles.bannerContent}>
-            <View style={styles.bannerLeft}>
-              <Text style={styles.bannerTitle}>{item.title}</Text>
-              <Text style={styles.bannerSubtitle}>{item.subtitle}</Text>
-              <View style={styles.bannerCtaBtn}>
-                <Text style={styles.bannerCtaText}>{item.cta}</Text>
-                <Icon name="arrow-forward-ios" size={11} color="#333" />
-              </View>
-            </View>
-            <View style={styles.bannerEmojiContainer}>
-              <Animated.Text style={[styles.bannerEmoji, { transform: [{ translateY: floatAnim }] }]}>
-                {item.emoji}
-              </Animated.Text>
-            </View>
-          </View>
-        </LinearGradient>
+const BannerCard = React.memo(({ item }) => (
+  <View style={styles.bannerOuter}>
+    <LinearGradient colors={item.colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.bannerGradient}>
+      <View style={styles.bannerHighlight} />
+      <View style={styles.bannerCircle1} />
+      <View style={styles.bannerCircle2} />
+      <View style={styles.bannerCircle3} />
+      <View style={styles.bannerTag}>
+        <View style={styles.bannerTagDot} />
+        <Text style={styles.bannerTagText}>{item.tag}</Text>
       </View>
-    </Animated.View>
-  );
-});
+      <View style={styles.bannerContent}>
+        <View style={styles.bannerLeft}>
+          <Text style={styles.bannerTitle}>{item.title}</Text>
+          <Text style={styles.bannerSubtitle}>{item.subtitle}</Text>
+          <View style={styles.bannerCtaBtn}>
+            <Text style={styles.bannerCtaText}>{item.cta}</Text>
+            <Icon name="arrow-forward-ios" size={11} color="#333" />
+          </View>
+        </View>
+        <View style={styles.bannerEmojiContainer}>
+          <Text style={styles.bannerEmoji}>{item.emoji}</Text>
+        </View>
+      </View>
+    </LinearGradient>
+  </View>
+));
 
 // ─────────────────────────────────────────────────────────
-// BannerSection — self-contained, no external refs
+// BannerSection — seamless infinite loop via translateX
+// No FlatList, no flicker. One slide animation for all.
 // ─────────────────────────────────────────────────────────
 const BannerSection = React.memo(() => {
-  const bannerScrollRef = useRef(null);
-  const scrollX = useRef(new Animated.Value(0)).current;
-  const activeIndexRef = useRef(BANNERS.length); // start at middle set
+  const ITEM_WIDTH = BANNER_WIDTH + 16;
+  const START = 1; // first real banner index in EXTENDED_BANNERS
 
-  // Auto-scroll interval
+  const translateX = useRef(new Animated.Value(-ITEM_WIDTH * START)).current;
+  const currentIdx = useRef(START);
+  const isAnimating = useRef(false);
+
+  // Slide to a target index with smooth animation
+  const slideTo = useCallback((targetIdx) => {
+    currentIdx.current = targetIdx;
+    isAnimating.current = true;
+    Animated.timing(translateX, {
+      toValue: -ITEM_WIDTH * targetIdx,
+      duration: 480,
+      easing: Easing.bezier(0.25, 0.1, 0.25, 1),
+      useNativeDriver: true,
+    }).start(({ finished }) => {
+      isAnimating.current = false;
+      if (!finished) return;
+
+      // Seamless reset: jump from clone to the real equivalent
+      // Clone of first banner (last index) → jump to real first (index 1)
+      if (targetIdx >= EXTENDED_BANNERS.length - 1) {
+        currentIdx.current = START;
+        translateX.setValue(-ITEM_WIDTH * START);
+      }
+      // Clone of last banner (index 0) → jump to real last
+      else if (targetIdx <= 0) {
+        currentIdx.current = BANNERS.length; // last real banner
+        translateX.setValue(-ITEM_WIDTH * BANNERS.length);
+      }
+    });
+  }, []);
+
+  // Auto-scroll
   useEffect(() => {
     const interval = setInterval(() => {
-      let nextIndex = activeIndexRef.current + 1;
-      bannerScrollRef.current?.scrollToOffset({
-        offset: nextIndex * (BANNER_WIDTH + 16),
-        animated: true,
-      });
-      activeIndexRef.current = nextIndex;
-      if (nextIndex >= LOOP_BANNERS.length - BANNERS.length) {
-        activeIndexRef.current = BANNERS.length;
-        bannerScrollRef.current?.scrollToOffset({
-          offset: BANNERS.length * (BANNER_WIDTH + 16),
-          animated: false,
-        });
+      if (!isAnimating.current) {
+        slideTo(currentIdx.current + 1);
       }
     }, 3500);
     return () => clearInterval(interval);
-  }, []);
+  }, [slideTo]);
 
-  const onMomentumScrollEnd = useCallback((e) => {
-    activeIndexRef.current = Math.round(
-      e.nativeEvent.contentOffset.x / (BANNER_WIDTH + 16)
-    );
-  }, []);
+  // Swipe gesture handling
+  const gestureRef = useRef({ startOffset: 0 });
+  const panResponder = useMemo(() => PanResponder.create({
+    onStartShouldSetPanResponder: () => false,
+    onMoveShouldSetPanResponder: (_, gs) =>
+      Math.abs(gs.dx) > 12 && Math.abs(gs.dx) > Math.abs(gs.dy) * 1.5,
+    onPanResponderTerminationRequest: () => false,
+    onPanResponderGrant: () => {
+      translateX.stopAnimation();
+      isAnimating.current = false;
+      gestureRef.current.startOffset = -ITEM_WIDTH * currentIdx.current;
+    },
+    onPanResponderMove: (_, gs) => {
+      translateX.setValue(gestureRef.current.startOffset + gs.dx);
+    },
+    onPanResponderRelease: (_, gs) => {
+      const dx = gs.dx;
+      const vx = gs.vx;
+      let targetIdx = currentIdx.current;
+
+      if (Math.abs(dx) > ITEM_WIDTH * 0.25 || Math.abs(vx) > 0.4) {
+        targetIdx = dx > 0 ? currentIdx.current - 1 : currentIdx.current + 1;
+      }
+
+      // Clamp within extended bounds
+      targetIdx = Math.max(0, Math.min(EXTENDED_BANNERS.length - 1, targetIdx));
+      slideTo(targetIdx);
+    },
+  }), []);
 
   return (
-    <Animated.FlatList
-      ref={bannerScrollRef}
-      data={LOOP_BANNERS}
-      horizontal
-      initialScrollIndex={BANNERS.length}   // ✅ start at middle set — no requestAnimationFrame needed
-      showsHorizontalScrollIndicator={false}
-      keyExtractor={BANNER_KEY_EXTRACTOR}
-      renderItem={({ item, index }) => (
-        <BannerCard item={item} index={index} scrollX={scrollX} />
-      )}
-      getItemLayout={BANNER_GET_ITEM_LAYOUT}
-      contentContainerStyle={styles.bannersContent}
-      disableIntervalMomentum
-      snapToInterval={BANNER_WIDTH + 16}
-      snapToAlignment="start"
-      decelerationRate="fast"
-      onMomentumScrollEnd={onMomentumScrollEnd}
-      onScroll={Animated.event(
-        [{ nativeEvent: { contentOffset: { x: scrollX } } }],
-        { useNativeDriver: false }
-      )}
-      scrollEventThrottle={16}
-      removeClippedSubviews
-      windowSize={5}
-      initialNumToRender={3}
-    />
+    <View style={styles.bannerContainer}>
+      <Animated.View
+        style={[styles.bannerTrack, { transform: [{ translateX }] }]}
+        {...panResponder.panHandlers}
+      >
+        {EXTENDED_BANNERS.map((item, index) => (
+          <BannerCard key={index} item={item} />
+        ))}
+      </Animated.View>
+    </View>
   );
 });
 
@@ -284,6 +294,7 @@ const HomeDishCard = React.memo(({ item, quantity, onAdd, onRemove, onPress }) =
               <Text style={{ fontSize: 32 }}>🍽️</Text>
             </View>
           )}
+
           <View style={[styles.vegBadgeSmall, { borderColor: isVeg ? '#2E7D32' : '#C62828' }]}>
             <View style={[styles.vegDotSmall, { backgroundColor: isVeg ? '#2E7D32' : '#C62828' }]} />
           </View>
@@ -307,11 +318,11 @@ const HomeDishCard = React.memo(({ item, quantity, onAdd, onRemove, onPress }) =
             </TouchableOpacity>
           ) : (
             <View style={styles.stepperFilled}>
-              <TouchableOpacity onPress={(e) => { e.stopPropagation?.(); onRemove(); }}>
+              <TouchableOpacity onPress={(e) => { e.stopPropagation?.(); onRemove(); }} style={styles.stepperTouchable}>
                 <Text style={styles.stepperBtnFilled}>−</Text>
               </TouchableOpacity>
               <Text style={styles.stepperCountFilled}>{quantity}</Text>
-              <TouchableOpacity onPress={(e) => { e.stopPropagation?.(); onAdd(); }}>
+              <TouchableOpacity onPress={(e) => { e.stopPropagation?.(); onAdd(); }} style={styles.stepperTouchable}>
                 <Text style={styles.stepperBtnFilled}>+</Text>
               </TouchableOpacity>
             </View>
@@ -343,7 +354,7 @@ const PopularDishesSection = React.memo(({ onDishPress, onAdd, onRemove, getQuan
   return (
     <View style={styles.dishSection}>
       <View style={styles.sectionHeaderRow}>
-        <View>
+        <View style={styles.sectionHeaderLeft}>
           <Text style={styles.sectionTitle}>Popular Dishes 🔥</Text>
           <Text style={styles.sectionSubtitle}>Trending near you</Text>
         </View>
@@ -472,7 +483,10 @@ const HomeListHeader = React.memo(({
       </Animated.View>
       <Animated.View style={{ opacity: catFade }}>
         <View style={styles.sectionHeaderRow}>
-          <Text style={styles.sectionTitle}>What's on your mind?</Text>
+          <View style={styles.sectionHeaderLeft}>
+            <Text style={styles.sectionTitle}>What's on your mind?</Text>
+            <View style={styles.sectionAccentLine} />
+          </View>
           <TouchableOpacity onPress={() => navigation.navigate('SearchScreen', {})}><Text style={styles.seeAll}>See All</Text></TouchableOpacity>
         </View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.catsContent}>
@@ -485,7 +499,7 @@ const HomeListHeader = React.memo(({
         <PopularDishesSection onDishPress={onDishPress} onAdd={onDishAdd} onRemove={onDishRemove} getQuantity={getQuantity} />
       </Animated.View>
       <Animated.View style={[styles.restHeaderRow, { opacity: restFade }]}>
-        <View>
+        <View style={styles.sectionHeaderLeft}>
           <Text style={styles.sectionTitle}>{activeFilters.length > 0 ? `Filtered (${restaurantCount})` : 'All Restaurants'}</Text>
           <Text style={styles.restSubtitle}>{restaurantCount} places near you</Text>
         </View>
@@ -540,6 +554,7 @@ const DishBottomModal = ({ visible, dish, onClose, onAdd, navigation }) => {
                 <Text style={{ fontSize: 64 }}>🍽️</Text>
               </View>
             )}
+
           </View>
           <View style={styles.dishModalContent}>
             <View style={[styles.vegIndicator, { borderColor: isVeg ? '#2E7D32' : '#C62828' }]}>
@@ -998,147 +1013,655 @@ export const HomeScreen = ({ navigation }) => {
 // ─────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-  topBar: { backgroundColor: Colors.white, paddingHorizontal: 16, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: Colors.border, overflow: 'visible', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, zIndex: 10 },
-  greeting: { fontSize: 13, color: Colors.textSecondary, fontWeight: '500', paddingTop: 4 },
-  locationCartRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 6, marginBottom: 10 },
+
+  // ── Top Bar ──
+  topBar: {
+    backgroundColor: Colors.white,
+    paddingHorizontal: 16,
+    paddingBottom: 14,
+    borderBottomWidth: 0,
+    borderBottomColor: 'transparent',
+    overflow: 'visible',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    zIndex: 10,
+  },
+  greeting: {
+    fontSize: 13,
+    color: Colors.textSecondary,
+    fontWeight: '600',
+    paddingTop: 4,
+    letterSpacing: 0.2,
+  },
+  locationCartRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 6,
+    marginBottom: 10,
+  },
   locationBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 },
-  locationIconBox: { width: 34, height: 34, borderRadius: 10, backgroundColor: Colors.primaryLight, justifyContent: 'center', alignItems: 'center' },
+  locationIconBox: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    backgroundColor: Colors.primaryLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   locationTexts: { gap: 1 },
-  locationLabel: { fontSize: 9, color: Colors.textLight, fontWeight: '700', letterSpacing: 0.8 },
+  locationLabel: {
+    fontSize: 9,
+    color: Colors.textLight,
+    fontWeight: '700',
+    letterSpacing: 0.8,
+  },
   locationValueRow: { flexDirection: 'row', alignItems: 'center', gap: 2 },
-  locationText: { fontSize: 14, fontWeight: '700', color: Colors.textPrimary, maxWidth: 180 },
-  topBarActions: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  iconBtn: { width: 38, height: 38, borderRadius: 12, backgroundColor: Colors.background, justifyContent: 'center', alignItems: 'center', position: 'relative' },
-  notifDot: { position: 'absolute', top: 7, right: 7, width: 7, height: 7, borderRadius: 4, backgroundColor: Colors.error, borderWidth: 1.5, borderColor: Colors.white },
-  cartBadge: { position: 'absolute', top: 4, right: 4, backgroundColor: Colors.primary, borderRadius: 8, minWidth: 16, height: 16, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 3, borderWidth: 1.5, borderColor: Colors.white },
+  locationText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: Colors.textPrimary,
+    maxWidth: 180,
+  },
+  topBarActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  iconBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 13,
+    backgroundColor: Colors.background,
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
+  },
+  notifDot: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: Colors.error,
+    borderWidth: 1.5,
+    borderColor: Colors.white,
+  },
+  cartBadge: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    backgroundColor: Colors.primary,
+    borderRadius: 9,
+    minWidth: 18,
+    height: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+    borderWidth: 1.5,
+    borderColor: Colors.white,
+  },
   cartBadgeText: { color: Colors.white, fontSize: 9, fontWeight: '800' },
-  searchBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: Colors.background, borderRadius: 14, paddingLeft: 14, paddingRight: 6, paddingVertical: 9, borderWidth: 1.5, borderColor: Colors.border },
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: Colors.background,
+    borderRadius: 14,
+    paddingLeft: 14,
+    paddingRight: 6,
+    paddingVertical: 10,
+    borderWidth: 1.5,
+    borderColor: Colors.border,
+    // ✨ Enhanced shadow for depth
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 1,
+  },
   searchLeft: { flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 },
   searchText: { fontSize: 14, color: Colors.textLight },
-  micBtn: { width: 34, height: 34, borderRadius: 10, backgroundColor: Colors.primary, justifyContent: 'center', alignItems: 'center' },
-  bannersContent: { paddingTop: 16, paddingBottom: 16 },
-  bannerOuter: { width: BANNER_WIDTH, minHeight: 150, borderRadius: 18, marginRight: 16, overflow: 'hidden', elevation: 4, shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.15, shadowRadius: 12 },
-  bannerGradient: { width: '100%', flex: 1, padding: 16, borderRadius: 18, minHeight: 136, overflow: 'hidden' },
-  bannerHighlight: { position: 'absolute', top: 0, left: 0, right: 0, height: '45%', backgroundColor: 'rgba(255,255,255,0.08)', borderTopLeftRadius: 18, borderTopRightRadius: 18 },
+  micBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 11,
+    backgroundColor: Colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  // ── Banners ──
+  bannerContainer: {
+    marginHorizontal: -16,   // Extend to full screen width (counteract parent paddingHorizontal)
+    overflow: 'hidden',
+  },
+  bannerTrack: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,   // Padding on the track so first/last banner sit 16px from screen edge
+    paddingVertical: 16,     // Even vertical padding — same top and bottom
+  },
+  bannerOuter: {
+    width: BANNER_WIDTH,
+    borderRadius: 20,
+    marginRight: 16,
+    overflow: 'hidden',
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.18,
+    shadowRadius: 14,
+  },
+  bannerGradient: {
+    width: '100%',
+    padding: 18,
+    borderRadius: 20,
+    minHeight: 140,
+    overflow: 'hidden',
+  },
+  bannerHighlight: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: '45%',
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+  },
   bannerCircle1: { position: 'absolute', width: 190, height: 190, borderRadius: 95, backgroundColor: 'rgba(255,255,255,0.1)', top: -70, right: -30 },
   bannerCircle2: { position: 'absolute', width: 120, height: 120, borderRadius: 60, backgroundColor: 'rgba(255,255,255,0.08)', bottom: -40, right: 70 },
   bannerCircle3: { position: 'absolute', width: 70, height: 70, borderRadius: 35, backgroundColor: 'rgba(255,255,255,0.1)', top: 20, right: 120 },
-  bannerTag: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(255,255,255,0.22)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20, alignSelf: 'flex-start', borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)', marginBottom: 10 },
+  bannerTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: 'rgba(255,255,255,0.22)',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 20,
+    alignSelf: 'flex-start',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
+    marginBottom: 10,
+  },
   bannerTagDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: Colors.white },
   bannerTagText: { fontSize: 9, fontWeight: '800', color: Colors.white, letterSpacing: 1 },
   bannerContent: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   bannerLeft: { flex: 1, gap: 5 },
   bannerTitle: { fontSize: 24, fontWeight: '900', color: Colors.white, letterSpacing: -0.5 },
-  bannerSubtitle: { fontSize: 12, color: 'rgba(255,255,255,0.88)', fontWeight: '500' },
-  bannerCtaBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: Colors.white, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 18, alignSelf: 'flex-start', marginTop: 6, elevation: 2 },
+  bannerSubtitle: { fontSize: 13, color: 'rgba(255,255,255,0.88)', fontWeight: '500' },
+  bannerCtaBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: Colors.white,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 20,
+    alignSelf: 'flex-start',
+    marginTop: 8,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
   bannerCtaText: { fontSize: 12, fontWeight: '800', color: '#1A1A1A' },
   bannerEmoji: { fontSize: 48, lineHeight: 52 },
   bannerEmojiContainer: { width: 70, alignItems: 'center', justifyContent: 'center' },
+
+  // ── Filters ──
   filtersRow: { flexGrow: 0, marginVertical: 10 },
   filtersContent: { paddingHorizontal: 16, gap: 8, alignItems: 'center' },
-  clearBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999, backgroundColor: '#FFECEC', borderWidth: 1, borderColor: '#FFAAAA' },
+  clearBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 999,
+    backgroundColor: '#FFECEC',
+    borderWidth: 1,
+    borderColor: '#FFAAAA',
+  },
   clearBtnText: { fontSize: 12, color: Colors.error, fontWeight: '600' },
-  sectionHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, marginBottom: 8, marginTop: 6 },
-  sectionTitle: { fontSize: 18, fontWeight: '800', color: Colors.textPrimary },
-  sectionSubtitle: { fontSize: 12, color: Colors.textSecondary, marginTop: 2 },
+
+  // ── Section Headers ──
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    marginBottom: 8,
+    marginTop: 6,
+  },
+  sectionHeaderLeft: {
+    gap: 2,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: Colors.textPrimary,
+    letterSpacing: -0.2,
+  },
+  sectionSubtitle: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    marginTop: 1,
+  },
+  sectionAccentLine: {
+    width: 28,
+    height: 3,
+    borderRadius: 2,
+    backgroundColor: Colors.primary,
+    marginTop: 2,
+  },
   seeAll: { fontSize: 13, color: Colors.primary, fontWeight: '700' },
+
+  // ── Categories ──
   catsContent: { paddingHorizontal: 16, gap: 10, paddingBottom: 4 },
   catCard: { width: 76, alignItems: 'center', gap: 7 },
-  catGradient: { width: 64, height: 64, borderRadius: 20, justifyContent: 'center', alignItems: 'center', elevation: 2 },
+  catGradient: {
+    width: 64,
+    height: 64,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+  },
   catEmoji: { fontSize: 28 },
-  catName: { fontSize: 11, fontWeight: '600', color: Colors.textPrimary, textAlign: 'center' },
+  catName: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: Colors.textPrimary,
+    textAlign: 'center',
+  },
+
+  // ── Dishes ──
   dishSection: { marginTop: 8, marginBottom: 4 },
   dishesContent: { paddingHorizontal: 16, gap: 12, paddingBottom: 8, paddingTop: 4 },
-  stepperFilled: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: Colors.primary, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3, marginTop: 6 },
-  stepperBtnFilled: { fontSize: 18, color: Colors.white, fontWeight: 'bold', paddingHorizontal: 2 },
-  stepperCountFilled: { fontWeight: '700', color: Colors.white, fontSize: 13 },
-  dishModalAddBtnFull: { backgroundColor: Colors.primary, borderRadius: 12, paddingVertical: 14, alignItems: 'center', width: '100%' },
-  dishModalAddTextFull: { color: Colors.white, fontWeight: '800', fontSize: 15, letterSpacing: 0.5 },
-  dishModalCloseBtnCenter: { alignSelf: 'center', marginTop: 4, marginBottom: 20, width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'center', alignItems: 'center' },
-  homeDishCard: { width: 160, borderRadius: 18, backgroundColor: '#fff', marginRight: 12, overflow: 'hidden', elevation: 4, shadowColor: '#000', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.08, shadowRadius: 8 },
-  homeDishImgBox: { height: 110, position: 'relative' },
+  homeDishCard: {
+    width: 160,
+    borderRadius: 20,
+    backgroundColor: '#fff',
+    marginRight: 12,
+    overflow: 'hidden',
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+  },
+  homeDishImgBox: {
+    height: 115,
+    position: 'relative',
+    overflow: 'hidden',
+  },
   homeDishImg: { width: '100%', height: '100%' },
   homeDishPlaceholder: { justifyContent: 'center', alignItems: 'center', backgroundColor: '#F5F5F5' },
-  vegBadgeSmall: { position: 'absolute', top: 7, left: 7, width: 16, height: 16, borderRadius: 3, borderWidth: 1.5, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.white },
+  vegBadgeSmall: {
+    position: 'absolute',
+    top: 7,
+    left: 7,
+    width: 16,
+    height: 16,
+    borderRadius: 3,
+    borderWidth: 1.5,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: Colors.white,
+  },
   vegDotSmall: { width: 8, height: 8, borderRadius: 4 },
   homeDishInfo: { padding: 10, gap: 2 },
-  homeDishName: { fontSize: 13, fontWeight: '700', color: Colors.textPrimary },
+  homeDishName: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: Colors.textPrimary,
+    letterSpacing: 0.1,
+  },
   priceRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 2 },
   originalPrice: { fontSize: 11, color: Colors.textLight, textDecorationLine: 'line-through' },
   homeDishPrice: { fontSize: 13, fontWeight: '800', color: Colors.textPrimary },
   homeDishDesc: { fontSize: 11, color: Colors.textSecondary, lineHeight: 15, marginTop: 2 },
-  addBtn: { borderWidth: 1.5, borderColor: Colors.primary, paddingVertical: 5, borderRadius: 8, alignItems: 'center', marginTop: 6 },
-  addBtnText: { color: Colors.primary, fontWeight: '800', fontSize: 12, letterSpacing: 0.5 },
-  dishSkeletonCard: { width: 160, backgroundColor: Colors.white, borderRadius: 18, overflow: 'hidden', elevation: 2, marginRight: 12 },
-  dishSkeletonImg: { width: '100%', height: 110, backgroundColor: Colors.border },
+  addBtn: {
+    borderWidth: 1.5,
+    borderColor: Colors.primary,
+    paddingVertical: 6,
+    borderRadius: 10,
+    alignItems: 'center',
+    marginTop: 6,
+    // ✨ Enhanced ADD button
+    backgroundColor: Colors.primaryLight + '30',
+  },
+  addBtnText: {
+    color: Colors.primary,
+    fontWeight: '800',
+    fontSize: 12,
+    letterSpacing: 0.5,
+  },
+  stepperFilled: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: Colors.primary,
+    borderRadius: 10,
+    paddingHorizontal: 6,
+    paddingVertical: 4,
+    marginTop: 6,
+  },
+  stepperTouchable: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  stepperBtnFilled: {
+    fontSize: 18,
+    color: Colors.white,
+    fontWeight: 'bold',
+  },
+  stepperCountFilled: {
+    fontWeight: '700',
+    color: Colors.white,
+    fontSize: 13,
+    minWidth: 20,
+    textAlign: 'center',
+  },
+
+  // ── Dish Skeleton ──
+  dishSkeletonCard: {
+    width: 160,
+    backgroundColor: Colors.white,
+    borderRadius: 20,
+    overflow: 'hidden',
+    elevation: 2,
+    marginRight: 12,
+  },
+  dishSkeletonImg: { width: '100%', height: 115, backgroundColor: Colors.border },
   dishSkeletonLine: { height: 11, backgroundColor: Colors.border, borderRadius: 6, margin: 10, marginBottom: 5 },
-  restHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, marginTop: 16, marginBottom: 10 },
+
+  // ── Restaurant Header ──
+  restHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    marginTop: 16,
+    marginBottom: 10,
+  },
   restSubtitle: { fontSize: 12, color: Colors.textSecondary, marginTop: 2 },
-  sortBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: Colors.primaryLight, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: Colors.primary + '33', position: 'relative' },
+  sortBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: Colors.primaryLight,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: Colors.primary + '33',
+    position: 'relative',
+    elevation: 2,
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
   sortText: { fontSize: 12, fontWeight: '700', color: Colors.primary },
   sortActiveDot: { width: 7, height: 7, borderRadius: 3.5, backgroundColor: Colors.primary, position: 'absolute', top: -2, right: -2 },
+
+  // ── List Content ──
   listContent: { paddingHorizontal: 16, paddingBottom: 40 },
   skeletonContainer: { paddingHorizontal: 16, paddingBottom: 32 },
-  skeletonCard: { backgroundColor: Colors.white, borderRadius: 16, marginBottom: 16, overflow: 'hidden' },
+  skeletonCard: {
+    backgroundColor: Colors.white,
+    borderRadius: 18,
+    marginBottom: 16,
+    overflow: 'hidden',
+  },
   skeletonImg: { width: '100%', height: 150, backgroundColor: Colors.border },
   skeletonBody: { padding: 14, gap: 10 },
   skeletonLine: { backgroundColor: Colors.border, borderRadius: 6 },
+
+  // ── Sort Bottom Sheet ──
   sortOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.4)', zIndex: 200 },
-  sortSheet: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: Colors.white, borderTopLeftRadius: 24, borderTopRightRadius: 24, zIndex: 300, elevation: 20, paddingBottom: 32 },
+  sortSheet: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: Colors.white,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    zIndex: 300,
+    elevation: 20,
+    paddingBottom: 32,
+  },
   sortHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: Colors.border, alignSelf: 'center', marginTop: 12, marginBottom: 4 },
-  sortSheetTitle: { fontSize: 16, fontWeight: '800', color: Colors.textPrimary, paddingHorizontal: 20, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: Colors.border },
-  sortOption: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 20, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: Colors.border + '80' },
+  sortSheetTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: Colors.textPrimary,
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  sortOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border + '80',
+  },
   sortOptionActive: { backgroundColor: Colors.primaryLight + '60' },
-  sortOptionIcon: { width: 38, height: 38, borderRadius: 12, backgroundColor: Colors.background, justifyContent: 'center', alignItems: 'center' },
+  sortOptionIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: Colors.background,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   sortOptionIconActive: { backgroundColor: Colors.primaryLight },
   sortOptionText: { flex: 1, fontSize: 14, fontWeight: '600', color: Colors.textPrimary },
   sortOptionTextActive: { color: Colors.primary, fontWeight: '700' },
+
+  // ── Address Dropdown ──
   dropdownOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.35)', zIndex: 50 },
-  dropdown: { position: 'absolute', top: 0, left: 12, right: 12, backgroundColor: Colors.white, borderRadius: 18, zIndex: 100, elevation: 16, overflow: 'hidden', marginTop: 8 },
-  dropdownHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingTop: 16, paddingBottom: 10, borderBottomWidth: 1, borderBottomColor: Colors.border },
+  dropdown: {
+    position: 'absolute',
+    top: 0,
+    left: 12,
+    right: 12,
+    backgroundColor: Colors.white,
+    borderRadius: 20,
+    zIndex: 100,
+    elevation: 16,
+    overflow: 'hidden',
+    marginTop: 8,
+  },
+  dropdownHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
   dropdownTitle: { fontSize: 15, fontWeight: '800', color: Colors.textPrimary },
-  dropdownAddBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: Colors.primaryLight, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20 },
+  dropdownAddBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: Colors.primaryLight,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 20,
+  },
   dropdownAddText: { fontSize: 12, fontWeight: '700', color: Colors.primary },
-  dropdownLocationBtn: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: Colors.border },
-  dropdownLocationIcon: { width: 38, height: 38, borderRadius: 12, backgroundColor: Colors.primaryLight, justifyContent: 'center', alignItems: 'center' },
+  dropdownLocationBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  dropdownLocationIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: Colors.primaryLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   dropdownLocationTitle: { fontSize: 13, fontWeight: '700', color: Colors.textPrimary, marginBottom: 2 },
   dropdownLocationSub: { fontSize: 11, color: Colors.textLight },
   dropdownDivider: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 16, paddingVertical: 10 },
   dropdownDividerLine: { flex: 1, height: 1, backgroundColor: Colors.border },
   dropdownDividerText: { fontSize: 10, fontWeight: '700', color: Colors.textLight, letterSpacing: 0.8 },
-  dropdownItem: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: Colors.border },
+  dropdownItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
   dropdownItemSelected: { backgroundColor: '#FFFAF7' },
-  dropdownItemIcon: { width: 36, height: 36, borderRadius: 10, backgroundColor: '#F5F5F5', justifyContent: 'center', alignItems: 'center' },
+  dropdownItemIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: '#F5F5F5',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   dropdownItemIconSelected: { backgroundColor: Colors.primaryLight },
   dropdownItemTop: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 },
   dropdownItemLabel: { fontSize: 13, fontWeight: '700', color: Colors.textPrimary },
   dropdownItemLabelSelected: { color: Colors.primary },
-  dropdownDefaultBadge: { backgroundColor: Colors.primaryLight, paddingHorizontal: 6, paddingVertical: 1, borderRadius: 6 },
+  dropdownDefaultBadge: {
+    backgroundColor: Colors.primaryLight,
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 6,
+  },
   dropdownDefaultText: { fontSize: 9, fontWeight: '700', color: Colors.primary },
   dropdownItemAddr: { fontSize: 11, color: Colors.textSecondary },
-  dropdownManageBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 16, paddingVertical: 13, justifyContent: 'center' },
+  dropdownManageBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 13,
+    justifyContent: 'center',
+  },
   dropdownManageText: { fontSize: 12, fontWeight: '600', color: Colors.textSecondary, flex: 1 },
+
+  // ── Dish Modal ──
   dishModalContainer: { flex: 1, justifyContent: 'flex-end' },
   dishModalOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.5)' },
-  dishModalSheet: { backgroundColor: Colors.white, borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '85%', overflow: 'hidden' },
-  dishModalImgBox: { width: '100%', height: 230 },
+  dishModalSheet: {
+    backgroundColor: Colors.white,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: '85%',
+    overflow: 'hidden',
+  },
+  dishModalImgBox: { width: '100%', height: 230, position: 'relative' },
   dishModalImg: { width: '100%', height: '100%' },
   dishModalImgPlaceholder: { justifyContent: 'center', alignItems: 'center', backgroundColor: '#F5F5F5' },
   dishModalContent: { padding: 16 },
-  vegIndicator: { width: 16, height: 16, borderRadius: 3, borderWidth: 1.5, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.white, marginBottom: 8 },
+  vegIndicator: {
+    width: 16,
+    height: 16,
+    borderRadius: 3,
+    borderWidth: 1.5,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: Colors.white,
+    marginBottom: 8,
+  },
   vegDot: { width: 8, height: 8, borderRadius: 4 },
   dishModalTitle: { fontSize: 18, fontWeight: '800', color: Colors.textPrimary },
   dishModalPrice: { fontSize: 16, fontWeight: '800', color: Colors.textPrimary, marginTop: 2 },
   dishModalDesc: { fontSize: 13, color: Colors.textSecondary, lineHeight: 20 },
+  dishModalAddBtnFull: {
+    backgroundColor: Colors.primary,
+    borderRadius: 14,
+    paddingVertical: 15,
+    alignItems: 'center',
+    width: '100%',
+    elevation: 3,
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+  },
+  dishModalAddTextFull: { color: Colors.white, fontWeight: '800', fontSize: 15, letterSpacing: 0.5 },
+  dishModalCloseBtnCenter: {
+    alignSelf: 'center',
+    marginTop: 4,
+    marginBottom: 20,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  // ── Conflict Modal ──
   conflictOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', paddingHorizontal: 24 },
-  conflictSheet: { backgroundColor: Colors.white, borderRadius: 20, paddingHorizontal: 20, paddingTop: 20, paddingBottom: 24, width: '100%', elevation: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 12 },
+  conflictSheet: {
+    backgroundColor: Colors.white,
+    borderRadius: 22,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 24,
+    width: '100%',
+    elevation: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+  },
   conflictClose: { position: 'absolute', top: 12, right: 12, padding: 4 },
   conflictTitle: { fontSize: 18, fontWeight: '800', color: Colors.textPrimary, marginBottom: 8, marginTop: 4, paddingRight: 24 },
   conflictMessage: { fontSize: 13, color: Colors.textSecondary, lineHeight: 20, marginBottom: 24 },
   conflictRestName: { fontWeight: '700', color: Colors.textPrimary },
   conflictBtns: { flexDirection: 'row', gap: 10 },
-  conflictBtnNo: { flex: 1, paddingVertical: 13, borderRadius: 12, backgroundColor: '#FFF3E0', alignItems: 'center', borderWidth: 1.5, borderColor: '#FFCC80' },
+  conflictBtnNo: {
+    flex: 1,
+    paddingVertical: 13,
+    borderRadius: 14,
+    backgroundColor: '#FFF3E0',
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: '#FFCC80',
+  },
   conflictBtnNoText: { fontSize: 14, fontWeight: '700', color: Colors.primary },
-  conflictBtnReplace: { flex: 1, paddingVertical: 13, borderRadius: 12, backgroundColor: Colors.primary, alignItems: 'center' },
+  conflictBtnReplace: {
+    flex: 1,
+    paddingVertical: 13,
+    borderRadius: 14,
+    backgroundColor: Colors.primary,
+    alignItems: 'center',
+    elevation: 3,
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+  },
   conflictBtnReplaceText: { fontSize: 14, fontWeight: '700', color: Colors.white },
 });

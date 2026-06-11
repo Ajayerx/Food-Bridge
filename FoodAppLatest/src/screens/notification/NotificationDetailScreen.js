@@ -83,6 +83,11 @@ export default function NotificationDetailScreen({ route, navigation }) {
     const restaurantId = notification?.data?.restaurantId ?? notification?.data?.restaurant_id ?? null;
     const replyText = notification?.data?.replyText ?? notification?.data?.reply_text ?? null;
 
+    console.log('notification type:', notification?.type);
+    console.log('typeKey resolved:', typeKey);
+    console.log('orderId:', orderId);
+    console.log('notification data:', JSON.stringify(notification?.data));
+
     // ── What to show ──────────────────────────────────────────────────────
     const showOrderCode = !!(orderCode ?? orderNo) && !["NEW_REVIEW", "PROMO_OFFER"].includes(typeKey);
     const showAmount = !!amount;
@@ -102,7 +107,6 @@ export default function NotificationDetailScreen({ route, navigation }) {
     ];
     const showViewOrder = !!orderId && ORDER_TYPES.includes(typeKey);
 
-    // Show "Write a Review" for delivered orders and explicit review requests
     const showReviewCta = !!orderId && ["ORDER_DELIVERED", "REVIEW_REQUEST"].includes(typeKey);
 
     const handleShare = async () => {
@@ -111,7 +115,6 @@ export default function NotificationDetailScreen({ route, navigation }) {
         } catch (_) { }
     };
 
-    // ── FIX: Navigate directly to ReviewScreen instead of scrolling ───────
     const goToOrder = () => {
         navigation.navigate("OrderDetailScreen", { orderId });
     };
@@ -138,9 +141,9 @@ export default function NotificationDetailScreen({ route, navigation }) {
                     <Icon name="arrow-back-ios" size={20} color={Colors.textPrimary} />
                 </TouchableOpacity>
 
-                <Text style={styles.headerTitle} pointerEvents="none">
-                    Notification
-                </Text>
+                <View style={styles.headerCenter}>
+                    <Text style={styles.headerTitle}>Notification</Text>
+                </View>
 
                 <View style={[styles.headerSide, { alignItems: "flex-end" }]}>
                     <TouchableOpacity
@@ -297,18 +300,21 @@ const styles = StyleSheet.create({
     header: {
         flexDirection: "row",
         alignItems: "center",
-        justifyContent: "space-between",
         paddingHorizontal: 16,
         paddingVertical: 12,
         backgroundColor: "#fff",
         borderBottomWidth: 1,
         borderBottomColor: "#f0f0f0",
     },
-    headerSide: { minWidth: 60 },
+    headerSide: {
+        width: 44,
+        justifyContent: "center",
+    },
+    headerCenter: {
+        flex: 1,
+        alignItems: "center",
+    },
     headerTitle: {
-        position: "absolute",
-        left: 0, right: 0,
-        textAlign: "center",
         fontSize: 18,
         fontWeight: "700",
         color: Colors.textPrimary,

@@ -10,16 +10,6 @@ import { Colors } from '../../constants/colors';
 import { ReviewCard } from '../../components/common/ReviewCard';
 import { useOrderStore } from '../../store/orderStore';
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Navigation params expected:
-//   orderId        string  — required
-//   restaurantId   string  — required
-//   restaurantName string  — for display (optional, falls back to "Restaurant")
-//   orderCode      string  — for display (optional, falls back to orderId)
-//   fromScreen     string  — "tracking" | "orderDetail" | "notification" (optional)
-//   menuItemId     string  — optional, auto-resolved from order store if not passed
-// ─────────────────────────────────────────────────────────────────────────────
-
 export const ReviewScreen = ({ route, navigation }) => {
     const {
         orderId,
@@ -30,25 +20,18 @@ export const ReviewScreen = ({ route, navigation }) => {
         menuItemId: navMenuItemId,
     } = route.params ?? {};
 
-    const displayCode = orderCode ?? orderId;  // updated below after order resolves
+    const displayCode = orderCode ?? orderId;
 
-    // ── Resolve menu_item_id from order store if not passed via nav params ──
-    // This handles cases like NotificationDetailScreen where only orderId is known.
-    // The order store has items with menu_item_id from when the order was placed.
     const order = useOrderStore(state =>
         state.orders.find(o => String(o.id) === String(orderId))
     );
 
-    // Ensure fresh order data is loaded (e.g. navigated from notification after app restart)
     useEffect(() => {
         if (orderId && !order) {
             useOrderStore.getState().fetchOrderById(orderId);
         }
     }, [orderId, order]);
 
-    // ── Resolve missing fields from the order store ──────────────────────
-    // When navigating from NotificationDetailScreen, only orderId may be known.
-    // The order store has restaurant_id, restaurant_name, and items with menu_item_id.
     const orderItems = order?.items ?? [];
 
     const resolvedRestaurantId = restaurantId
@@ -69,7 +52,6 @@ export const ReviewScreen = ({ route, navigation }) => {
         ?? order?.order_code
         ?? orderId;
 
-    // Loading state while order is being fetched
     if (!order && orderId) {
         return (
             <View style={styles.root}>
@@ -79,7 +61,9 @@ export const ReviewScreen = ({ route, navigation }) => {
                         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
                             <Icon name="arrow-back-ios" size={20} color="#fff" />
                         </TouchableOpacity>
-                        <Text style={styles.topBarTitle} pointerEvents="none">Rate Your Order</Text>
+                        <View style={styles.topBarCenter}>
+                            <Text style={styles.topBarTitle}>Rate Your Order</Text>
+                        </View>
                         <View style={{ width: 36 }} />
                     </View>
                 </SafeAreaView>
@@ -95,7 +79,6 @@ export const ReviewScreen = ({ route, navigation }) => {
         <View style={styles.root}>
             <StatusBar backgroundColor={Colors.primary} barStyle="light-content" />
 
-            {/* ── Coloured header — matches OrderDetailScreen pattern ── */}
             <SafeAreaView style={[styles.safeTop, { backgroundColor: Colors.primary }]} edges={['top']}>
                 <View style={styles.topBar}>
                     <TouchableOpacity
@@ -106,16 +89,13 @@ export const ReviewScreen = ({ route, navigation }) => {
                         <Icon name="arrow-back-ios" size={20} color="#fff" />
                     </TouchableOpacity>
 
-                    {/* Absolutely centred title — never pushed by back button */}
-                    <Text style={styles.topBarTitle} pointerEvents="none">
-                        Rate Your Order
-                    </Text>
+                    <View style={styles.topBarCenter}>
+                        <Text style={styles.topBarTitle}>Rate Your Order</Text>
+                    </View>
 
-                    {/* Right placeholder to keep title centred */}
                     <View style={{ width: 36 }} />
                 </View>
 
-                {/* Context strip under header */}
                 <View style={styles.contextStrip}>
                     <View style={styles.contextIconBox}>
                         <Icon name="restaurant" size={20} color={Colors.primary} />
@@ -133,14 +113,12 @@ export const ReviewScreen = ({ route, navigation }) => {
                 </View>
             </SafeAreaView>
 
-            {/* ── White scrollable body ── */}
             <ScrollView
                 style={styles.body}
                 contentContainerStyle={styles.scrollContent}
                 showsVerticalScrollIndicator={false}
                 keyboardShouldPersistTaps="handled"
             >
-                {/* Prompt text */}
                 <View style={styles.promptBox}>
                     <Text style={styles.promptEmoji}>⭐</Text>
                     <Text style={styles.promptTitle}>How was your meal?</Text>
@@ -150,7 +128,6 @@ export const ReviewScreen = ({ route, navigation }) => {
                     </Text>
                 </View>
 
-                {/* Order items preview — shows what the user ordered */}
                 {orderItems.length > 0 && (
                     <View style={styles.itemsPreview}>
                         <Text style={styles.itemsPreviewTitle}>Your Order</Text>
@@ -166,7 +143,6 @@ export const ReviewScreen = ({ route, navigation }) => {
                     </View>
                 )}
 
-                {/* The single canonical ReviewCard — now passes menuItemId */}
                 {orderId && resolvedRestaurantId ? (
                     <ReviewCard
                         orderId={String(orderId)}
@@ -182,7 +158,6 @@ export const ReviewScreen = ({ route, navigation }) => {
                     </View>
                 )}
 
-                {/* Small footer nudge */}
                 <Text style={styles.footer}>
                     Reviews are public and may be seen by other customers.
                 </Text>
@@ -193,9 +168,6 @@ export const ReviewScreen = ({ route, navigation }) => {
 
 export default ReviewScreen;
 
-// ─────────────────────────────────────────────────────────────────────────────
-// STYLES
-// ─────────────────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
     root: { flex: 1, backgroundColor: Colors.background },
 
@@ -209,16 +181,17 @@ const styles = StyleSheet.create({
         paddingVertical: 14,
     },
     backBtn: { padding: 4, width: 36 },
+    // FIX: center column instead of absolute positioning
+    topBarCenter: {
+        flex: 1,
+        alignItems: 'center',
+    },
     topBarTitle: {
-        position: 'absolute',
-        left: 0, right: 0,
-        textAlign: 'center',
         fontSize: 18,
         fontWeight: '700',
         color: '#fff',
     },
 
-    // Context strip — restaurant name + order code + "Delivered" badge
     contextStrip: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -255,7 +228,6 @@ const styles = StyleSheet.create({
         fontSize: 12, fontWeight: '700', color: '#27AE60',
     },
 
-    // Loading body
     loadingBody: {
         flex: 1,
         backgroundColor: Colors.background,
@@ -271,13 +243,12 @@ const styles = StyleSheet.create({
         color: Colors.textSecondary,
     },
 
-    // Body
     body: {
         flex: 1,
         backgroundColor: Colors.background,
         borderTopLeftRadius: 20,
         borderTopRightRadius: 20,
-        marginTop: -1, // tuck under header curve
+        marginTop: -1,
     },
     scrollContent: {
         padding: 16,
@@ -285,7 +256,6 @@ const styles = StyleSheet.create({
         paddingBottom: 48,
     },
 
-    // Prompt
     promptBox: {
         alignItems: 'center',
         paddingVertical: 8,
@@ -301,7 +271,6 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
     },
 
-    // Items preview
     itemsPreview: {
         backgroundColor: Colors.white,
         borderRadius: 14,
@@ -344,7 +313,6 @@ const styles = StyleSheet.create({
         fontWeight: '500',
     },
 
-    // Error guard
     errorBox: {
         backgroundColor: Colors.white,
         borderRadius: 16,

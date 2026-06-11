@@ -47,7 +47,17 @@ export const useOrderStore = create(
       orders: [],
       currentOrder: null,
       isPlacing: false,
+      lastFullSync: null,
+      setLastFullSync: (timestamp) => set({ lastFullSync: timestamp }),
 
+      bulkMergeOrders: (apiOrders) => {
+        set(state => {
+          const existingIds = new Set(state.orders.map(o => String(o.id)));
+          const newOrders = apiOrders.filter(o => !existingIds.has(String(o.id)));
+          if (newOrders.length === 0) return state;
+          return { orders: [...state.orders, ...newOrders] };
+        });
+      },
       // ─── Fetch single order from backend ──────────────────────────────────
       fetchOrderById: async (id) => {
         try {
@@ -244,7 +254,7 @@ export const useOrderStore = create(
         })),
 
       clearCurrentOrder: () => set({ currentOrder: null }),
-      clearOrders: () => set({ orders: [] }),
+      clearOrders: () => set({ orders: [], currentOrder: null, lastFullSync: null }),
 
       // ─── Helpers ───────────────────────────────────────────────────────────
 

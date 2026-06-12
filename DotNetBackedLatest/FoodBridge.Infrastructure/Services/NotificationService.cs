@@ -28,33 +28,35 @@ public class NotificationService : INotificationService
         
     }
 
-    public async Task SendToUserAsync(
-     Guid userId,
-     string title,
-     string body,
-     object? data = null,
-     NotificationType type = NotificationType.System,
-     CancellationToken ct = default)
+    public async Task<Guid> SendToUserAsync(
+    Guid userId,
+    string title,
+    string body,
+    object? data = null,
+    NotificationType type = NotificationType.System,
+    CancellationToken ct = default)
     {
-        // ✅ Serialize data to JSON string for DB storage
         string? dataJson = null;
         if (data is not null)
         {
-            // Use Newtonsoft.Json — handles anonymous types correctly unlike System.Text.Json
             dataJson = JsonConvert.SerializeObject(data);
             Console.WriteLine($"[Notification] data saved: {dataJson}");
         }
 
-        _db.Notifications.Add(new Domain.Entities.Notification
+        var notification = new Domain.Entities.Notification   // ← assign to variable
         {
             UserId = userId,
             Title = title,
             Body = body,
             Type = type,
             IsRead = false,
-            Data = dataJson,  // ✅ this was missing — was always null
-        });
+            Data = dataJson,
+        };
+
+        _db.Notifications.Add(notification);
         await _db.SaveChangesAsync(ct);
+
+        return notification.Id;    // ← EF populates Id after SaveChanges
     }
 
     public async Task SendToManyAsync(

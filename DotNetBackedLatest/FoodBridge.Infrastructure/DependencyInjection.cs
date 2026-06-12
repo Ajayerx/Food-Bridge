@@ -56,6 +56,7 @@ public static class DependencyInjection
         services.AddScoped<IStorageService, StorageService>();
         services.AddScoped<ISmsService, SmsService>();
         services.AddScoped<IOrderNotificationService, OrderNotificationService>();
+        services.AddScoped<IPricingService, PricingService>();
 
         return services;
     }

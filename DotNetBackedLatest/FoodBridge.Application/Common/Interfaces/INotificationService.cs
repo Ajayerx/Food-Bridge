@@ -7,7 +7,7 @@ namespace FoodBridge.Application.Common.Interfaces;
 
 public interface INotificationService
 {
-    Task SendToUserAsync(
+    Task<Guid> SendToUserAsync(
         Guid userId,
         string title,
         string body,

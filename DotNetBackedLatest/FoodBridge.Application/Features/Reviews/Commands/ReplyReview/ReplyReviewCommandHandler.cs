@@ -11,11 +11,11 @@ public class ReplyReviewCommandHandler
     : IRequestHandler<ReplyReviewCommand, ReviewDto>
 {
     private readonly IAppDbContext _db;
-    private readonly INotificationService _notifications; // ✅ add
+    private readonly INotificationService _notifications;
 
     public ReplyReviewCommandHandler(
         IAppDbContext db,
-        INotificationService notifications) // ✅ add
+        INotificationService notifications)
     {
         _db = db;
         _notifications = notifications;
@@ -30,13 +30,13 @@ public class ReplyReviewCommandHandler
             ?? throw new NotFoundException("Vendor profile not found.");
 
         var review = await _db.Reviews
-          .Include(r => r.Customer).ThenInclude(c => c.User)
-          .Include(r => r.Restaurant)
-          .Include(r => r.Order)                    // ✅ add this
-          .FirstOrDefaultAsync(
-              r => r.Id == request.ReviewId
-                && r.Restaurant.VendorId == vendor.Id, ct)
-          ?? throw new NotFoundException("Review", request.ReviewId);
+            .Include(r => r.Customer).ThenInclude(c => c.User)
+            .Include(r => r.Restaurant)
+            .Include(r => r.Order)
+            .FirstOrDefaultAsync(
+                r => r.Id == request.ReviewId
+                  && r.Restaurant.VendorId == vendor.Id, ct)
+            ?? throw new NotFoundException("Review", request.ReviewId);
 
         if (review.VendorReply is not null)
             throw new BadRequestException("You have already replied to this review.");
@@ -47,11 +47,11 @@ public class ReplyReviewCommandHandler
 
         await _db.SaveChangesAsync(ct);
 
-        // ✅ Notify the customer who wrote the review
+        // Notify the customer who wrote the review
         var customerUserId = review.Customer.UserId;
         var restaurantName = review.Restaurant.Name;
-        // In ReplyReviewCommandHandler.cs — fix the notification call:
-        await _notifications.SendToUserAsync(
+
+        _ = await _notifications.SendToUserAsync(   // ✅ discards Guid return, Task<Guid> is still awaited
             customerUserId,
             "Restaurant replied to your review",
             $"{restaurantName} has responded to your review. Tap to see their reply.",
@@ -59,7 +59,7 @@ public class ReplyReviewCommandHandler
             {
                 reviewId = review.Id.ToString(),
                 orderId = review.OrderId.ToString(),
-                orderCode = review.Order!.OrderCode,   // ✅ exact field name
+                orderCode = review.Order!.OrderCode,
                 restaurantName = restaurantName,
                 replyText = request.Reply
             },

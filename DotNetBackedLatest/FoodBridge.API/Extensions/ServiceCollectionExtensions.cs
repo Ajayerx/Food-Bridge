@@ -92,18 +92,16 @@ public static class ServiceCollectionExtensions
         services.AddSignalR();
 
         // ── CORS ─────────────────────────────────────────
-        //services.AddCors(opt =>
-        //    opt.AddPolicy("AllowAll", policy =>
-        //        policy
-        //            .WithOrigins("https://localhost:5173")
-        //            .AllowAnyMethod()
-        //            .AllowAnyHeader()));
+        var allowedOrigins = configuration.GetSection("Cors:AllowedOrigins")
+            .Get<string[]>() ?? new[] { "*" };
+
         services.AddCors(opt =>
             opt.AddPolicy("AllowAll", policy =>
                 policy
-                    .AllowAnyOrigin()   
+                    .WithOrigins(allowedOrigins)
                     .AllowAnyMethod()
-                    .AllowAnyHeader()));
+                    .AllowAnyHeader()
+                    .AllowCredentials())); // ← needed for SignalR
 
         // ── Response Compression ─────────────────────────
         services.AddResponseCompression(opt =>

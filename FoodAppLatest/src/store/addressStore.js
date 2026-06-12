@@ -4,6 +4,7 @@ import {
     addAddress,
     updateAddress as updateAddressAPI,
     deleteAddress,
+    setDefaultAddress,
 } from "../services/address/addressService";
 
 const LABEL_ORDER = { Home: 1, Work: 2, Other: 3 };
@@ -20,13 +21,13 @@ export const useAddressStore = create((set, get) => ({
     addresses: [],
     selectedAddress: null,
     loading: false,
+    loadingAddrs: {},
 
     fetchAddresses: async () => {
         set({ loading: true });
         try {
-            // ✅ res = { success, data: CustomerAddressDto[] }
             const res = await getAddresses();
-            const data = res?.data ?? [];          // ← was res.data directly ❌
+            const data = res?.data ?? [];
             const sorted = sortAddresses(data);
             const defaultAddress = sorted.find(a => a.is_default);
             set({
@@ -41,34 +42,45 @@ export const useAddressStore = create((set, get) => ({
     },
 
     addNewAddress: async (address) => {
-        // ✅ res = { success, data: CustomerAddressDto }
-        const res = await addAddress(address);
-        const newAddress = res?.data;              // ← was res.data directly ❌
-        if (!newAddress) {
-            console.log("❌ Address not returned from API");
-            return;
+        try {
+            const res = await addAddress(address);
+            const newAddress = res?.data;
+            if (!newAddress) {
+                console.log("Address not returned from API");
+                return;
+            }
+            const updated = sortAddresses([...get().addresses, newAddress]);
+            set({
+                addresses: updated,
+                selectedAddress: newAddress.is_default ? newAddress : get().selectedAddress,
+            });
+        } catch (error) {
+            console.log("addNewAddress error", error);
+            throw error;
         }
-        const updated = sortAddresses([...get().addresses, newAddress]);
-        set({
-            addresses: updated,
-            selectedAddress: newAddress.is_default ? newAddress : get().selectedAddress,
-        });
     },
 
     removeAddress: async (id) => {
-        await deleteAddress(id);
-        const updated = get().addresses.filter(a => a.id !== id);
-        set({
-            addresses: updated,
-            selectedAddress: updated.find(a => a.is_default) || null,
-        });
+        set(s => ({ loadingAddrs: { ...s.loadingAddrs, [id]: true } }));
+        try {
+            await deleteAddress(id);
+            const updated = get().addresses.filter(a => a.id !== id);
+            set(s => ({
+                addresses: updated,
+                selectedAddress: updated.find(a => a.is_default) || null,
+                loadingAddrs: { ...s.loadingAddrs, [id]: undefined },
+            }));
+        } catch (error) {
+            set(s => ({ loadingAddrs: { ...s.loadingAddrs, [id]: undefined } }));
+            console.log("removeAddress error", error);
+            throw error;
+        }
     },
 
     updateAddress: async (id, updatedData) => {
         try {
-            // ✅ res = { success, data: CustomerAddressDto }
             const res = await updateAddressAPI(id, updatedData);
-            const updated = res?.data;             // ← was res.data directly ❌
+            const updated = res?.data;
             if (!updated) return;
             set(state => ({
                 addresses: sortAddresses(
@@ -81,36 +93,34 @@ export const useAddressStore = create((set, get) => ({
         }
     },
 
-    makeDefault: async (id) => {
-        const address = get().addresses.find(a => a.id === id);
-        if (!address) return;
-
+    setDefault: async (id) => {
+        set(s => ({ loadingAddrs: { ...s.loadingAddrs, [id]: true } }));
         try {
-            await updateAddressAPI(id, {
-                label: address.label,
-                address_line1: address.address_line1,
-                address_line2: address.address_line2 || undefined,
-                city: address.city,
-                state: address.state || '',
-                // ✅ CustomerAddressDto.PinCode → pin_code
-                pin_code: address.pin_code ?? '',   // ← was address.pincode ❌
-                latitude: address.latitude ?? 0,
-                longitude: address.longitude ?? 0,
-                is_default: true,
-            });
-
-            const updated = get().addresses.map(a => ({
-                ...a,
-                is_default: a.id === id,
-            }));
-            const sorted = sortAddresses(updated);
-
-            set({
-                addresses: sorted,
-                selectedAddress: sorted.find(a => a.is_default) || null,
-            });
+            const res = await setDefaultAddress(id);
+            const updated = res?.data;
+            if (updated) {
+                set(s => ({
+                    addresses: sortAddresses(
+                        s.addresses.map(addr => addr.id === id ? updated : addr)
+                    ),
+                    selectedAddress: updated,
+                    loadingAddrs: { ...s.loadingAddrs, [id]: undefined },
+                }));
+            } else {
+                const mapped = get().addresses.map(a => ({
+                    ...a,
+                    is_default: a.id === id,
+                }));
+                const sorted = sortAddresses(mapped);
+                set(s => ({
+                    addresses: sorted,
+                    selectedAddress: sorted.find(a => a.is_default) || null,
+                    loadingAddrs: { ...s.loadingAddrs, [id]: undefined },
+                }));
+            }
         } catch (error) {
-            console.log("makeDefault error", error?.response?.data || error);
+            set(s => ({ loadingAddrs: { ...s.loadingAddrs, [id]: undefined } }));
+            console.log("setDefault error", error);
             throw error;
         }
     },

@@ -2,7 +2,7 @@
 
 namespace FoodBridge.Domain.Entities;
 
-public class CustomerAddress : BaseEntity
+public class CustomerAddress : SoftDeleteEntity
 {
     public Guid CustomerId { get; set; }
     public Customer Customer { get; set; } = null!;

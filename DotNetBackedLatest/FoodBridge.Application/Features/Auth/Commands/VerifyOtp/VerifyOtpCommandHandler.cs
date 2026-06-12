@@ -51,7 +51,7 @@ public class VerifyOtpCommandHandler
             isNewUser = true;
             user = new User
             {
-                MobileNumber = request.MobileNumber,
+                MobileNumber = request.MobileNumber!,
                 Role = UserRole.Customer,
                 Status = UserStatus.Active
             };
@@ -92,7 +92,7 @@ public class VerifyOtpCommandHandler
         {
             UserId = user.Id,
             FullName = user.FullName ?? string.Empty,
-            MobileNumber = user.MobileNumber,
+            MobileNumber = user.MobileNumber!,
             Role = user.Role.ToString(),
             StaffRole = user.StaffUser != null
                 ? user.StaffUser.StaffRole.ToString().ToLower()

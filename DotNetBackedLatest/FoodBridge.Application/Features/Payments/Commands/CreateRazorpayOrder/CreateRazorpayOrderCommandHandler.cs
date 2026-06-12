@@ -32,10 +32,10 @@ public class CreateRazorpayOrderCommandHandler
         // 1. Get order
         var order = await _db.Orders
             .Include(o => o.Customer)
-                .ThenInclude(c => c.User)
+                .ThenInclude(c => c!.User)
             .FirstOrDefaultAsync(
                 o => o.Id == request.OrderId
-                  && o.Customer.UserId == request.UserId, ct)
+                  && o.Customer!.UserId == request.UserId, ct)
             ?? throw new NotFoundException("Order", request.OrderId);
 
         if (order.PaymentStatus == OrderPaymentStatus.Paid)
@@ -88,7 +88,7 @@ public class CreateRazorpayOrderCommandHandler
             Currency = "INR",
             OrderId = order.Id,
             OrderCode = order.OrderCode,
-            CustomerName = order.Customer.User.FullName ?? string.Empty,
+            CustomerName = order.Customer!.User.FullName ?? string.Empty,
             CustomerMobile = order.Customer.User.MobileNumber,
             CustomerEmail = order.Customer.User.Email
         };

@@ -21,7 +21,7 @@ public class GetOrderByIdQueryHandler
         var order = await _db.Orders
             .AsNoTracking()
             .Include(o => o.Restaurant)
-            .Include(o => o.Customer).ThenInclude(c => c.User)
+            .Include(o => o.Customer).ThenInclude(c => c!.User)
             .Include(o => o.OrderItems)
                 .ThenInclude(oi => oi.Modifiers)
             .FirstOrDefaultAsync(
@@ -41,7 +41,7 @@ public class GetOrderByIdQueryHandler
             CustomerId = order.Customer?.Id,
             CustomerName = order.Customer?.User?.FullName ?? string.Empty,
             RestaurantId = order.RestaurantId,
-            RestaurantName = order.Restaurant.Name,
+            RestaurantName = order.Restaurant?.Name ?? string.Empty,
             OrderType = order.OrderType.ToString(),
             OrderStatus = order.OrderStatus.ToString(),
             PaymentMethod = order.PaymentMethod.ToString(),

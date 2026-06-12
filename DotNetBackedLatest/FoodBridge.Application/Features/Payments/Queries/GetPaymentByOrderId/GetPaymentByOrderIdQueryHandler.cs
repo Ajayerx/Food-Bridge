@@ -29,7 +29,7 @@ public class GetPaymentByOrderIdQueryHandler
 
         // Access check
         if (request.RoleType == "Customer"
-         && payment.Order.Customer.UserId != request.UserId)
+         && payment.Order.Customer?.UserId != request.UserId)
             throw new ForbiddenException(
                 "You are not allowed to view this payment.");
 

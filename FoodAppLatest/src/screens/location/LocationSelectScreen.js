@@ -68,6 +68,7 @@ export const LocationSelectScreen = ({ navigation }) => {
             <View style={styles.quickRow}>
                 <TouchableOpacity
                     style={styles.quickCard}
+                    onPress={() => navigation.navigate("AddAddressScreen")}
                     activeOpacity={0.75}
                 >
                     <View style={[styles.quickIcon, { backgroundColor: "#FFF3E0" }]}>

@@ -27,3 +27,9 @@ export const deleteAddress = async (id) => {
     const res = await api.delete(`/me/addresses/${id}`);
     return res.data;
 };
+
+// PUT /me/addresses/:id/default → { success, data: CustomerAddressDto }
+export const setDefaultAddress = async (id) => {
+    const res = await api.put(`/me/addresses/${id}/default`);
+    return res.data;
+};

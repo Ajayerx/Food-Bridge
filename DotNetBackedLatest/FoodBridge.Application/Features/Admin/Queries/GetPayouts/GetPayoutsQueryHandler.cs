@@ -35,7 +35,7 @@ public class GetPayoutsQueryHandler : IRequestHandler<GetPayoutsQuery, GetPayout
             {
                 Id = p.Id,
                 VendorId = p.VendorId,
-                VendorName = p.Vendor.User.FullName,
+                VendorName = p.Vendor.User.FullName ?? string.Empty,
                 Amount = p.Amount,
                 Currency = p.Currency,
                 Status = p.Status.ToString(),

@@ -27,6 +27,7 @@ public class GetAddressesQueryHandler
             return new List<CustomerAddressDto>();
 
         return customer.Addresses
+            .Where(a => !a.DeletedAt.HasValue)
             .OrderByDescending(a => a.IsDefault)
             .ThenByDescending(a => a.CreatedAt)
             .Select(a => new CustomerAddressDto

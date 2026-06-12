@@ -21,7 +21,7 @@ public class GetOrdersQueryHandler
         var query = _db.Orders
             .AsNoTracking()
             .Include(o => o.Restaurant)
-            .Include(o => o.Customer).ThenInclude(c => c.User)
+            .Include(o => o.Customer).ThenInclude(c => c!.User)
             .Include(o => o.Table)                                  
             .Include(o => o.OrderItems).ThenInclude(i => i.Variant)
             .AsQueryable();
@@ -86,7 +86,7 @@ public class GetOrdersQueryHandler
             CustomerId = o.Customer?.Id,
             CustomerName = o.Customer?.User?.FullName ?? string.Empty,    
             RestaurantId = o.RestaurantId,
-            RestaurantName = o.Restaurant.Name,
+            RestaurantName = o.Restaurant?.Name ?? string.Empty,
             OrderType = o.OrderType.ToString(),
             OrderStatus = o.OrderStatus.ToString(),
             PaymentMethod = o.PaymentMethod.ToString(),

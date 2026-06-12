@@ -1,7 +1,7 @@
 using FoodBridge.Application.Common.Exceptions;
-using FluentValidation;
 using System.Net;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace FoodBridge.API.Middleware;
 
@@ -9,6 +9,12 @@ public class ExceptionMiddleware
 {
     private readonly RequestDelegate _next;
     private readonly ILogger<ExceptionMiddleware> _logger;
+
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+    };
 
     public ExceptionMiddleware(
         RequestDelegate next,
@@ -24,21 +30,30 @@ public class ExceptionMiddleware
         {
             await _next(context);
         }
-        catch (FluentValidation.ValidationException ex)
+        catch (ValidationException ex) when (ex.Errors.Count > 0)
         {
             _logger.LogWarning("Validation failed: {Errors}",
                 string.Join(", ", ex.Errors.Select(e => e.ErrorMessage)));
 
-            await WriteErrorAsync(
-                context,
-                HttpStatusCode.UnprocessableEntity,
-                "VALIDATION_ERROR",
-                string.Join(", ", ex.Errors.Select(e => e.ErrorMessage)),
-                ex.Errors.Select(e => new
-                {
-                    field = e.PropertyName,
-                    message = e.ErrorMessage
-                }));
+            var errorsDict = new Dictionary<string, string>();
+            foreach (var failure in ex.Errors)
+            {
+                var key = char.ToLowerInvariant(failure.PropertyName[0]) + failure.PropertyName[1..];
+                if (!errorsDict.ContainsKey(key))
+                    errorsDict[key] = failure.ErrorMessage;
+            }
+
+            context.Response.StatusCode = (int)HttpStatusCode.UnprocessableEntity;
+            context.Response.ContentType = "application/json";
+
+            var response = new
+            {
+                success = false,
+                errors = errorsDict
+            };
+
+            var json = JsonSerializer.Serialize(response, JsonOptions);
+            await context.Response.WriteAsync(json);
         }
         catch (NotFoundException ex)
         {
@@ -128,12 +143,7 @@ public class ExceptionMiddleware
             timestamp = DateTime.UtcNow
         };
 
-        var json = JsonSerializer.Serialize(response, new JsonSerializerOptions
-        {
-            PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
-            DefaultIgnoreCondition =
-                System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
-        });
+        var json = JsonSerializer.Serialize(response, JsonOptions);
 
         await context.Response.WriteAsync(json);
     }

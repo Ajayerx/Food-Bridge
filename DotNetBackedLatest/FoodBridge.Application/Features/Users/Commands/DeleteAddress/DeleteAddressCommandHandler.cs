@@ -3,6 +3,7 @@ using FoodBridge.Application.Common.Exceptions;
 using FoodBridge.Application.Common.Interfaces;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+
 namespace FoodBridge.Application.Features.Users.Commands.DeleteAddress;
 
 public class DeleteAddressCommandHandler
@@ -29,7 +30,9 @@ public class DeleteAddressCommandHandler
             ?? throw new NotFoundException(
                 "Address", request.AddressId);
 
-        _db.CustomerAddresses.Remove(address);
+        // Soft delete — keeps the row so FK on Orders stays intact
+        address.DeletedAt = DateTime.UtcNow;
+
         await _db.SaveChangesAsync(ct);
 
         return Unit.Value;

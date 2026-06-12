@@ -3,6 +3,7 @@ using FoodBridge.Application.Features.Users.Commands.UpdateProfile;
 using FoodBridge.Application.Features.Users.Commands.AddAddress;
 using FoodBridge.Application.Features.Users.Commands.UpdateAddress;
 using FoodBridge.Application.Features.Users.Commands.DeleteAddress;
+using FoodBridge.Application.Features.Users.Commands.SetDefaultAddress;
 using FoodBridge.Application.Features.Users.Commands.DeleteAccount;
 using FoodBridge.Application.Features.Users.Queries.GetProfile;
 using FoodBridge.Application.Features.Users.Queries.GetAddresses;
@@ -91,6 +92,15 @@ public class UsersController : ControllerBase
     {
         await _mediator.Send(new DeleteAddressCommand(id, _currentUser.UserId!.Value), ct);
         return Ok(new { success = true, message = "Address deleted successfully" });
+    }
+
+    /// <summary>PUT v1/me/addresses/{id}/default</summary>
+    [HttpPut("v1/me/addresses/{id:guid}/default")]
+    [Authorize(Roles = "Customer")]
+    public async Task<IActionResult> SetDefaultAddress(Guid id, CancellationToken ct)
+    {
+        await _mediator.Send(new SetDefaultAddressCommand(id, _currentUser.UserId!.Value), ct);
+        return Ok(new { success = true });
     }
 
     /// <summary>POST v1/me/delete-account</summary>

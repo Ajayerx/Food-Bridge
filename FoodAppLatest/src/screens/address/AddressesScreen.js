@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React from "react";
 import {
     View,
     Text,
@@ -7,6 +7,7 @@ import {
     TouchableOpacity,
     StatusBar,
     Alert,
+    ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Icon from "react-native-vector-icons/MaterialIcons";
@@ -20,12 +21,11 @@ const LABEL_ICONS = {
     Other: { icon: "location-on", color: "#6A1B9A", bg: "#F3E5F5" },
 };
 
-const AddressCard = ({ item, onEdit, onDelete, onSetDefault }) => {
+const AddressCard = ({ item, onEdit, onDelete, onSetDefault, loadingAddr }) => {
     const config = LABEL_ICONS[item.label] || LABEL_ICONS.Other;
 
     return (
         <View style={[styles.card, item.is_default && styles.cardDefault]}>
-            {/* Default badge */}
             {!!item.is_default && (
                 <View style={styles.defaultBadge}>
                     <Icon name="check-circle" size={11} color={Colors.primary} />
@@ -34,46 +34,45 @@ const AddressCard = ({ item, onEdit, onDelete, onSetDefault }) => {
             )}
 
             <View style={styles.cardRow}>
-                {/* Icon */}
                 <View style={[styles.iconBox, { backgroundColor: config.bg }]}>
                     <Icon name={config.icon} size={22} color={config.color} />
                 </View>
-
-                {/* Address info */}
                 <View style={styles.addressContent}>
                     <Text style={styles.labelText}>{item.label}</Text>
-
-                    {/* ✅ FIXED: address_line1 not item.address */}
                     <Text style={styles.addressLine} numberOfLines={2}>
                         {item.address_line1}
                         {item.address_line2 ? `, ${item.address_line2}` : ""}
                     </Text>
-
-                    {/* ✅ FIXED: city + pincode only — no state (not in DB) */}
                     <Text style={styles.cityLine}>
                         {item.city}{item.pin_code ? ` — ${item.pin_code}` : ""}
                     </Text>
-
                 </View>
             </View>
 
-            {/* Action buttons */}
             <View style={styles.actions}>
                 {!item.is_default && (
                     <TouchableOpacity
-                        style={styles.defaultBtn}
+                        style={[styles.defaultBtn, loadingAddr && styles.btnDisabled]}
                         onPress={() => onSetDefault(item.id)}
+                        disabled={loadingAddr}
                         activeOpacity={0.75}
                     >
-                        <Icon name="radio-button-unchecked" size={14} color={Colors.primary} />
-                        <Text style={styles.defaultBtnText}>Set Default</Text>
+                        {loadingAddr ? (
+                            <ActivityIndicator size="small" color={Colors.primary} />
+                        ) : (
+                            <Icon name="radio-button-unchecked" size={14} color={Colors.primary} />
+                        )}
+                        <Text style={styles.defaultBtnText}>
+                            {loadingAddr ? "Setting..." : "Set Default"}
+                        </Text>
                     </TouchableOpacity>
                 )}
 
                 <View style={styles.actionRight}>
                     <TouchableOpacity
-                        style={styles.editBtn}
+                        style={[styles.editBtn, loadingAddr && styles.btnDisabled]}
                         onPress={() => onEdit(item)}
+                        disabled={loadingAddr}
                         activeOpacity={0.75}
                     >
                         <Icon name="edit" size={14} color={Colors.primary} />
@@ -81,8 +80,9 @@ const AddressCard = ({ item, onEdit, onDelete, onSetDefault }) => {
                     </TouchableOpacity>
 
                     <TouchableOpacity
-                        style={styles.deleteBtn}
-                        onPress={() => onDelete(item.id)}  // ✅ FIXED: item.id not item._id
+                        style={[styles.deleteBtn, loadingAddr && styles.btnDisabled]}
+                        onPress={() => onDelete(item.id)}
+                        disabled={loadingAddr}
                         activeOpacity={0.75}
                     >
                         <Icon name="delete-outline" size={14} color="#E53935" />
@@ -96,11 +96,12 @@ const AddressCard = ({ item, onEdit, onDelete, onSetDefault }) => {
 
 export const AddressesScreen = ({ navigation }) => {
     const addresses = useAddressStore(s => s.addresses);
+    const loading = useAddressStore(s => s.loading);
+    const loadingAddrs = useAddressStore(s => s.loadingAddrs);
     const fetchAddresses = useAddressStore(s => s.fetchAddresses);
     const removeAddress = useAddressStore(s => s.removeAddress);
-    const makeDefault = useAddressStore(s => s.makeDefault);
+    const setDefault = useAddressStore(s => s.setDefault);
 
-    // ✅ Refetch every time screen comes into focus (handles back navigation)
     useFocusEffect(
         React.useCallback(() => {
             fetchAddresses();
@@ -116,7 +117,13 @@ export const AddressesScreen = ({ navigation }) => {
                 {
                     text: "Delete",
                     style: "destructive",
-                    onPress: () => removeAddress(id),
+                    onPress: async () => {
+                        try {
+                            await removeAddress(id);
+                        } catch {
+                            Alert.alert("Error", "Failed to delete address. Please try again.");
+                        }
+                    },
                 },
             ]
         );
@@ -126,17 +133,24 @@ export const AddressesScreen = ({ navigation }) => {
         navigation.navigate("EditAddressScreen", { address: item });
     };
 
-    const handleSetDefault = (id) => {
-        makeDefault(id);
+    const handleSetDefault = async (id) => {
+        try {
+            await setDefault(id);
+        } catch {
+            Alert.alert("Error", "Failed to set default address. Please try again.");
+        }
     };
 
-    const ListEmpty = () => (
-        <View style={styles.emptyBox}>
-            <Text style={styles.emptyEmoji}>📍</Text>
-            <Text style={styles.emptyTitle}>No saved addresses</Text>
-            <Text style={styles.emptySub}>Add your home or work address for faster checkout</Text>
-        </View>
-    );
+    const ListEmpty = () => {
+        if (loading) return null;
+        return (
+            <View style={styles.emptyBox}>
+                <Text style={styles.emptyEmoji}>📍</Text>
+                <Text style={styles.emptyTitle}>No saved addresses</Text>
+                <Text style={styles.emptySub}>Add your home or work address for faster checkout</Text>
+            </View>
+        );
+    };
 
     return (
         <SafeAreaView style={styles.container} edges={["top"]}>
@@ -151,10 +165,14 @@ export const AddressesScreen = ({ navigation }) => {
                 <View style={{ width: 36 }} />
             </View>
 
-            {/* Address List */}
+            {loading && addresses.length === 0 && (
+                <View style={styles.loadingBox}>
+                    <ActivityIndicator size="large" color={Colors.primary} />
+                </View>
+            )}
+
             <FlatList
                 data={addresses}
-                // ✅ FIXED: id not _id
                 keyExtractor={(item) => item.id}
                 renderItem={({ item }) => (
                     <AddressCard
@@ -162,6 +180,7 @@ export const AddressesScreen = ({ navigation }) => {
                         onEdit={handleEdit}
                         onDelete={handleDelete}
                         onSetDefault={handleSetDefault}
+                        loadingAddr={!!loadingAddrs[item.id]}
                     />
                 )}
                 contentContainerStyle={styles.listContent}
@@ -291,6 +310,10 @@ const styles = StyleSheet.create({
         borderColor: "#E53935",
     },
     deleteText: { fontSize: 12, fontWeight: "700", color: "#E53935" },
+
+    // Loading
+    loadingBox: { alignItems: "center", paddingVertical: 80 },
+    btnDisabled: { opacity: 0.5 },
 
     // Empty
     emptyBox: { alignItems: "center", paddingVertical: 60, gap: 10 },

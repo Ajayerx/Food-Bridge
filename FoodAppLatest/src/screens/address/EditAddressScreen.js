@@ -21,6 +21,7 @@ import {
   searchAddress,
   searchCities,
   searchByPincode,
+  geocodeAddress,
 } from "../../services/geocodingService";
 import {
   ADDRESS_VALIDATION,
@@ -217,10 +218,28 @@ export const EditAddressScreen = ({ route, navigation }) => {
 
   const selectSuggestion = (item) => {
     withLocationConfirm(() => {
+      setAddressLine1('');
+      setAddressLine2('');
+      setCity('');
+      setState('');
+      setPinCode('');
+      setLatitude(0);
+      setLongitude(0);
+      setPincodeError(null);
+      setErrors({});
       populateFields(item);
       setShowSuggestions(false);
-      setSearchQuery("");
+      setSearchQuery('');
       setSuggestions([]);
+
+      if ((!item.pinCode) && item.latitude && item.longitude && item.latitude !== 0 && item.longitude !== 0) {
+        reverseGeocode(item.latitude, item.longitude).then(rev => {
+          if (rev && rev.pinCode) {
+            setPinCode(rev.pinCode);
+            flashHighlight('pinCode');
+          }
+        }).catch(() => {});
+      }
     });
   };
 
@@ -236,9 +255,6 @@ export const EditAddressScreen = ({ route, navigation }) => {
     } else if (!/^[1-9][0-9]{5}$/.test(pinCode.trim())) {
       newErrors.pinCode = ADDRESS_VALIDATION.PIN_CODE_INVALID;
     }
-    if (!latitude || !longitude || latitude === 0 || longitude === 0) {
-      newErrors.coordinates = ADDRESS_VALIDATION.COORDINATES_REQUIRED;
-    }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -250,6 +266,29 @@ export const EditAddressScreen = ({ route, navigation }) => {
     }
 
     setLoading(true);
+
+    let resolvedLat = latitude;
+    let resolvedLng = longitude;
+
+    // If coordinates are still 0, try to geocode from address fields before submitting
+    if (resolvedLat === 0 || resolvedLng === 0) {
+      const query = [addressLine2, city, state, pinCode]
+        .filter(Boolean)
+        .join(', ');
+
+      try {
+        const coords = await geocodeAddress(query);
+        if (coords && coords.latitude !== 0 && coords.longitude !== 0) {
+          resolvedLat = coords.latitude;
+          resolvedLng = coords.longitude;
+          setLatitude(resolvedLat);
+          setLongitude(resolvedLng);
+        }
+      } catch {
+        // silently ignore — submit with 0 and let backend decide
+      }
+    }
+
     try {
       await updateAddress(address.id, {
         label: getLabelValue(),
@@ -258,8 +297,8 @@ export const EditAddressScreen = ({ route, navigation }) => {
         city: city.trim(),
         state: state.trim(),
         pin_code: pinCode.trim(),
-        latitude,
-        longitude,
+        latitude: resolvedLat,
+        longitude: resolvedLng,
         is_default: isDefault,
       });
       navigation.goBack();
@@ -331,6 +370,15 @@ export const EditAddressScreen = ({ route, navigation }) => {
           </Text>
         </TouchableOpacity>
         {gpsError && <Text style={styles.errorText}>{gpsError}</Text>}
+
+        {latitude === 0 && longitude === 0 && (
+          <View style={styles.coordHint}>
+            <Icon name="info" size={16} color="#1565C0" />
+            <Text style={styles.coordHintText}>
+              Tap 'Use Current Location' above to set your exact location for better delivery accuracy
+            </Text>
+          </View>
+        )}
 
         <View style={styles.searchBox}>
           {searchLoading ? (
@@ -633,10 +681,13 @@ export const EditAddressScreen = ({ route, navigation }) => {
                       const result = await promise;
                       if (pincodeQueryRef.current !== queryAtCall) return;
                       if (result) {
-                        setAddressLine1(result.addressLine1);
                         setAddressLine2(result.addressLine2);
                         setCity(result.city);
                         setState(result.state);
+                        if (result.latitude && result.longitude && latitude === 0 && longitude === 0) {
+                          setLatitude(result.latitude);
+                          setLongitude(result.longitude);
+                        }
                       } else {
                         setPincodeError('Could not find location for this pincode');
                       }
@@ -668,10 +719,6 @@ export const EditAddressScreen = ({ route, navigation }) => {
             {errors.pinCode && <Text style={styles.fieldError}>{errors.pinCode}</Text>}
           </View>
         </View>
-
-        {errors.coordinates && (
-          <Text style={styles.fieldError}>{errors.coordinates}</Text>
-        )}
 
         {/* Set as Default */}
         <TouchableOpacity
@@ -869,6 +916,23 @@ const styles = StyleSheet.create({
   },
   saveBtnDisabled: { opacity: 0.6 },
   saveText: { color: Colors.white, fontWeight: "700", fontSize: 15 },
+
+  // Coordinate hint
+  coordHint: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
+    backgroundColor: "#E3F2FD",
+    padding: 12,
+    borderRadius: 10,
+    marginBottom: 12,
+  },
+  coordHintText: {
+    flex: 1,
+    fontSize: 12,
+    color: "#1565C0",
+    lineHeight: 17,
+  },
 
   // Errors
   errorText: { color: Colors.error, fontSize: 12, marginBottom: 12, marginLeft: 4 },

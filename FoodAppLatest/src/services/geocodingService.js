@@ -23,20 +23,17 @@ function mapNominatimAddress(address, lat, lon) {
       || address.quarter
       || address.hamlet
       || '',
-
     addressLine2: address.suburb
       || address.neighbourhood
       || address.quarter
       || address.district
       || '',
-
     city: address.city
       || address.town
       || address.village
       || address.county
       || address.district
       || '',
-
     state: address.state || '',
     pinCode: address.postcode || '',
     latitude: parseFloat(lat) || 0,
@@ -90,46 +87,97 @@ export async function reverseGeocode(lat, lon) {
   return mapNominatimAddress(data.address, data.lat || lat, data.lon || lon);
 }
 
+function formatDisplayName(displayName) {
+  if (!displayName) return '';
+  const parts = displayName.split(',').map(p => p.trim()).filter(Boolean);
+  const filtered = parts.filter(p => p.toLowerCase() !== 'india');
+  return filtered.slice(0, 4).join(', ');
+}
+
+// Generate fallback queries tried one at a time if first fails
+// Uses commas which Nominatim docs say improve performance
+function generateQueryVariants(query) {
+  const trimmed = query.trim();
+  const words = trimmed.split(/\s+/);
+  const variants = [];
+
+  // Primary: original query with commas between words for better Nominatim parsing
+  // Nominatim docs: "Commas are optional, but improve performance"
+  variants.push(words.join(', '));
+
+  // Fallback 1: first two words + last word
+  // "Rajendra Nagar Bijalpur Indore" → "Rajendra Nagar, Indore"
+  if (words.length >= 3) {
+    variants.push([...words.slice(0, 2), words[words.length - 1]].join(', '));
+  }
+
+  // Fallback 2: last two words
+  // "Rajendra Nagar Bijalpur Indore" → "Bijalpur, Indore"
+  if (words.length >= 3) {
+    variants.push(words.slice(-2).join(', '));
+  }
+
+  // Deduplicate
+  return [...new Set(variants)];
+}
+
 export function searchAddress(query) {
   const controller = new AbortController();
 
   const promise = (async () => {
-    const url = `${NOMINATIM_BASE}/search?q=${encodeURIComponent(query)}&countrycodes=in&format=json&addressdetails=1&limit=5`;
+    if (!query || query.trim().length < 3) return [];
 
-    let response;
-    try {
-      response = await fetch(url, {
-        signal: controller.signal,
-        headers: HEADERS,
-      });
-    } catch (err) {
-      if (err.name === 'AbortError') {
-        return [];
+    const variants = generateQueryVariants(query.trim());
+
+    // SEQUENTIAL not parallel — Nominatim policy: max 1 request/second
+    // Try each variant one at a time, stop as soon as we get results
+    for (const variant of variants) {
+      if (controller.signal.aborted) return [];
+
+      const url = `${NOMINATIM_BASE}/search?q=${encodeURIComponent(variant)}&countrycodes=in&format=json&addressdetails=1&limit=8`;
+
+      try {
+        const response = await fetch(url, {
+          signal: controller.signal,
+          headers: HEADERS,
+        });
+
+        if (!response.ok) continue;
+
+        const results = await response.json();
+
+        if (!Array.isArray(results) || results.length === 0) continue;
+
+        // Got results — deduplicate by place_id, sort by importance, return
+        const seen = new Set();
+        const unique = results.filter(item => {
+          if (seen.has(item.place_id)) return false;
+          seen.add(item.place_id);
+          return true;
+        });
+
+        unique.sort((a, b) => (b.importance || 0) - (a.importance || 0));
+
+        return unique.slice(0, 6).map(item => {
+          const mapped = mapNominatimAddress(item.address, item.lat, item.lon);
+          return {
+            displayName: formatDisplayName(item.display_name || ''),
+            ...mapped,
+          };
+        });
+
+      } catch (err) {
+        if (err.name === 'AbortError') return [];
+        // Network error on this variant — try next
+        continue;
       }
-      throw new GeocodingError(GEOCODING_ERRORS.NETWORK);
     }
 
-    if (!response.ok) {
-      throw new GeocodingError(GEOCODING_ERRORS.SERVICE_UNAVAILABLE);
-    }
-
-    const results = await response.json();
-
-    if (!Array.isArray(results) || results.length === 0) {
-      return [];
-    }
-
-    return results.map(item => {
-      const mapped = mapNominatimAddress(item.address, item.lat, item.lon);
-      return {
-        displayName: item.display_name || '',
-        ...mapped,
-      };
-    });
+    // All variants exhausted with no results
+    return [];
   })();
 
   const cancelFn = () => controller.abort();
-
   return [promise, cancelFn];
 }
 
@@ -150,9 +198,7 @@ export function searchCities(query, stateFilter = null) {
         headers: HEADERS,
       });
     } catch (err) {
-      if (err.name === 'AbortError') {
-        return [];
-      }
+      if (err.name === 'AbortError') return [];
       throw new GeocodingError(GEOCODING_ERRORS.NETWORK);
     }
 
@@ -161,10 +207,7 @@ export function searchCities(query, stateFilter = null) {
     }
 
     const results = await response.json();
-
-    if (!Array.isArray(results) || results.length === 0) {
-      return [];
-    }
+    if (!Array.isArray(results) || results.length === 0) return [];
 
     const seen = new Set();
     return results
@@ -181,7 +224,6 @@ export function searchCities(query, stateFilter = null) {
   })();
 
   const cancelFn = () => controller.abort();
-
   return [promise, cancelFn];
 }
 
@@ -209,39 +251,63 @@ export function searchByPincode(pincode) {
     const postOffices = data[0].PostOffice;
     if (!Array.isArray(postOffices) || postOffices.length === 0) return null;
 
-    const headPO = postOffices.find(p => p.BranchType === 'Head Post Office') || postOffices[0];
+    const city = (postOffices[0].District || '').trim();
+    const state = (postOffices[0].State || '').trim();
 
-    const district = headPO.District || '';
-    const stateFromAPI = headPO.State || '';
+    const localityPO = postOffices.find(p => p.BranchType !== 'Head Post Office') || postOffices[0];
+    const rawLocality = (localityPO.Name || '').trim();
+    const addressLine2 = rawLocality.replace(/\s*\([^)]*\)\s*$/, '').trim();
 
-    // City: if Head PO name differs from District, use it (e.g. "Motihari" vs district "East Champaran")
-    let city = district;
-    const headName = (headPO.Name || '').trim();
-    if (headName && headName.toLowerCase() !== district.toLowerCase()) {
-      city = headName;
+    let latitude = 0;
+    let longitude = 0;
+
+    try {
+      const nominatimUrl = `${NOMINATIM_BASE}/search?postalcode=${pincode}&countrycodes=in&format=json&limit=1`;
+      const nomResponse = await fetch(nominatimUrl, {
+        signal: controller.signal,
+        headers: HEADERS,
+      });
+      if (nomResponse.ok) {
+        const nomData = await nomResponse.json();
+        if (Array.isArray(nomData) && nomData.length > 0) {
+          latitude = parseFloat(nomData[0].lat) || 0;
+          longitude = parseFloat(nomData[0].lon) || 0;
+        }
+      }
+    } catch {
+      // silently ignore
     }
 
-    // AddressLine1: first non-Head PO with a meaningful locality name
-    const localityPO = postOffices.find(p => {
-      if (p.BranchType === 'Head Post Office') return false;
-      const name = (p.Name || '').trim().toLowerCase();
-      return name !== city.toLowerCase() && name !== district.toLowerCase();
-    }) || headPO;
-    const addressLine1 = localityPO.Name.trim();
-
-    // AddressLine2: Division or Region
-    const division = headPO.Division || '';
-    const region = headPO.Region || '';
-    let addressLine2 = '';
-    if (division && division !== city && division !== addressLine1) {
-      addressLine2 = division;
-    } else if (region && region !== city && region !== addressLine1) {
-      addressLine2 = region;
-    }
-
-    return { addressLine1, addressLine2, city, state: stateFromAPI };
+    return { city, state, addressLine2, latitude, longitude };
   })();
 
   const cancelFn = () => controller.abort();
   return [promise, cancelFn];
+}
+
+export async function geocodeAddress(query) {
+  if (!query || query.trim().length < 3) return null;
+
+  const url = `${NOMINATIM_BASE}/search?q=${encodeURIComponent(query)}&countrycodes=in&format=json&addressdetails=1&limit=1`;
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 8000);
+
+  try {
+    const response = await fetch(url, {
+      signal: controller.signal,
+      headers: HEADERS,
+    });
+    if (!response.ok) return null;
+    const results = await response.json();
+    if (!Array.isArray(results) || results.length === 0) return null;
+    return {
+      latitude: parseFloat(results[0].lat) || 0,
+      longitude: parseFloat(results[0].lon) || 0,
+    };
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timeoutId);
+  }
 }

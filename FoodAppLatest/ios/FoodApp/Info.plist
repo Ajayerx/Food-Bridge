@@ -33,7 +33,10 @@
 		<true/>
 	</dict>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string></string>
+	<string>We use your location to fill in your delivery address automatically.</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>We use your location to fill in your delivery address automatically.</string>
+	<key>UILaunchStoryboardName</key>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIRequiredDeviceCapabilities</key>

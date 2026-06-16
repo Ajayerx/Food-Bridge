@@ -17,6 +17,8 @@ end
 target 'FoodApp' do
   config = use_native_modules!
 
+  $RNMapLibre = true
+
   use_react_native!(
     :path => config[:reactNativePath],
     # An absolute path to your application root.

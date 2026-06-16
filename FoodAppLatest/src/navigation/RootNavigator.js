@@ -32,6 +32,7 @@ import PaymentScreen from "../screens/payment/PaymentScreen";
 import PaymentMethodsScreen from "../screens/payment/PaymentMethodsScreen";
 import AddCardScreen from "../screens/payment/AddCardScreen";
 import { LocationSelectScreen } from "../screens/location/LocationSelectScreen";
+import LocationPickerScreen from "../screens/location/LocationPickerScreen";
 import NotificationsScreen from '../screens/notification/NotificationsScreen';
 import NotificationDetailScreen from '../screens/notification/NotificationDetailScreen';
 import ReviewScreen from '../screens/reviews/ReviewScreen';
@@ -80,6 +81,7 @@ const AuthenticatedNavigator = React.memo(() => {
         <Stack.Screen name="AddressesScreen" component={AddressesScreen} />
         <Stack.Screen name="AddAddressScreen" component={AddAddressScreen} />
         <Stack.Screen name="EditAddressScreen" component={EditAddressScreen} />
+        <Stack.Screen name="LocationPickerScreen" component={LocationPickerScreen} />
         <Stack.Screen name="PaymentMethods" component={PaymentMethodsScreen} />
         <Stack.Screen name="AddCard" component={AddCardScreen} />
         <Stack.Screen name="LocationSelectScreen" component={LocationSelectScreen} />

@@ -18,4 +18,13 @@ buildscript {
     }
 }
 
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+        // Add this:
+        maven { url 'https://api.mapbox.com/downloads/v2/releases/maven' }
+    }
+}
+
 apply plugin: "com.facebook.react.rootproject"

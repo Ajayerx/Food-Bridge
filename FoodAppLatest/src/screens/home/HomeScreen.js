@@ -770,15 +770,10 @@ export const HomeScreen = ({ navigation }) => {
     } catch (error) { console.log("Address fetch error", error?.response?.data || error); }
   };
 
-  const getCurrentLocation = async () => {
-    const hasPermission = await requestLocationPermission();
-    if (!hasPermission) return;
-    Geolocation.getCurrentPosition(
-      (position) => fetchAddress(position.coords.latitude, position.coords.longitude),
-      (error) => console.log("Location Error", error),
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }
-    );
-  };
+  const getCurrentLocation = useCallback(() => {
+    closeDropdown();
+    navigation.navigate('LocationPickerScreen', {});
+  }, [closeDropdown, navigation]);
 
   const restaurantCount = sortedRestaurants?.length ?? 0;
 
@@ -838,13 +833,17 @@ export const HomeScreen = ({ navigation }) => {
             <View style={styles.locationTexts}>
               <Text style={styles.locationLabel}>DELIVERING TO</Text>
               <TouchableOpacity style={styles.locationValueRow} onPress={dropdownOpen ? closeDropdown : openDropdown} activeOpacity={0.7}>
-                <Text style={styles.locationText} numberOfLines={1}>
-                  {selectedAddress
-                    ? (selectedAddress.address_line1
-                      ? `${selectedAddress.address_line1}, ${selectedAddress.city}`
-                      : selectedAddress.city || "Select Address")
-                    : "Select Address"}
-                </Text>
+                <View style={styles.locationTextBlock}>
+                  <Text style={styles.locationCityText} numberOfLines={1}>
+                    {selectedAddress?.city || "Select Location"}
+                  </Text>
+                  {selectedAddress && (
+                    <Text style={styles.locationAddressText} numberOfLines={1}>
+                      {[selectedAddress.address_line1, selectedAddress.city, selectedAddress.pin_code]
+                        .filter(Boolean).join(', ')}
+                    </Text>
+                  )}
+                </View>
                 <Animated.View style={{ transform: [{ rotate: arrowAnim.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '180deg'] }) }] }}>
                   <Icon name="keyboard-arrow-down" size={18} color={Colors.primary} />
                 </Animated.View>
@@ -929,7 +928,7 @@ export const HomeScreen = ({ navigation }) => {
           }]}>
             <View style={styles.dropdownHeader}>
               <Text style={styles.dropdownTitle}>Deliver to</Text>
-              <TouchableOpacity onPress={() => { closeDropdown(); navigation.navigate("AddAddressScreen"); }} style={styles.dropdownAddBtn}>
+              <TouchableOpacity onPress={() => { closeDropdown(); navigation.navigate("LocationPickerScreen", {}); }} style={styles.dropdownAddBtn}>
                 <Icon name="add" size={14} color={Colors.primary} />
                 <Text style={styles.dropdownAddText}>Add New</Text>
               </TouchableOpacity>
@@ -1059,11 +1058,17 @@ const styles = StyleSheet.create({
     letterSpacing: 0.8,
   },
   locationValueRow: { flexDirection: 'row', alignItems: 'center', gap: 2 },
-  locationText: {
-    fontSize: 14,
-    fontWeight: '700',
+  locationTextBlock: { gap: 1, flex: 1 },
+  locationCityText: {
+    fontSize: 15,
+    fontWeight: '800',
     color: Colors.textPrimary,
-    maxWidth: 180,
+    maxWidth: 170,
+  },
+  locationAddressText: {
+    fontSize: 11,
+    color: Colors.textSecondary,
+    maxWidth: 170,
   },
   topBarActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   iconBtn: {

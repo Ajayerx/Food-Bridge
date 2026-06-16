@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+
+    <!--
+        Allow cleartext only for local dev (Metro bundler).
+        All map tile domains use HTTPS — they don't need cleartext,
+        but they DO need to be explicitly trusted so Android's
+        stricter TLS rules (API 24+) don't silently cancel connections.
+    -->
+    <domain-config cleartextTrafficPermitted="true">
+        <!-- Metro bundler (dev only) -->
+        <domain includeSubdomains="true">localhost</domain>
+        <domain includeSubdomains="true">10.0.2.2</domain>
+        <domain includeSubdomains="true">10.0.3.2</domain>
+    </domain-config>
+
+    <!--
+        Explicitly trust tile / geocoding domains.
+        Without this, Android 7+ can silently cancel HTTPS requests
+        to these hosts if their certificate chain isn't in the system
+        trust store build used by the emulator/device.
+    -->
+    <domain-config cleartextTrafficPermitted="false">
+        <!-- CartoDB tile CDN (map tiles) -->
+        <domain includeSubdomains="true">basemaps.cartocdn.com</domain>
+        <!-- OpenStreetMap tile CDN (fallback) -->
+        <domain includeSubdomains="true">tile.openstreetmap.org</domain>
+        <!-- Nominatim geocoding -->
+        <domain includeSubdomains="true">nominatim.openstreetmap.org</domain>
+        <!-- Postal pincode API -->
+        <domain includeSubdomains="true">api.postalpincode.in</domain>
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates src="user" />
+        </trust-anchors>
+    </domain-config>
+
+</network-security-config>

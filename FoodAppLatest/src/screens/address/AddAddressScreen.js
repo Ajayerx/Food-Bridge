@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -41,7 +41,8 @@ const LABEL_ICONS = {
   Other: "location-on",
 };
 
-export const AddAddressScreen = ({ navigation }) => {
+export const AddAddressScreen = ({ navigation, route }) => {
+  const prefillData = route?.params?.prefillData;
   const addNewAddress = useAddressStore(s => s.addNewAddress);
   const scrollRef = useRef(null);
   const debounceRef = useRef(null);
@@ -86,6 +87,19 @@ export const AddAddressScreen = ({ navigation }) => {
 
   const [errors, setErrors] = useState({});
   const [highlightedFields, setHighlightedFields] = useState({});
+
+  useEffect(() => {
+    if (!prefillData) return;
+    if (prefillData.addressLine1) setAddressLine1(prefillData.addressLine1);
+    if (prefillData.addressLine2) setAddressLine2(prefillData.addressLine2);
+    if (prefillData.city) setCity(prefillData.city);
+    if (prefillData.state) setState(prefillData.state);
+    if (prefillData.pinCode) setPinCode(prefillData.pinCode);
+    if (prefillData.latitude && prefillData.longitude) {
+      setLatitude(prefillData.latitude);
+      setLongitude(prefillData.longitude);
+    }
+  }, [prefillData]);
 
   const getLabelValue = () => {
     if (label === "Other") return customLabel.trim() || "";
@@ -379,6 +393,15 @@ export const AddAddressScreen = ({ navigation }) => {
           </Text>
         </TouchableOpacity>
         {gpsError && <Text style={styles.errorText}>{gpsError}</Text>}
+
+        <TouchableOpacity
+          style={styles.pickOnMapBtn}
+          onPress={() => navigation.navigate('LocationPickerScreen', {})}
+          activeOpacity={0.75}
+        >
+          <Icon name="map" size={16} color={Colors.primary} />
+          <Text style={styles.pickOnMapText}>Pick location on map</Text>
+        </TouchableOpacity>
 
         {latitude === 0 && longitude === 0 && (
           <View style={styles.coordHint}>
@@ -816,6 +839,24 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   gpsBtnText: { fontSize: 14, fontWeight: "700", color: Colors.primary },
+  pickOnMapBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    borderWidth: 1.5,
+    borderColor: Colors.primary,
+    borderStyle: 'dashed',
+    paddingVertical: 10,
+    borderRadius: 10,
+    marginBottom: 12,
+    backgroundColor: Colors.primaryLight,
+  },
+  pickOnMapText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: Colors.primary,
+  },
 
   // Search
   searchBox: {

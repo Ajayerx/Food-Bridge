@@ -16,49 +16,8 @@ import MapLibreGL from '@maplibre/maplibre-react-native';
 import Geolocation from 'react-native-geolocation-service';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { Colors } from '../../constants/colors';
+import { MAP_STYLE } from '../../constants/mapStyle';
 import { reverseGeocode, searchAddress } from '../../services/geocodingService';
-
-// ─── Map style ────────────────────────────────────────────────────────────────
-// Pre-stringified at module level so the reference never changes across renders.
-//
-// Tile source priority:
-//   1. openstreetmap.org/tile — most permissive CORS + UA policy, works on all
-//      Android versions without extra headers
-//   2. CartoDB voyager — better looking but occasionally blocks requests that
-//      lack a browser UA (handled via CustomHeadersInterceptor in MainApplication)
-//
-// We use OSM directly here so tiles load even before the native interceptor
-// has had a chance to attach the User-Agent on the very first request.
-const MAP_STYLE_JSON = JSON.stringify({
-  version: 8,
-  sources: {
-    'osm-tiles': {
-      type: 'raster',
-      tiles: [
-        'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-      ],
-      tileSize: 256,
-      attribution: '© OpenStreetMap contributors',
-      maxzoom: 19,
-    },
-  },
-  layers: [
-    {
-      id: 'osm-tiles',
-      type: 'raster',
-      source: 'osm-tiles',
-      minzoom: 0,
-      maxzoom: 19,
-    },
-  ],
-});
-
-// NOTE: Do NOT call MapLibreGL.addCustomHeader() here.
-// Headers are now registered natively in MainApplication.kt via
-// CustomHeadersInterceptor BEFORE MapLibre.getInstance() is called,
-// which is the only way to guarantee they're present on the very
-// first tile request. Calling addCustomHeader from JS races with
-// native tile fetches and can arrive too late.
 
 const BOTTOM_SHEET_HEIGHT = 220;
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -78,10 +37,12 @@ const requestLocationPermission = async () => {
 };
 
 export const LocationPickerScreen = ({ navigation, route }) => {
-  const { initialCoords, initialAddress } = route?.params || {};
+  const { initialCoords, initialAddress, source } = route?.params || {};
 
   const [address, setAddress] = useState(initialAddress || null);
   const [isReversing, setIsReversing] = useState(false);
+  const [geocodeError, setGeocodeError] = useState(null);
+  const [tileError, setTileError] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [searchLoading, setSearchLoading] = useState(false);
@@ -98,11 +59,13 @@ export const LocationPickerScreen = ({ navigation, route }) => {
   // ── Reverse geocode ───────────────────────────────────────────────────────
   const doReverseGeocode = useCallback(async (lat, lng) => {
     setIsReversing(true);
+    setGeocodeError(null);
     try {
       const result = await reverseGeocode(lat, lng);
       setAddress(result);
-    } catch {
+    } catch (err) {
       setAddress(null);
+      setGeocodeError(err?.message || 'Could not find address for this location');
     } finally {
       setIsReversing(false);
     }
@@ -151,16 +114,20 @@ export const LocationPickerScreen = ({ navigation, route }) => {
   // the user actually dragged the map. When WE called setCamera() it's false.
   // Checking this flag is the correct way to avoid the geocode feedback loop.
   const onRegionDidChange = useCallback((feature) => {
-    if (!feature?.properties?.isUserInteraction) return;
+    try {
+      if (!feature?.properties?.isUserInteraction) return;
+      const coords = feature?.geometry?.coordinates;
+      if (!coords || coords.length < 2) return;
+      const [lng, lat] = coords;
+      currentCoordsRef.current = [lng, lat];
 
-    const [lng, lat] = feature.geometry.coordinates;
-    currentCoordsRef.current = [lng, lat];
-
-    // Debounce — don't hit Nominatim on every pixel of drag
-    clearTimeout(reverseDebounceRef.current);
-    reverseDebounceRef.current = setTimeout(() => {
-      doReverseGeocode(lat, lng);
-    }, 500);
+      clearTimeout(reverseDebounceRef.current);
+      reverseDebounceRef.current = setTimeout(() => {
+        doReverseGeocode(lat, lng);
+      }, 500);
+    } catch (e) {
+      console.warn('onRegionDidChange error:', e);
+    }
   }, [doReverseGeocode]);
 
   // ── Search ────────────────────────────────────────────────────────────────
@@ -238,18 +205,23 @@ export const LocationPickerScreen = ({ navigation, route }) => {
   const handleConfirm = useCallback(() => {
     if (!address) return;
     const [lng, lat] = currentCoordsRef.current;
-    navigation.navigate('AddAddressScreen', {
-      prefillData: {
-        addressLine1: address.addressLine1 || '',
-        addressLine2: address.addressLine2 || '',
-        city: address.city || '',
-        state: address.state || '',
-        pinCode: address.pinCode || '',
-        latitude: lat,
-        longitude: lng,
-      },
-    });
-  }, [address, navigation]);
+
+    const prefillData = {
+      addressLine1: address.addressLine1 || '',
+      addressLine2: address.addressLine2 || '',
+      city: address.city || '',
+      state: address.state || '',
+      pinCode: address.pinCode || '',
+      latitude: lat,
+      longitude: lng,
+    };
+
+    if (source === 'EditAddressScreen') {
+      navigation.navigate('EditAddressScreen', { prefillData });
+    } else {
+      navigation.navigate('AddAddressScreen', { prefillData });
+    }
+  }, [address, navigation, source]);
 
   // ── Derived display strings ───────────────────────────────────────────────
   const addressName = address
@@ -284,8 +256,18 @@ export const LocationPickerScreen = ({ navigation, route }) => {
       <View style={styles.mapContainer}>
         <MapLibreGL.MapView
           style={StyleSheet.absoluteFillObject}
-          styleJSON={MAP_STYLE_JSON}
+          mapStyle={MAP_STYLE}
           onRegionDidChange={onRegionDidChange}
+          onDidFailLoadingMap={() => {
+            console.warn('MapView: DidFailLoadingMap');
+            setTileError(true);
+          }}
+          onDidFinishLoadingMap={() => {
+            console.log('MapView: DidFinishLoadingMap');
+            setTileError(false);
+          }}
+          onDidFinishLoadingStyle={() => console.log('MapView: DidFinishLoadingStyle')}
+          onDidFinishRenderingMapFully={() => console.log('MapView: DidFinishRenderingMapFully')}
           compassEnabled={false}
           logoEnabled={false}
           attributionEnabled={false}
@@ -314,6 +296,14 @@ export const LocationPickerScreen = ({ navigation, route }) => {
         </TouchableOpacity>
       </View>
 
+      {/* ── Tile Error Banner ──────────────────────────────────── */}
+      {tileError && (
+        <View style={styles.tileErrorBanner}>
+          <Icon name="warning" size={16} color="#fff" />
+          <Text style={styles.tileErrorText}>Map tiles failed to load. Check your connection.</Text>
+        </View>
+      )}
+
       {/* ── Bottom Sheet ─────────────────────────────────────── */}
       <View style={styles.bottomSheet}>
         <Text style={styles.bottomHint}>Place the pin at exact delivery location</Text>
@@ -323,6 +313,11 @@ export const LocationPickerScreen = ({ navigation, route }) => {
             <View style={styles.loadingRow}>
               <ActivityIndicator size="small" color={Colors.primary} />
               <Text style={styles.loadingText}>Finding address...</Text>
+            </View>
+          ) : geocodeError ? (
+            <View style={styles.loadingRow}>
+              <Icon name="error-outline" size={18} color={Colors.error} />
+              <Text style={styles.errorText}>{geocodeError}</Text>
             </View>
           ) : address ? (
             <>
@@ -425,6 +420,25 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
   },
   currentLocationText: { fontSize: 13, fontWeight: '600', color: Colors.primary },
+
+  tileErrorBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: Colors.error,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    marginHorizontal: 12,
+    borderRadius: 8,
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 104 : 66,
+    left: 0, right: 0,
+    zIndex: 25,
+    elevation: 8,
+  },
+  tileErrorText: { color: '#fff', fontSize: 12, flex: 1 },
+
+  errorText: { color: Colors.error, fontSize: 12, flex: 1 },
 
   bottomSheet: {
     height: BOTTOM_SHEET_HEIGHT,

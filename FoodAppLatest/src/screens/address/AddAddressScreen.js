@@ -396,7 +396,11 @@ export const AddAddressScreen = ({ navigation, route }) => {
 
         <TouchableOpacity
           style={styles.pickOnMapBtn}
-          onPress={() => navigation.navigate('LocationPickerScreen', {})}
+          onPress={() => navigation.navigate('LocationPickerScreen', {
+            initialCoords: latitude && longitude ? [longitude, latitude] : undefined,
+            initialAddress: addressLine1 ? { addressLine1, addressLine2, city, state, pinCode } : undefined,
+            source: 'AddAddressScreen',
+          })}
           activeOpacity={0.75}
         >
           <Icon name="map" size={16} color={Colors.primary} />

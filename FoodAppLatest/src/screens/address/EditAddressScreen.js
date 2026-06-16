@@ -328,6 +328,32 @@ export const EditAddressScreen = ({ route, navigation }) => {
     }
   };
 
+  // Handle prefillData when returning from LocationPickerScreen
+  const prefillData = route?.params?.prefillData;
+
+  useEffect(() => {
+    if (!prefillData) return;
+    if (prefillData.addressLine1) setAddressLine1(prefillData.addressLine1);
+    if (prefillData.addressLine2) setAddressLine2(prefillData.addressLine2);
+    if (prefillData.city) setCity(prefillData.city);
+    if (prefillData.state) setState(prefillData.state);
+    if (prefillData.pinCode) setPinCode(prefillData.pinCode);
+    if (prefillData.latitude && prefillData.longitude) {
+      setLatitude(prefillData.latitude);
+      setLongitude(prefillData.longitude);
+    }
+  }, [prefillData]);
+
+  const handlePickOnMap = () => {
+    withLocationConfirm(() => {
+      navigation.navigate("LocationPickerScreen", {
+        initialCoords: latitude && longitude ? [longitude, latitude] : undefined,
+        initialAddress: addressLine1 ? { addressLine1, addressLine2, city, state, pinCode } : undefined,
+        source: "EditAddressScreen",
+      });
+    });
+  };
+
   const clearSearch = () => {
     if (cancelRef.current) cancelRef.current();
     setSearchQuery("");
@@ -379,6 +405,15 @@ export const EditAddressScreen = ({ route, navigation }) => {
             </Text>
           </View>
         )}
+
+        <TouchableOpacity
+          style={styles.pickOnMapBtn}
+          onPress={handlePickOnMap}
+          activeOpacity={0.75}
+        >
+          <Icon name="map" size={16} color={Colors.primary} />
+          <Text style={styles.pickOnMapText}>Pick location on map</Text>
+        </TouchableOpacity>
 
         <View style={styles.searchBox}>
           {searchLoading ? (
@@ -787,6 +822,24 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   gpsBtnText: { fontSize: 14, fontWeight: "700", color: Colors.primary },
+  pickOnMapBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    borderWidth: 1.5,
+    borderColor: Colors.primary,
+    borderStyle: 'dashed',
+    paddingVertical: 10,
+    borderRadius: 10,
+    marginBottom: 12,
+    backgroundColor: Colors.primaryLight,
+  },
+  pickOnMapText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: Colors.primary,
+  },
 
   // Search
   searchBox: {

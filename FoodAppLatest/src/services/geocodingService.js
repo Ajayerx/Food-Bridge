@@ -41,6 +41,17 @@ function mapNominatimAddress(address, lat, lon) {
   };
 }
 
+async function fetchWithRetry(url, options, retries = 1) {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    const response = await fetch(url, options);
+    if (response.status !== 429 || attempt >= retries) {
+      return response;
+    }
+    const retryAfter = parseInt(response.headers.get('Retry-After') || '2', 10);
+    await new Promise(resolve => setTimeout(resolve, retryAfter * 1000));
+  }
+}
+
 export async function reverseGeocode(lat, lon) {
   if (!lat || !lon || (lat === 0 && lon === 0)) {
     throw new GeocodingError(GEOCODING_ERRORS.COORDINATES_MISSING);
@@ -53,7 +64,7 @@ export async function reverseGeocode(lat, lon) {
 
   let response;
   try {
-    response = await fetch(url, {
+    response = await fetchWithRetry(url, {
       headers: HEADERS,
       signal: controller.signal,
     });

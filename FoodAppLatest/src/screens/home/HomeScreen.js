@@ -1,6 +1,5 @@
 import Geolocation from "react-native-geolocation-service";
 import { PermissionsAndroid, Platform } from "react-native";
-import axios from "axios";
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { getRestaurantById, getMenuByRestaurantId } from '../../services/restaurant/restaurantService';
 
@@ -35,6 +34,7 @@ import { useCart } from '../../hooks/useCart';
 import { FILTER_CHIPS, CATEGORIES } from '../../constants/categories';
 import api from '../../services/api/base';
 import { useNotificationStore } from '../../store/notificationStore';
+import { reverseGeocode } from '../../services/geocodingService';
 
 const { width } = Dimensions.get('window');
 const BANNER_WIDTH = width - 32;
@@ -761,13 +761,19 @@ export const HomeScreen = ({ navigation }) => {
 
   const fetchAddress = async (latitude, longitude) => {
     try {
-      const res = await axios.get(`https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=YOUR_GOOGLE_MAPS_API_KEY`);
-      if (!res.data.results?.length) return;
-      const result = res.data.results[0];
-      const cityComponent = result.address_components?.find(c => c.types.includes("locality"));
-      const stateComponent = result.address_components?.find(c => c.types.includes("administrative_area_level_1"));
-      setSelectedAddress({ label: "Current Location", address: result.formatted_address || "Unknown address", city: cityComponent?.long_name || "Unknown", state: stateComponent?.long_name || "", latitude, longitude });
-    } catch (error) { console.log("Address fetch error", error?.response?.data || error); }
+      const data = await reverseGeocode(latitude, longitude);
+      if (!data) return;
+      const fullAddress = [data.addressLine1, data.addressLine2, data.city, data.state, data.pinCode]
+        .filter(Boolean).join(', ');
+      setSelectedAddress({
+        label: "Current Location",
+        address: fullAddress || "Unknown address",
+        city: data.city || "Unknown",
+        state: data.state || "",
+        latitude,
+        longitude,
+      });
+    } catch (error) { console.log("Address fetch error", error?.message || error); }
   };
 
   const getCurrentLocation = useCallback(() => {

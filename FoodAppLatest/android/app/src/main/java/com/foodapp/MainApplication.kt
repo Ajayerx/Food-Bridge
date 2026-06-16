@@ -10,8 +10,6 @@ import com.facebook.react.defaults.DefaultNewArchitectureEntryPoint.load
 import com.facebook.react.defaults.DefaultReactHost.getDefaultReactHost
 import com.facebook.react.defaults.DefaultReactNativeHost
 import com.facebook.soloader.SoLoader
-import org.maplibre.android.MapLibre
-import org.maplibre.reactnative.http.CustomHeadersInterceptor
 
 class MainApplication : Application(), ReactApplication {
   override val reactNativeHost: ReactNativeHost =
@@ -34,26 +32,7 @@ class MainApplication : Application(), ReactApplication {
     if (BuildConfig.IS_NEW_ARCHITECTURE_ENABLED) {
       load()
     }
-
-    // ── FIX: Set headers BEFORE getInstance so OkHttp interceptor
-    // is wired into the client before any tile request fires.
-    // Setting them after getInstance means the first batch of tile
-    // requests goes out without the User-Agent and gets canceled by
-    // CartoDB/OSM servers that require a valid UA string.
-    CustomHeadersInterceptor.INSTANCE.addHeader(
-      "User-Agent",
-      "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
-    )
-    CustomHeadersInterceptor.INSTANCE.addHeader(
-      "Accept",
-      "image/png,image/*;q=0.9,*/*;q=0.8"
-    )
-    CustomHeadersInterceptor.INSTANCE.addHeader(
-      "Accept-Language",
-      "en-US,en;q=0.9"
-    )
-
-    // ── Initialize MapLibre AFTER headers are registered ─────────────────
-    MapLibre.getInstance(this)
+    // MapLibre is initialized by MLRNModule.initialize() during native module registration.
+    // No custom OkHttpClient or headers needed — the SDK's default HTTP engine handles tile requests.
   }
 }

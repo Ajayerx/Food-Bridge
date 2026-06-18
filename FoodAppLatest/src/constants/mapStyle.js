@@ -1499,3 +1499,70 @@ export const MAP_STYLE = {
     },
   ],
 };
+
+function cloneStyle(style) {
+  return JSON.parse(JSON.stringify(style));
+}
+
+export function getMapStyle(isDark) {
+  if (!isDark) return MAP_STYLE;
+
+  const s = cloneStyle(MAP_STYLE);
+  const darkLayerOverrides = {
+    background: { 'background-color': '#1A1A2E' },
+    natural_earth: { 'raster-opacity': 0.15 },
+    park: { 'fill-color': '#1E3A2E', 'fill-opacity': 0.6, 'fill-outline-color': 'rgba(40, 80, 50, 1)' },
+    park_outline: { 'line-color': 'rgba(30, 60, 40, 1)' },
+    landuse_residential: { 'fill-color': '#252536' },
+    landcover_wood: { 'fill-color': '#1E3A2E', 'fill-opacity': 0.3 },
+    landcover_grass: { 'fill-color': '#1E3A2E', 'fill-opacity': 0.2 },
+    landuse_hospital: { 'fill-color': '#2E1A2A' },
+    landuse_school: { 'fill-color': '#2E2E1A' },
+    waterway_river: { 'line-color': '#1A3A5C' },
+    waterway_other: { 'line-color': '#1A3A5C' },
+    water: { 'fill-color': '#1A2A4A' },
+    building: { 'fill-color': '#2E2E3E', 'fill-outline-color': '#3E3E4E' },
+    building_3d: { 'fill-extrusion-color': '#2E2E3E' },
+    road_minor_casing: { 'line-color': '#3A3A4A' },
+    road_minor: { 'line-color': '#2E2E3E' },
+    road_secondary_tertiary_casing: { 'line-color': '#4A3A2A' },
+    road_secondary_tertiary: { 'line-color': '#3E3E2E' },
+    road_trunk_primary_casing: { 'line-color': '#4A3A2A' },
+    road_trunk_primary: { 'line-color': '#4A3A2E' },
+    road_motorway_casing: { 'line-color': '#4A3A2A' },
+    road_motorway: { 'line-color': '#5A4A2E' },
+    highway_name_path: { 'text-color': '#888', 'text-halo-color': '#1A1A2E' },
+    highway_name_minor: { 'text-color': '#999', 'text-halo-color': '#1A1A2E', 'text-halo-width': 1 },
+    highway_name_major: { 'text-color': '#AAA', 'text-halo-color': '#1A1A2E', 'text-halo-width': 1 },
+    waterway_line_label: { 'text-color': '#4A7A9E', 'text-halo-color': 'rgba(26,26,46,0.7)' },
+    water_name_point_label: { 'text-color': '#4A7A9E', 'text-halo-color': 'rgba(26,26,46,0.7)' },
+    water_name_line_label: { 'text-color': '#4A7A9E', 'text-halo-color': 'rgba(26,26,46,0.7)' },
+    label_other: { 'text-color': '#999', 'text-halo-color': '#1A1A2E' },
+    label_suburb: { 'text-color': '#888', 'text-halo-color': '#1A1A2E' },
+    label_village: { 'text-color': '#CCC', 'text-halo-color': '#1A1A2E' },
+    label_town: { 'text-color': '#DDD', 'text-halo-color': '#1A1A2E' },
+    label_state: { 'text-color': '#999', 'text-halo-color': '#1A1A2E' },
+    label_city: { 'text-color': '#EEE', 'text-halo-color': '#1A1A2E' },
+    label_city_capital: { 'text-color': '#FFF', 'text-halo-color': '#1A1A2E' },
+    label_country_3: { 'text-color': '#DDD', 'text-halo-color': '#1A1A2E' },
+    label_country_2: { 'text-color': '#DDD', 'text-halo-color': '#1A1A2E' },
+    label_country_1: { 'text-color': '#DDD', 'text-halo-color': '#1A1A2E' },
+    poi_r20: { 'text-color': '#AAA', 'text-halo-color': '#1A1A2E' },
+    poi_r7: { 'text-color': '#AAA', 'text-halo-color': '#1A1A2E' },
+    poi_r1: { 'text-color': '#AAA', 'text-halo-color': '#1A1A2E' },
+    poi_transit: { 'text-color': '#7A9ABF', 'text-halo-color': '#1A1A2E' },
+    poi_food: { 'text-color': '#D66', 'text-halo-color': '#1A1A2E' },
+    airport: { 'text-color': '#AAA', 'text-halo-color': '#1A1A2E' },
+    boundary_3: { 'line-color': '#3A3A4A' },
+    boundary_2: { 'line-color': '#5A5A6A' },
+  };
+
+  for (const layer of s.layers) {
+    const overrides = darkLayerOverrides[layer.id];
+    if (overrides) {
+      Object.assign(layer.paint, overrides);
+    }
+  }
+
+  return s;
+}

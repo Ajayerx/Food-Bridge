@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from "react";
+import React, { useState, useRef, useCallback, useMemo, useEffect } from "react";
 import {
   View,
   Text,
@@ -15,7 +15,8 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { useAddressStore } from "../../store/addressStore";
-import { Colors } from "../../constants/colors";
+import { useTheme } from '../../hooks/useTheme';
+import { useUserStore } from '../../store/userStore';
 import {
   reverseGeocode,
   searchAddress,
@@ -36,7 +37,9 @@ import { INDIAN_STATES } from "../../constants/indianStates";
 const LABEL_OPTIONS = ["Home", "Work", "Other"];
 
 export const EditAddressScreen = ({ route, navigation }) => {
-  const { address } = route.params;
+  const { address = {} } = route.params;
+  const existingAddressId = route?.params?.existingAddressId;
+  const existingLabel = route?.params?.existingLabel;
   const updateAddress = useAddressStore(s => s.updateAddress);
   const scrollRef = useRef(null);
   const debounceRef = useRef(null);
@@ -49,7 +52,7 @@ export const EditAddressScreen = ({ route, navigation }) => {
   const pincodeCancelRef = useRef(null);
   const pincodeQueryRef = useRef('');
 
-  const [label, setLabel] = useState(address.label || "Home");
+  const [label, setLabel] = useState(existingLabel || address.label || "Home");
   const [customLabel, setCustomLabel] = useState(
     !["Home", "Work"].includes(address.label) ? address.label : ""
   );
@@ -82,6 +85,10 @@ export const EditAddressScreen = ({ route, navigation }) => {
 
   const [errors, setErrors] = useState({});
   const [highlightedFields, setHighlightedFields] = useState({});
+
+  const Colors = useTheme();
+  const darkMode = useUserStore(s => s.darkMode);
+  const styles = useMemo(() => createStyles(Colors), [Colors]);
 
   const hasExistingLocation = latitude !== 0 && longitude !== 0;
 
@@ -290,7 +297,8 @@ export const EditAddressScreen = ({ route, navigation }) => {
     }
 
     try {
-      await updateAddress(address.id, {
+      const addrId = existingAddressId || address.id;
+      await updateAddress(addrId, {
         label: getLabelValue(),
         address_line1: addressLine1.trim(),
         address_line2: addressLine2.trim() || null,
@@ -364,7 +372,7 @@ export const EditAddressScreen = ({ route, navigation }) => {
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <StatusBar backgroundColor={Colors.white} barStyle="dark-content" />
+      <StatusBar backgroundColor={Colors.surface} barStyle={darkMode ? 'light-content' : 'dark-content'} />
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <Icon name="arrow-back-ios" size={20} color={Colors.textPrimary} />
@@ -399,7 +407,7 @@ export const EditAddressScreen = ({ route, navigation }) => {
 
         {latitude === 0 && longitude === 0 && (
           <View style={styles.coordHint}>
-            <Icon name="info" size={16} color="#1565C0" />
+            <Icon name="info" size={16} color={Colors.info} />
             <Text style={styles.coordHintText}>
               Tap 'Use Current Location' above to set your exact location for better delivery accuracy
             </Text>
@@ -793,21 +801,21 @@ export const EditAddressScreen = ({ route, navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F5F5F5" },
+const createStyles = (C) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: C.background },
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: Colors.white,
+    backgroundColor: C.surface,
     paddingHorizontal: 16,
     paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    borderBottomColor: C.border,
     elevation: 2,
   },
   backBtn: { padding: 4 },
-  headerTitle: { fontSize: 18, fontWeight: "800", color: Colors.textPrimary },
+  headerTitle: { fontSize: 18, fontWeight: "800", color: C.textPrimary },
   scrollContent: { padding: 16, paddingBottom: 40 },
 
   // GPS
@@ -816,53 +824,53 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    backgroundColor: Colors.primaryLight,
+    backgroundColor: C.primaryLight,
     paddingVertical: 14,
     borderRadius: 12,
     marginBottom: 12,
   },
-  gpsBtnText: { fontSize: 14, fontWeight: "700", color: Colors.primary },
+  gpsBtnText: { fontSize: 14, fontWeight: "700", color: C.primary },
   pickOnMapBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
     borderWidth: 1.5,
-    borderColor: Colors.primary,
+    borderColor: C.primary,
     borderStyle: 'dashed',
     paddingVertical: 10,
     borderRadius: 10,
     marginBottom: 12,
-    backgroundColor: Colors.primaryLight,
+    backgroundColor: C.primaryLight,
   },
   pickOnMapText: {
     fontSize: 13,
     fontWeight: '600',
-    color: Colors.primary,
+    color: C.primary,
   },
 
   // Search
   searchBox: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: Colors.white,
+    backgroundColor: C.surface,
     borderRadius: 12,
     paddingHorizontal: 14,
     height: 48,
     gap: 10,
     marginBottom: 4,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: C.border,
   },
-  searchInput: { flex: 1, fontSize: 16, color: Colors.textPrimary, paddingVertical: 0 },
+  searchInput: { flex: 1, fontSize: 16, color: C.textPrimary, paddingVertical: 0 },
   clearBtn: { padding: 4 },
 
   // Suggestions
   suggestionContainer: {
-    backgroundColor: Colors.white,
+    backgroundColor: C.surface,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: C.border,
     marginBottom: 16,
     overflow: "hidden",
   },
@@ -873,15 +881,15 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 14,
   },
-  suggestionBorder: { borderBottomWidth: 1, borderBottomColor: Colors.border },
+  suggestionBorder: { borderBottomWidth: 1, borderBottomColor: C.border },
   suggestionContent: { flex: 1 },
-  suggestionText: { fontSize: 13, color: Colors.textSecondary, lineHeight: 18 },
+  suggestionText: { fontSize: 13, color: C.textSecondary, lineHeight: 18 },
 
   // Label
   sectionLabel: {
     fontSize: 13,
     fontWeight: "700",
-    color: Colors.textSecondary,
+    color: C.textSecondary,
     marginBottom: 10,
     textTransform: "uppercase",
     letterSpacing: 0.5,
@@ -896,36 +904,36 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 10,
     borderWidth: 1.5,
-    borderColor: Colors.border,
-    backgroundColor: Colors.white,
+    borderColor: C.border,
+    backgroundColor: C.surface,
   },
-  labelBtnActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
-  labelBtnText: { fontSize: 13, fontWeight: "600", color: Colors.textSecondary },
-  labelBtnTextActive: { color: Colors.white },
+  labelBtnActive: { backgroundColor: C.primary, borderColor: C.primary },
+  labelBtnText: { fontSize: 13, fontWeight: "600", color: C.textSecondary },
+  labelBtnTextActive: { color: C.white },
 
   // Inputs
   inputLabel: {
     fontSize: 13,
     fontWeight: "600",
-    color: Colors.textSecondary,
+    color: C.textSecondary,
     marginBottom: 6,
   },
-  required: { color: Colors.error },
-  optional: { color: Colors.textLight, fontWeight: "400" },
+  required: { color: C.error },
+  optional: { color: C.textLight, fontWeight: "400" },
   input: {
-    backgroundColor: Colors.white,
+    backgroundColor: C.surface,
     paddingHorizontal: 14,
     paddingVertical: 13,
     borderRadius: 12,
     borderWidth: 1.5,
-    borderColor: Colors.border,
+    borderColor: C.border,
     fontSize: 16,
-    color: Colors.textPrimary,
+    color: C.textPrimary,
     marginBottom: 16,
     minHeight: 48,
   },
-  inputError: { borderColor: Colors.error },
-  highlighted: { borderColor: Colors.warning, backgroundColor: "#FFFDE7" },
+  inputError: { borderColor: C.error },
+  highlighted: { borderColor: C.warning, backgroundColor: C.warning + '20' },
   rowInputs: { flexDirection: "row", gap: 12 },
 
   // Default
@@ -933,11 +941,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "flex-start",
     gap: 12,
-    backgroundColor: Colors.white,
+    backgroundColor: C.surface,
     padding: 14,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: C.border,
     marginBottom: 24,
   },
   checkbox: {
@@ -945,14 +953,14 @@ const styles = StyleSheet.create({
     height: 22,
     borderRadius: 6,
     borderWidth: 2,
-    borderColor: Colors.border,
+    borderColor: C.border,
     justifyContent: "center",
     alignItems: "center",
     marginTop: 1,
   },
-  checkboxChecked: { backgroundColor: Colors.primary, borderColor: Colors.primary },
-  defaultLabel: { fontSize: 14, fontWeight: "600", color: Colors.textPrimary },
-  defaultSub: { fontSize: 12, color: Colors.textLight, marginTop: 2 },
+  checkboxChecked: { backgroundColor: C.primary, borderColor: C.primary },
+  defaultLabel: { fontSize: 14, fontWeight: "600", color: C.textPrimary },
+  defaultSub: { fontSize: 12, color: C.textLight, marginTop: 2 },
 
   // Save
   saveBtn: {
@@ -960,7 +968,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    backgroundColor: Colors.primary,
+    backgroundColor: C.primary,
     paddingVertical: 15,
     borderRadius: 14,
     marginTop: 8,
@@ -968,14 +976,14 @@ const styles = StyleSheet.create({
     minHeight: 52,
   },
   saveBtnDisabled: { opacity: 0.6 },
-  saveText: { color: Colors.white, fontWeight: "700", fontSize: 15 },
+  saveText: { color: C.white, fontWeight: "700", fontSize: 15 },
 
   // Coordinate hint
   coordHint: {
     flexDirection: "row",
     alignItems: "flex-start",
     gap: 8,
-    backgroundColor: "#E3F2FD",
+    backgroundColor: C.infoBoxBg,
     padding: 12,
     borderRadius: 10,
     marginBottom: 12,
@@ -983,11 +991,11 @@ const styles = StyleSheet.create({
   coordHintText: {
     flex: 1,
     fontSize: 12,
-    color: "#1565C0",
+    color: C.infoBoxText,
     lineHeight: 17,
   },
 
   // Errors
-  errorText: { color: Colors.error, fontSize: 12, marginBottom: 12, marginLeft: 4 },
-  fieldError: { color: Colors.error, fontSize: 12, marginTop: -12, marginBottom: 12, marginLeft: 4 },
+  errorText: { color: C.error, fontSize: 12, marginBottom: 12, marginLeft: 4 },
+  fieldError: { color: C.error, fontSize: 12, marginTop: -12, marginBottom: 12, marginLeft: 4 },
 });

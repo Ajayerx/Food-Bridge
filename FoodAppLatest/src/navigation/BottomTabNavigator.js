@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useMemo, useCallback } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import Icon from 'react-native-vector-icons/MaterialIcons';
@@ -6,23 +6,21 @@ import { HomeScreen } from '../screens/home/HomeScreen';
 import { OrdersScreen } from '../screens/orders/OrdersScreen';
 import { ProfileScreen } from '../screens/profile/ProfileScreen';
 import { useCartStore } from '../store/cartStore';
-import { Colors } from '../constants/colors';
+import { useTheme } from '../hooks/useTheme';
 
 const Tab = createBottomTabNavigator();
 
-// ─── Cart Badge ───────────────────────────────────────────
-// REPLACE CartBadge:
-const CartBadge = React.memo(({ color, size }) => {
+const CartBadge = React.memo(({ color, size, s }) => {
   const itemCount = useCartStore(
     useCallback(s => s.items.reduce((sum, i) => sum + i.quantity, 0), [])
   );
 
   return (
-    <View style={styles.iconWrapper}>
+    <View style={s.iconWrapper}>
       <Icon name="shopping-cart" size={size} color={color} />
       {itemCount > 0 && (
-        <View style={styles.badge}>
-          <Text style={styles.badgeText}>
+        <View style={s.badge}>
+          <Text style={s.badgeText}>
             {itemCount > 99 ? '99+' : itemCount}
           </Text>
         </View>
@@ -31,8 +29,10 @@ const CartBadge = React.memo(({ color, size }) => {
   );
 });
 
-// ─── Navigator ────────────────────────────────────────────
 export const BottomTabNavigator = () => {
+  const Colors = useTheme();
+  const styles = useMemo(() => createStyles(Colors), [Colors]);
+
   return (
     <Tab.Navigator
       screenOptions={{
@@ -42,8 +42,6 @@ export const BottomTabNavigator = () => {
         tabBarLabelStyle: styles.tabLabel,
         headerShown: false,
       }}>
-
-      {/* Home */}
       <Tab.Screen
         name="HomeScreen"
         component={HomeScreen}
@@ -54,8 +52,6 @@ export const BottomTabNavigator = () => {
           ),
         }}
       />
-
-      {/* Cart */}
       <Tab.Screen
         name="CartTab"
         component={HomeScreen}
@@ -68,12 +64,10 @@ export const BottomTabNavigator = () => {
         options={{
           title: 'Cart',
           tabBarIcon: ({ color, size }) => (
-            <CartBadge color={color} size={size} />
+            <CartBadge color={color} size={size} s={styles} />
           ),
         }}
       />
-
-      {/* Orders */}
       <Tab.Screen
         name="OrdersScreen"
         component={OrdersScreen}
@@ -84,8 +78,6 @@ export const BottomTabNavigator = () => {
           ),
         }}
       />
-
-      {/* Profile */}
       <Tab.Screen
         name="ProfileScreen"
         component={ProfileScreen}
@@ -100,11 +92,11 @@ export const BottomTabNavigator = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (C) => StyleSheet.create({
   tabBar: {
-    backgroundColor: Colors.white,
+    backgroundColor: C.surface,
     borderTopWidth: 1,
-    borderTopColor: Colors.border,
+    borderTopColor: C.border,
     height: 64,
     paddingBottom: 8,
     paddingTop: 6,
@@ -119,8 +111,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginTop: 2,
   },
-
-  // Cart Badge
   iconWrapper: {
     position: 'relative',
     width: 28,
@@ -132,7 +122,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: -4,
     right: -6,
-    backgroundColor: Colors.primary,
+    backgroundColor: C.primary,
     borderRadius: 8,
     minWidth: 16,
     height: 16,
@@ -140,10 +130,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 3,
     borderWidth: 1.5,
-    borderColor: Colors.white,
+    borderColor: C.white,
   },
   badgeText: {
-    color: Colors.white,
+    color: C.white,
     fontSize: 9,
     fontWeight: '800',
   },

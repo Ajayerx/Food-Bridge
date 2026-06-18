@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -8,10 +8,12 @@ import {
   Platform,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import { Colors } from '../../constants/colors';
+import { useTheme } from '../../hooks/useTheme';
 import { formatCurrency } from '../../utils/formatCurrency';
 
 const CartBarComponent = ({ itemCount, total, restaurantName, onPress }) => {
+  const Colors = useTheme();
+  const styles = useMemo(() => createStyles(Colors), [Colors]);
   const slideAnim = useRef(new Animated.Value(120)).current;
   const bumpAnim = useRef(new Animated.Value(1)).current;
   const [visible, setVisible] = useState(false);
@@ -108,22 +110,20 @@ const CartBarComponent = ({ itemCount, total, restaurantName, onPress }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (C) => StyleSheet.create({
   wrapper: {
     position: 'absolute',
     bottom: 20,
     left: 16,
     right: 16,
-    // Android: elevation handles stacking, NOT zIndex
     elevation: 20,
-    // iOS shadow
-    shadowColor: Colors.primary,
+    shadowColor: C.primary,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.45,
     shadowRadius: 16,
   },
   bar: {
-    backgroundColor: Colors.primary,
+    backgroundColor: C.primary,
     borderRadius: 18,
     flexDirection: 'row',
     alignItems: 'center',
@@ -142,20 +142,20 @@ const styles = StyleSheet.create({
     width: 46,
     height: 46,
     borderRadius: 13,
-    backgroundColor: Colors.primaryDark,
+    backgroundColor: C.primaryDark,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
     borderColor: 'rgba(255,255,255,0.2)',
   },
   countNum: {
-    color: Colors.white,
+    color: C.white,
     fontSize: 20,
     fontWeight: '900',
   },
   labelCol: { flex: 1 },
   itemsLabel: {
-    color: Colors.white,
+    color: C.white,
     fontSize: 14,
     fontWeight: '700',
   },
@@ -171,7 +171,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   totalAmt: {
-    color: Colors.white,
+    color: C.white,
     fontSize: 16,
     fontWeight: '800',
     textAlign: 'right',
@@ -185,7 +185,7 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: 10,
-    backgroundColor: Colors.white,
+    backgroundColor: C.surface,
     justifyContent: 'center',
     alignItems: 'center',
   },

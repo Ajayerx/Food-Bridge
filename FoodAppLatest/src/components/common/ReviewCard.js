@@ -1,14 +1,16 @@
 // components/common/ReviewCard.js
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import {
     View, Text, StyleSheet, TouchableOpacity, TextInput,
     ActivityIndicator, Alert, Animated,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import { Colors } from '../../constants/colors';
+import { useTheme } from '../../hooks/useTheme';
 import { submitReview, getOrderReview } from '../../services/review/reviewService';
 
 export const ReviewCard = ({ orderId, restaurantId, menuItemId, style }) => {
+    const Colors = useTheme();
+    const rvStyles = useMemo(() => createStyles(Colors), [Colors]);
     const [selected, setSelected] = useState(0);
     const [comment, setComment] = useState('');
     const [submitting, setSubmitting] = useState(false);
@@ -101,7 +103,7 @@ export const ReviewCard = ({ orderId, restaurantId, menuItemId, style }) => {
                 <View style={rvStyles.starsRowSmall}>
                     {[1, 2, 3, 4, 5].map(s => (
                         <Icon key={s} name={s <= existingReview.rating ? 'star' : 'star-border'}
-                            size={20} color={s <= existingReview.rating ? '#F39C12' : Colors.border} />
+                            size={20} color={s <= existingReview.rating ? Colors.warning : Colors.border} />
                     ))}
                 </View>
                 {existingReview.comment ? (
@@ -112,7 +114,7 @@ export const ReviewCard = ({ orderId, restaurantId, menuItemId, style }) => {
                     <View style={rvStyles.replyBox}>
                         <View style={rvStyles.replyHeader}>
                             <View style={rvStyles.replyIconCircle}>
-                                <Icon name="store" size={12} color="#fff" />
+                                <Icon name="store" size={12} color={Colors.white} />
                             </View>
                             <View>
                                 <Text style={rvStyles.replyFrom}>Restaurant's Response</Text>
@@ -160,7 +162,7 @@ export const ReviewCard = ({ orderId, restaurantId, menuItemId, style }) => {
                     <TouchableOpacity key={star} onPress={() => handleStarPress(star)} activeOpacity={0.7}>
                         <Animated.View style={{ transform: [{ scale: starAnimations[star - 1] }] }}>
                             <Icon name={star <= selected ? 'star' : 'star-border'}
-                                size={40} color={star <= selected ? '#F39C12' : Colors.border} />
+                                size={40} color={star <= selected ? Colors.warning : Colors.border} />
                         </Animated.View>
                     </TouchableOpacity>
                 ))}
@@ -175,7 +177,7 @@ export const ReviewCard = ({ orderId, restaurantId, menuItemId, style }) => {
             <TextInput
                 style={rvStyles.commentInput}
                 placeholder="Share details about your experience (optional)"
-                placeholderTextColor="#bbb"
+                placeholderTextColor={Colors.textLight}
                 value={comment}
                 onChangeText={setComment}
                 multiline
@@ -192,71 +194,71 @@ export const ReviewCard = ({ orderId, restaurantId, menuItemId, style }) => {
                 activeOpacity={0.8}
             >
                 {submitting
-                    ? <ActivityIndicator color="#fff" size="small" />
-                    : <><Icon name="send" size={18} color="#fff" /><Text style={rvStyles.submitText}>Submit Review</Text></>
+                    ? <ActivityIndicator color={Colors.white} size="small" />
+                    : <><Icon name="send" size={18} color={Colors.white} /><Text style={rvStyles.submitText}>Submit Review</Text></>
                 }
             </TouchableOpacity>
         </View>
     );
 };
 
-const rvStyles = StyleSheet.create({
+const createStyles = (C) => StyleSheet.create({
     card: {
-        backgroundColor: Colors.white, borderRadius: 16, padding: 20,
-        elevation: 1, shadowColor: '#000',
+        backgroundColor: C.surface, borderRadius: 16, padding: 20,
+        elevation: 1, shadowColor: C.black,
         shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 4,
         alignItems: 'center', gap: 10,
     },
-    title: { fontSize: 16, fontWeight: '800', color: Colors.textPrimary },
-    sub: { fontSize: 12, color: Colors.textSecondary, textAlign: 'center' },
+    title: { fontSize: 16, fontWeight: '800', color: C.textPrimary },
+    sub: { fontSize: 12, color: C.textSecondary, textAlign: 'center' },
     starsRow: { flexDirection: 'row', gap: 8, marginVertical: 8 },
     starsRowSmall: { flexDirection: 'row', gap: 3 },
-    starLabel: { fontSize: 14, fontWeight: '600', color: Colors.textPrimary, marginBottom: 4 },
+    starLabel: { fontSize: 14, fontWeight: '600', color: C.textPrimary, marginBottom: 4 },
     commentInput: {
-        width: '100%', borderWidth: 1, borderColor: Colors.border,
+        width: '100%', borderWidth: 1, borderColor: C.border,
         borderRadius: 12, padding: 12, fontSize: 13,
-        color: Colors.textPrimary, minHeight: 80, backgroundColor: '#FAFAFA',
+        color: C.textPrimary, minHeight: 80, backgroundColor: C.inputBg,
     },
-    charCount: { alignSelf: 'flex-end', fontSize: 11, color: Colors.textLight },
+    charCount: { alignSelf: 'flex-end', fontSize: 11, color: C.textLight },
     submitBtn: {
         flexDirection: 'row', alignItems: 'center', gap: 8,
-        backgroundColor: Colors.primary,
+        backgroundColor: C.primary,
         paddingVertical: 13, paddingHorizontal: 28,
         borderRadius: 14, marginTop: 4, width: '100%', justifyContent: 'center',
     },
-    submitText: { color: '#fff', fontWeight: '700', fontSize: 15 },
+    submitText: { color: C.white, fontWeight: '700', fontSize: 15 },
     thankRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
     thankEmoji: { fontSize: 28 },
-    thankTitle: { fontSize: 16, fontWeight: '800', color: Colors.textPrimary },
-    thankSub: { fontSize: 13, color: Colors.textSecondary, textAlign: 'center' },
-    savedComment: { fontSize: 13, color: Colors.textSecondary, fontStyle: 'italic', textAlign: 'center', paddingHorizontal: 8 },
+    thankTitle: { fontSize: 16, fontWeight: '800', color: C.textPrimary },
+    thankSub: { fontSize: 13, color: C.textSecondary, textAlign: 'center' },
+    savedComment: { fontSize: 13, color: C.textSecondary, fontStyle: 'italic', textAlign: 'center', paddingHorizontal: 8 },
     replyBox: {
         alignSelf: 'stretch', marginTop: 8, borderRadius: 14,
-        borderWidth: 1, borderColor: '#E0EDFF',
-        backgroundColor: '#F5F9FF', overflow: 'hidden',
+        borderWidth: 1, borderColor: C.replyBoxBorder,
+        backgroundColor: C.replyBoxBg, overflow: 'hidden',
     },
     replyHeader: {
         flexDirection: 'row', alignItems: 'center', gap: 10,
-        paddingHorizontal: 14, paddingVertical: 10, backgroundColor: '#EAF2FF',
+        paddingHorizontal: 14, paddingVertical: 10, backgroundColor: C.replyBoxHeaderBg,
     },
     replyIconCircle: {
         width: 24, height: 24, borderRadius: 12,
-        backgroundColor: Colors.primary,
+        backgroundColor: C.primary,
         justifyContent: 'center', alignItems: 'center',
     },
-    replyFrom: { fontSize: 11, fontWeight: '700', color: Colors.primary, letterSpacing: 0.2 },
-    replyDate: { fontSize: 10, color: '#7aA8D8', marginTop: 1 },
-    replyDivider: { height: 1, backgroundColor: '#D8EAFF' },
+    replyFrom: { fontSize: 11, fontWeight: '700', color: C.primary, letterSpacing: 0.2 },
+    replyDate: { fontSize: 10, color: C.replyDateColor, marginTop: 1 },
+    replyDivider: { height: 1, backgroundColor: C.replyDividerColor },
     replyText: {
-        fontSize: 13, color: '#2C4A6E', fontStyle: 'italic',
+        fontSize: 13, color: C.replyTextColor, fontStyle: 'italic',
         lineHeight: 20, paddingHorizontal: 14, paddingVertical: 12,
     },
     awaitingBox: {
         flexDirection: 'row', alignItems: 'center', gap: 6,
         alignSelf: 'stretch', marginTop: 8,
         paddingVertical: 10, paddingHorizontal: 14,
-        backgroundColor: '#FAFAFA', borderRadius: 10,
-        borderWidth: 1, borderColor: Colors.border, borderStyle: 'dashed',
+        backgroundColor: C.inputBg, borderRadius: 10,
+        borderWidth: 1, borderColor: C.border, borderStyle: 'dashed',
     },
-    awaitingReply: { fontSize: 12, color: Colors.textLight, fontStyle: 'italic' },
+    awaitingReply: { fontSize: 12, color: C.textLight, fontStyle: 'italic' },
 });

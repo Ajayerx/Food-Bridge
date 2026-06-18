@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -15,8 +15,9 @@ import {
 import MapLibreGL from '@maplibre/maplibre-react-native';
 import Geolocation from 'react-native-geolocation-service';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import { Colors } from '../../constants/colors';
-import { MAP_STYLE } from '../../constants/mapStyle';
+import { useTheme } from '../../hooks/useTheme';
+import { useUserStore } from '../../store/userStore';
+import { getMapStyle } from '../../constants/mapStyle';
 import { reverseGeocode, searchAddress } from '../../services/geocodingService';
 
 const BOTTOM_SHEET_HEIGHT = 220;
@@ -37,9 +38,27 @@ const requestLocationPermission = async () => {
 };
 
 export const LocationPickerScreen = ({ navigation, route }) => {
-  const { initialCoords, initialAddress, source } = route?.params || {};
+  const { initialCoords, initialAddress, source, existingAddress } = route?.params || {};
+  const existingCoords = existingAddress?.latitude
+    ? [existingAddress.longitude, existingAddress.latitude]
+    : null;
 
-  const [address, setAddress] = useState(initialAddress || null);
+  const Colors = useTheme();
+  const isDark = useUserStore(s => s.darkMode);
+  const mapStyle = useMemo(() => getMapStyle(isDark), [isDark]);
+  const styles = useMemo(() => createStyles(Colors), [Colors]);
+
+  const [address, setAddress] = useState(
+    initialAddress ||
+    (existingAddress ? {
+      addressLine1: existingAddress.address_line1 || '',
+      addressLine2: existingAddress.address_line2 || '',
+      city: existingAddress.city || '',
+      state: existingAddress.state || '',
+      pinCode: existingAddress.pincode || '',
+    } : null) ||
+    null
+  );
   const [isReversing, setIsReversing] = useState(false);
   const [geocodeError, setGeocodeError] = useState(null);
   const [tileError, setTileError] = useState(false);
@@ -54,7 +73,7 @@ export const LocationPickerScreen = ({ navigation, route }) => {
   const reverseDebounceRef = useRef(null);
   const gpsAttemptedRef = useRef(false);
   // Always-current coords — updated on user drag, GPS, or search pick
-  const currentCoordsRef = useRef(initialCoords || DEFAULT_COORDS);
+  const currentCoordsRef = useRef(initialCoords || existingCoords || DEFAULT_COORDS);
 
   // ── Reverse geocode ───────────────────────────────────────────────────────
   const doReverseGeocode = useCallback(async (lat, lng) => {
@@ -88,6 +107,12 @@ export const LocationPickerScreen = ({ navigation, route }) => {
   useEffect(() => {
     if (initialCoords) {
       doReverseGeocode(initialCoords[1], initialCoords[0]);
+      return;
+    }
+    if (existingCoords) {
+      currentCoordsRef.current = existingCoords;
+      flyTo(existingCoords);
+      doReverseGeocode(existingCoords[1], existingCoords[0]);
       return;
     }
     if (gpsAttemptedRef.current) return;
@@ -216,12 +241,21 @@ export const LocationPickerScreen = ({ navigation, route }) => {
       longitude: lng,
     };
 
+    if (existingAddress) {
+      navigation.navigate('EditAddressScreen', {
+        prefillData,
+        existingAddressId: existingAddress.id,
+        existingLabel: existingAddress.label,
+      });
+      return;
+    }
+
     if (source === 'EditAddressScreen') {
       navigation.navigate('EditAddressScreen', { prefillData });
     } else {
       navigation.navigate('AddAddressScreen', { prefillData });
     }
-  }, [address, navigation, source]);
+  }, [address, navigation, source, existingAddress]);
 
   // ── Derived display strings ───────────────────────────────────────────────
   const addressName = address
@@ -256,7 +290,7 @@ export const LocationPickerScreen = ({ navigation, route }) => {
       <View style={styles.mapContainer}>
         <MapLibreGL.MapView
           style={StyleSheet.absoluteFillObject}
-          mapStyle={MAP_STYLE}
+          mapStyle={mapStyle}
           onRegionDidChange={onRegionDidChange}
           onDidFailLoadingMap={() => {
             console.warn('MapView: DidFailLoadingMap');
@@ -338,7 +372,7 @@ export const LocationPickerScreen = ({ navigation, route }) => {
           disabled={isReversing || !address}
           activeOpacity={0.85}
         >
-          <Text style={styles.confirmBtnText}>Confirm & proceed</Text>
+          <Text style={styles.confirmBtnText}>{existingAddress ? 'Continue to Edit' : 'Confirm & proceed'}</Text>
         </TouchableOpacity>
       </View>
 
@@ -390,8 +424,8 @@ export const LocationPickerScreen = ({ navigation, route }) => {
 
 export default LocationPickerScreen;
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.white },
+const createStyles = (C) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: C.surface },
 
   mapContainer: { height: MAP_HEIGHT, overflow: 'hidden' },
 
@@ -409,23 +443,23 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: Colors.white,
+    backgroundColor: C.surface,
     paddingHorizontal: 14,
     paddingVertical: 9,
     borderRadius: 24,
     elevation: 5,
-    shadowColor: '#000',
+    shadowColor: C.black,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.18,
     shadowRadius: 6,
   },
-  currentLocationText: { fontSize: 13, fontWeight: '600', color: Colors.primary },
+  currentLocationText: { fontSize: 13, fontWeight: '600', color: C.primary },
 
   tileErrorBanner: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: Colors.error,
+    backgroundColor: C.error,
     paddingVertical: 8,
     paddingHorizontal: 16,
     marginHorizontal: 12,
@@ -436,27 +470,27 @@ const styles = StyleSheet.create({
     zIndex: 25,
     elevation: 8,
   },
-  tileErrorText: { color: '#fff', fontSize: 12, flex: 1 },
+  tileErrorText: { color: C.white, fontSize: 12, flex: 1 },
 
-  errorText: { color: Colors.error, fontSize: 12, flex: 1 },
+  errorText: { color: C.error, fontSize: 12, flex: 1 },
 
   bottomSheet: {
     height: BOTTOM_SHEET_HEIGHT,
-    backgroundColor: Colors.white,
+    backgroundColor: C.surface,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     paddingHorizontal: 20,
     paddingTop: 16,
     paddingBottom: Platform.OS === 'ios' ? 32 : 20,
     elevation: 16,
-    shadowColor: '#000',
+    shadowColor: C.black,
     shadowOffset: { width: 0, height: -4 },
     shadowOpacity: 0.12,
     shadowRadius: 10,
   },
   bottomHint: {
     fontSize: 11,
-    color: Colors.textLight,
+    color: C.textLight,
     marginBottom: 10,
     textAlign: 'center',
     letterSpacing: 0.2,
@@ -469,12 +503,12 @@ const styles = StyleSheet.create({
     minHeight: 44,
   },
   loadingRow: { flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 },
-  loadingText: { fontSize: 13, color: Colors.textLight },
-  addressName: { fontSize: 15, fontWeight: '700', color: Colors.textPrimary, marginBottom: 2 },
-  addressFull: { fontSize: 12, color: Colors.textSecondary, lineHeight: 16 },
+  loadingText: { fontSize: 13, color: C.textLight },
+  addressName: { fontSize: 15, fontWeight: '700', color: C.textPrimary, marginBottom: 2 },
+  addressFull: { fontSize: 12, color: C.textSecondary, lineHeight: 16 },
   addressPlaceholder: {
     fontSize: 13,
-    color: Colors.textLight,
+    color: C.textLight,
     fontStyle: 'italic',
     flex: 1,
     paddingTop: 10,
@@ -482,18 +516,18 @@ const styles = StyleSheet.create({
   },
 
   confirmBtn: {
-    backgroundColor: Colors.primary,
+    backgroundColor: C.primary,
     paddingVertical: 14,
     borderRadius: 14,
     alignItems: 'center',
     elevation: 3,
-    shadowColor: Colors.primary,
+    shadowColor: C.primary,
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.25,
     shadowRadius: 6,
   },
   confirmBtnDisabled: { opacity: 0.45 },
-  confirmBtnText: { color: Colors.white, fontSize: 15, fontWeight: '700', letterSpacing: 0.3 },
+  confirmBtnText: { color: C.white, fontSize: 15, fontWeight: '700', letterSpacing: 0.3 },
 
   topBar: {
     position: 'absolute',
@@ -509,11 +543,11 @@ const styles = StyleSheet.create({
   backBtn: {
     width: 40, height: 40,
     borderRadius: 20,
-    backgroundColor: Colors.white,
+    backgroundColor: C.surface,
     justifyContent: 'center',
     alignItems: 'center',
     elevation: 5,
-    shadowColor: '#000',
+    shadowColor: C.black,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.18,
     shadowRadius: 5,
@@ -522,30 +556,30 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.white,
+    backgroundColor: C.surface,
     borderRadius: 12,
     paddingHorizontal: 12,
     height: 44,
     gap: 8,
     elevation: 5,
-    shadowColor: '#000',
+    shadowColor: C.black,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.18,
     shadowRadius: 5,
   },
-  searchInput: { flex: 1, fontSize: 14, color: Colors.textPrimary, paddingVertical: 0 },
+  searchInput: { flex: 1, fontSize: 14, color: C.textPrimary, paddingVertical: 0 },
 
   searchResultsContainer: {
     position: 'absolute',
     top: Platform.OS === 'ios' ? 112 : 74,
     left: 12, right: 12,
-    backgroundColor: Colors.white,
+    backgroundColor: C.surface,
     borderRadius: 12,
     zIndex: 30,
     elevation: 10,
     maxHeight: 240,
     overflow: 'hidden',
-    shadowColor: '#000',
+    shadowColor: C.black,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
     shadowRadius: 10,
@@ -557,7 +591,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 14,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    borderBottomColor: C.border,
   },
-  searchResultText: { flex: 1, fontSize: 13, color: Colors.textPrimary, lineHeight: 18 },
+  searchResultText: { flex: 1, fontSize: 13, color: C.textPrimary, lineHeight: 18 },
 });

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import {
   View, Text, StyleSheet, Animated, TouchableOpacity,
   StatusBar, Platform, Alert,
@@ -6,7 +6,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import { Colors } from '../../constants/colors';
+import { useTheme } from '../../hooks/useTheme';
 import { Button } from '../../components/common/Button';
 import { formatCurrency } from '../../utils/formatCurrency';
 import { useOrderStore } from '../../store/orderStore';
@@ -65,13 +65,13 @@ const STATUS_CONFIG = [
     key: 'Out for Delivery',
     icon: 'delivery-dining', emoji: '🛵',
     label: 'Out for Delivery', sub: 'Rider is on the way to you',
-    color: Colors.primary,
+    color: '#FC8019',
   },
   {
     key: 'Delivered',
     icon: 'check-circle', emoji: '🎉',
     label: 'Delivered!', sub: 'Enjoy your meal',
-    color: Colors.success,
+    color: '#27AE60',
   },
   {
     key: 'Cancelled',
@@ -89,7 +89,7 @@ const ETA_BY_STATUS = {
 // ─────────────────────────────────────────────────────────────────────────────
 // RIDER ANIMATION
 // ─────────────────────────────────────────────────────────────────────────────
-const RiderAnimation = ({ isActive }) => {
+const RiderAnimation = ({ isActive, s }) => {
   const bounceAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
@@ -106,8 +106,8 @@ const RiderAnimation = ({ isActive }) => {
   }, [isActive]);
 
   return (
-    <Animated.View style={[styles.riderBox, { transform: [{ translateY: bounceAnim }, { scale: scaleAnim }] }]}>
-      <Text style={styles.riderEmoji}>🛵</Text>
+      <Animated.View style={[s.riderBox, { transform: [{ translateY: bounceAnim }, { scale: scaleAnim }] }]}>
+      <Text style={s.riderEmoji}>🛵</Text>
     </Animated.View>
   );
 };
@@ -115,7 +115,7 @@ const RiderAnimation = ({ isActive }) => {
 // ─────────────────────────────────────────────────────────────────────────────
 // TIMELINE STEP
 // ─────────────────────────────────────────────────────────────────────────────
-const TimelineStep = ({ config, isDone, isActive, isLast }) => {
+const TimelineStep = ({ config, isDone, isActive, isLast, C, s }) => {
   const scaleAnim = useRef(new Animated.Value(isDone || isActive ? 1 : 0.8)).current;
   const opacityAnim = useRef(new Animated.Value(isDone || isActive ? 1 : 0.4)).current;
   const lineAnim = useRef(new Animated.Value(isDone ? 1 : 0)).current;
@@ -135,40 +135,40 @@ const TimelineStep = ({ config, isDone, isActive, isLast }) => {
   const lineHeight = lineAnim.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] });
 
   return (
-    <View style={styles.timelineStep}>
-      <View style={styles.timelineLeft}>
+    <View style={s.timelineStep}>
+      <View style={s.timelineLeft}>
         <Animated.View style={[
-          styles.timelineDot,
+          s.timelineDot,
           isDone && { backgroundColor: config.color, borderColor: config.color },
-          isActive && { backgroundColor: Colors.white, borderColor: config.color, borderWidth: 3 },
+          isActive && { backgroundColor: C.surface, borderColor: config.color, borderWidth: 3 },
           { transform: [{ scale: scaleAnim }] },
         ]}>
-          {isDone ? <Icon name="check" size={12} color={Colors.white} /> :
-            isActive ? <View style={[styles.activeDotInner, { backgroundColor: config.color }]} /> : null}
+          {isDone ? <Icon name="check" size={12} color={C.white} /> :
+            isActive ? <View style={[s.activeDotInner, { backgroundColor: config.color }]} /> : null}
         </Animated.View>
         {!isLast && (
-          <View style={styles.timelineLineTrack}>
-            <Animated.View style={[styles.timelineLineFill, { height: lineHeight, backgroundColor: config.color }]} />
+          <View style={s.timelineLineTrack}>
+            <Animated.View style={[s.timelineLineFill, { height: lineHeight, backgroundColor: config.color }]} />
           </View>
         )}
       </View>
-      <Animated.View style={[styles.timelineContent, { opacity: opacityAnim }]}>
-        <View style={styles.timelineTextRow}>
+      <Animated.View style={[s.timelineContent, { opacity: opacityAnim }]}>
+        <View style={s.timelineTextRow}>
           <Text style={[
-            styles.timelineLabel,
-            (isDone || isActive) && styles.timelineLabelActive,
+            s.timelineLabel,
+            (isDone || isActive) && s.timelineLabelActive,
             isActive && { color: config.color },
           ]}>
             {config.label}
           </Text>
           {isActive && (
-            <View style={[styles.activeBadge, { backgroundColor: config.color + '22' }]}>
-              <View style={[styles.activeDot, { backgroundColor: config.color }]} />
-              <Text style={[styles.activeBadgeText, { color: config.color }]}>Now</Text>
+            <View style={[s.activeBadge, { backgroundColor: config.color + '22' }]}>
+              <View style={[s.activeDot, { backgroundColor: config.color }]} />
+              <Text style={[s.activeBadgeText, { color: config.color }]}>Now</Text>
             </View>
           )}
         </View>
-        <Text style={styles.timelineSub}>{config.sub}</Text>
+        <Text style={s.timelineSub}>{config.sub}</Text>
       </Animated.View>
     </View>
   );
@@ -177,7 +177,7 @@ const TimelineStep = ({ config, isDone, isActive, isLast }) => {
 // ─────────────────────────────────────────────────────────────────────────────
 // ETA CIRCLE
 // ─────────────────────────────────────────────────────────────────────────────
-const ETACircle = ({ minutes, status }) => {
+const ETACircle = ({ minutes, status, C, s }) => {
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
@@ -189,27 +189,27 @@ const ETACircle = ({ minutes, status }) => {
 
   if (status === 'Cancelled') {
     return (
-      <View style={[styles.etaCircle, { backgroundColor: '#E53935' }]}>
-        <Text style={styles.etaEmoji}>❌</Text>
-        <Text style={styles.etaDeliveredText}>Cancelled</Text>
+      <View style={[s.etaCircle, { backgroundColor: Colors.error }]}>
+        <Text style={s.etaEmoji}>❌</Text>
+        <Text style={s.etaDeliveredText}>Cancelled</Text>
       </View>
     );
   }
 
   if (status === 'Delivered') {
     return (
-      <View style={[styles.etaCircle, { backgroundColor: Colors.success }]}>
-        <Text style={styles.etaEmoji}>🎉</Text>
-        <Text style={styles.etaDeliveredText}>Delivered!</Text>
+      <View style={[s.etaCircle, { backgroundColor: C.success }]}>
+        <Text style={s.etaEmoji}>🎉</Text>
+        <Text style={s.etaDeliveredText}>Delivered!</Text>
       </View>
     );
   }
 
   return (
-    <Animated.View style={[styles.etaCircle, { transform: [{ scale: pulseAnim }] }]}>
-      <Text style={styles.etaMins}>{minutes}</Text>
-      <Text style={styles.etaLabel}>min</Text>
-      <Text style={styles.etaSub}>estimated</Text>
+    <Animated.View style={[s.etaCircle, { transform: [{ scale: pulseAnim }] }]}>
+      <Text style={s.etaMins}>{minutes}</Text>
+      <Text style={s.etaLabel}>min</Text>
+      <Text style={s.etaSub}>estimated</Text>
     </Animated.View>
   );
 };
@@ -218,6 +218,8 @@ const ETACircle = ({ minutes, status }) => {
 // MAIN SCREEN — all hooks at top level (Rules of Hooks compliant)
 // ─────────────────────────────────────────────────────────────────────────────
 export const OrderTrackingScreen = ({ navigation, route }) => {
+  const Colors = useTheme();
+  const styles = useMemo(() => createStyles(Colors), [Colors]);
   const { orderId } = route.params;
 
   // ── Animation refs — declared unconditionally at the top ─────────────────
@@ -330,14 +332,14 @@ export const OrderTrackingScreen = ({ navigation, route }) => {
         <TouchableOpacity style={styles.headerBack} onPress={() => navigation.goBack()}>
           <Icon name="arrow-back-ios" size={20} color={Colors.white} />
         </TouchableOpacity>
-        <ETACircle minutes={eta} status={currentStatus} />
+        <ETACircle minutes={eta} status={currentStatus} C={Colors} s={styles} />
         <Text style={styles.headerStatus}>{activeConfig.label}</Text>
         <Text style={styles.headerSub}>{activeConfig.sub}</Text>
         <View style={styles.orderIdRow}>
           <Icon name="tag" size={13} color="rgba(255,255,255,0.7)" />
           <Text style={styles.orderId}>Order #{order.order_code ?? order.id}</Text>
         </View>
-        {currentStatus === 'Out for Delivery' && <RiderAnimation isActive />}
+        {currentStatus === 'Out for Delivery' && <RiderAnimation isActive s={styles} />}
       </Animated.View>
 
       {/* Content */}
@@ -359,16 +361,18 @@ export const OrderTrackingScreen = ({ navigation, route }) => {
                   isDone={idx < currentIdx}
                   isActive={idx === currentIdx}
                   isLast={idx === timelineSteps.length - 1}
+                  C={Colors} s={styles}
                 />
               ))}
             {currentStatus === 'Cancelled' && (
               <>
                 {timelineSteps.slice(0, currentIdx + 1).map((config) => (
-                  <TimelineStep key={config.key} config={config} isDone isActive={false} isLast={false} />
+                  <TimelineStep key={config.key} config={config} isDone isActive={false} isLast={false} C={Colors} s={styles} />
                 ))}
                 <TimelineStep
                   config={STATUS_CONFIG.find(s => s.key === 'Cancelled')}
                   isDone={false} isActive isLast
+                  C={Colors} s={styles}
                 />
               </>
             )}
@@ -481,7 +485,7 @@ export const OrderTrackingScreen = ({ navigation, route }) => {
           >
             <View style={styles.reviewNavLeft}>
               <View style={styles.reviewNavIconBox}>
-                <Icon name="star" size={24} color="#F39C12" />
+                <Icon name="star" size={24} color={Colors.warning} />
               </View>
               <View style={styles.reviewNavText}>
                 <Text style={styles.reviewNavTitle}>Rate Your Order</Text>
@@ -499,8 +503,8 @@ export const OrderTrackingScreen = ({ navigation, route }) => {
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Cancellation Reason</Text>
             <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10 }}>
-              <Icon name="info-outline" size={18} color="#E53935" />
-              <Text style={{ flex: 1, fontSize: 14, color: '#E53935', lineHeight: 20 }}>
+              <Icon name="info-outline" size={18} color={Colors.error} />
+              <Text style={{ flex: 1, fontSize: 14, color: Colors.error, lineHeight: 20 }}>
                 {String(order.cancel_reason)}
               </Text>
             </View>
@@ -511,7 +515,7 @@ export const OrderTrackingScreen = ({ navigation, route }) => {
         <View style={styles.actionsCard}>
           {!isDelivered && (currentStatus === 'Placed' || currentStatus === 'Confirmed') && (
             <TouchableOpacity style={styles.cancelBtn} onPress={handleCancelOrder}>
-              <Icon name="cancel" size={20} color="#fff" />
+              <Icon name="cancel" size={20} color={Colors.white} />
               <Text style={styles.cancelBtnText}>Cancel Order</Text>
             </TouchableOpacity>
           )}
@@ -542,15 +546,15 @@ export const OrderTrackingScreen = ({ navigation, route }) => {
 // ─────────────────────────────────────────────────────────────────────────────
 // STYLES
 // ─────────────────────────────────────────────────────────────────────────────
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: Colors.background },
-  container: { flex: 1, backgroundColor: Colors.white },
+const createStyles = (C) => StyleSheet.create({
+  root: { flex: 1, backgroundColor: C.background },
+  container: { flex: 1, backgroundColor: C.surface },
 
   cancelBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: 8, backgroundColor: '#E53935', paddingVertical: 14, borderRadius: 14,
+    gap: 8, backgroundColor: C.error, paddingVertical: 14, borderRadius: 14,
   },
-  cancelBtnText: { fontSize: 14, fontWeight: '700', color: '#fff' },
+  cancelBtnText: { fontSize: 14, fontWeight: '700', color: C.white },
 
   header: {
     paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 24) + 8 : 54,
@@ -563,7 +567,7 @@ const styles = StyleSheet.create({
     top: Platform.OS === 'android' ? (StatusBar.currentHeight || 24) + 10 : 54,
     left: 16, padding: 4,
   },
-  headerStatus: { fontSize: 22, fontWeight: '800', color: Colors.white, marginTop: 12, marginBottom: 4 },
+  headerStatus: { fontSize: 22, fontWeight: '800', color: C.white, marginTop: 12, marginBottom: 4 },
   headerSub: { fontSize: 14, color: 'rgba(255,255,255,0.8)', marginBottom: 10 },
   orderIdRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   orderId: { fontSize: 12, color: 'rgba(255,255,255,0.7)' },
@@ -574,16 +578,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center', alignItems: 'center',
     borderWidth: 3, borderColor: 'rgba(255,255,255,0.4)',
   },
-  etaMins: { fontSize: 28, fontWeight: '900', color: Colors.white, lineHeight: 32 },
+  etaMins: { fontSize: 28, fontWeight: '900', color: C.white, lineHeight: 32 },
   etaLabel: { fontSize: 12, color: 'rgba(255,255,255,0.9)', fontWeight: '600' },
   etaSub: { fontSize: 10, color: 'rgba(255,255,255,0.7)' },
   etaEmoji: { fontSize: 32 },
-  etaDeliveredText: { fontSize: 13, fontWeight: '800', color: Colors.white },
+  etaDeliveredText: { fontSize: 13, fontWeight: '800', color: C.white },
 
   riderBox: {
     position: 'absolute', bottom: -18, right: 32,
     width: 52, height: 52, borderRadius: 26,
-    backgroundColor: Colors.white,
+    backgroundColor: C.surface,
     justifyContent: 'center', alignItems: 'center', elevation: 6,
   },
   riderEmoji: { fontSize: 26 },
@@ -592,11 +596,11 @@ const styles = StyleSheet.create({
   scrollContent: { paddingTop: 16, paddingHorizontal: 16, paddingBottom: 40, gap: 12 },
 
   card: {
-    backgroundColor: Colors.white, borderRadius: 18, padding: 18,
+    backgroundColor: C.surface, borderRadius: 18, padding: 18,
     elevation: 2, shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8,
   },
-  cardTitle: { fontSize: 15, fontWeight: '800', color: Colors.textPrimary, marginBottom: 16 },
+  cardTitle: { fontSize: 15, fontWeight: '800', color: C.textPrimary, marginBottom: 16 },
 
   timeline: { gap: 0 },
 
@@ -604,17 +608,17 @@ const styles = StyleSheet.create({
   timelineLeft: { alignItems: 'center', width: 28 },
   timelineDot: {
     width: 28, height: 28, borderRadius: 14,
-    backgroundColor: Colors.border, borderWidth: 2, borderColor: Colors.border,
+    backgroundColor: C.border, borderWidth: 2, borderColor: C.border,
     justifyContent: 'center', alignItems: 'center', zIndex: 1,
   },
   activeDotInner: { width: 10, height: 10, borderRadius: 5 },
-  timelineLineTrack: { width: 2, flex: 1, backgroundColor: Colors.border, marginTop: 2, overflow: 'hidden' },
+  timelineLineTrack: { width: 2, flex: 1, backgroundColor: C.border, marginTop: 2, overflow: 'hidden' },
   timelineLineFill: { width: '100%', borderRadius: 1 },
   timelineContent: { flex: 1, paddingBottom: 20, paddingTop: 2 },
   timelineTextRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 2 },
-  timelineLabel: { fontSize: 14, fontWeight: '600', color: Colors.textLight },
-  timelineLabelActive: { color: Colors.textPrimary, fontWeight: '700' },
-  timelineSub: { fontSize: 12, color: Colors.textLight },
+  timelineLabel: { fontSize: 14, fontWeight: '600', color: C.textLight },
+  timelineLabelActive: { color: C.textPrimary, fontWeight: '700' },
+  timelineSub: { fontSize: 12, color: C.textLight },
   activeBadge: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
     paddingHorizontal: 8, paddingVertical: 3, borderRadius: 20,
@@ -623,43 +627,43 @@ const styles = StyleSheet.create({
   activeBadgeText: { fontSize: 10, fontWeight: '700' },
 
   summaryRestRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
-  summaryRestName: { fontSize: 14, fontWeight: '700', color: Colors.textPrimary },
+  summaryRestName: { fontSize: 14, fontWeight: '700', color: C.textPrimary },
   summaryItem: {
     flexDirection: 'row', alignItems: 'center',
     paddingVertical: 6, gap: 8,
-    borderBottomWidth: 1, borderBottomColor: Colors.divider,
+    borderBottomWidth: 1, borderBottomColor: C.divider,
   },
-  summaryItemName: { flex: 1, fontSize: 13, color: Colors.textSecondary },
-  summaryItemQty: { fontSize: 13, color: Colors.textSecondary, width: 28, textAlign: 'center' },
-  summaryItemPrice: { fontSize: 13, fontWeight: '600', color: Colors.textPrimary, width: 64, textAlign: 'right' },
-  summaryDivider: { height: 1, backgroundColor: Colors.divider, marginVertical: 10 },
+  summaryItemName: { flex: 1, fontSize: 13, color: C.textSecondary },
+  summaryItemQty: { fontSize: 13, color: C.textSecondary, width: 28, textAlign: 'center' },
+  summaryItemPrice: { fontSize: 13, fontWeight: '600', color: C.textPrimary, width: 64, textAlign: 'right' },
+  summaryDivider: { height: 1, backgroundColor: C.divider, marginVertical: 10 },
   summaryBillRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 4 },
-  summaryBillLabel: { fontSize: 13, color: Colors.textSecondary },
-  summaryBillValue: { fontSize: 13, color: Colors.textPrimary, fontWeight: '500' },
-  summaryDiscount: { color: '#27AE60', fontWeight: '600' },
+  summaryBillLabel: { fontSize: 13, color: C.textSecondary },
+  summaryBillValue: { fontSize: 13, color: C.textPrimary, fontWeight: '500' },
+  summaryDiscount: { color: C.success, fontWeight: '600' },
   summaryTotal: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 },
-  summaryTotalLabel: { fontSize: 15, fontWeight: '700', color: Colors.textPrimary },
-  summaryTotalValue: { fontSize: 16, fontWeight: '900', color: Colors.primary },
+  summaryTotalLabel: { fontSize: 15, fontWeight: '700', color: C.textPrimary },
+  summaryTotalValue: { fontSize: 16, fontWeight: '900', color: C.primary },
   summaryPaymentChip: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
     alignSelf: 'flex-end',
-    backgroundColor: Colors.primaryLight,
+    backgroundColor: C.primaryLight,
     paddingHorizontal: 10, paddingVertical: 4,
     borderRadius: 20, marginTop: 10,
   },
-  summaryPaymentText: { fontSize: 11, fontWeight: '700', color: Colors.primary },
+  summaryPaymentText: { fontSize: 11, fontWeight: '700', color: C.primary },
 
   deliveryRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, marginBottom: 14 },
   deliveryText: { flex: 1 },
-  deliveryLabel: { fontSize: 12, color: Colors.textLight, marginBottom: 2 },
-  deliveryValue: { fontSize: 14, fontWeight: '600', color: Colors.textPrimary },
+  deliveryLabel: { fontSize: 12, color: C.textLight, marginBottom: 2 },
+  deliveryValue: { fontSize: 14, fontWeight: '600', color: C.textPrimary },
 
   // ── Review navigation card (replaces inline ReviewCard) ──
   reviewNavCard: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: Colors.white,
+    backgroundColor: C.surface,
     borderRadius: 18,
     paddingHorizontal: 18,
     paddingVertical: 18,
@@ -679,26 +683,26 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 16,
-    backgroundColor: '#FFF8E1',
+    backgroundColor: C.warning + '20',
     justifyContent: 'center',
     alignItems: 'center',
   },
   reviewNavText: { flex: 1, gap: 2 },
-  reviewNavTitle: { fontSize: 16, fontWeight: '700', color: Colors.textPrimary },
-  reviewNavSub: { fontSize: 12, color: Colors.textSecondary },
+  reviewNavTitle: { fontSize: 16, fontWeight: '700', color: C.textPrimary },
+  reviewNavSub: { fontSize: 12, color: C.textSecondary },
 
   actionsCard: { gap: 10, paddingBottom: 8 },
   actionBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: 8, backgroundColor: Colors.white,
+    gap: 8, backgroundColor: C.surface,
     paddingVertical: 14, borderRadius: 14,
-    borderWidth: 1.5, borderColor: Colors.primary, elevation: 2,
+    borderWidth: 1.5, borderColor: C.primary, elevation: 2,
   },
-  actionBtnText: { fontSize: 14, fontWeight: '700', color: Colors.primary },
+  actionBtnText: { fontSize: 14, fontWeight: '700', color: C.primary },
   reorderBtn: { marginBottom: 0 },
-  homeBtn: { backgroundColor: Colors.white, borderWidth: 1.5, borderColor: Colors.border },
+  homeBtn: { backgroundColor: C.surface, borderWidth: 1.5, borderColor: C.border },
 
   noOrderBox: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32, gap: 16 },
   noOrderEmoji: { fontSize: 64 },
-  noOrderTitle: { fontSize: 18, color: Colors.textSecondary, fontWeight: '600' },
+  noOrderTitle: { fontSize: 18, color: C.textSecondary, fontWeight: '600' },
 });

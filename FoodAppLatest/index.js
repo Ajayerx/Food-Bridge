@@ -1,3 +1,5 @@
+import 'react-native-gesture-handler';
+
 if (__DEV__) {
     require('./src/config/ReactotronConfig')
 }

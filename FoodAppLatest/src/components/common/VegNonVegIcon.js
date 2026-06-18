@@ -1,9 +1,11 @@
 import React from 'react';
 import {View, StyleSheet} from 'react-native';
-import {Colors} from '../../constants/colors';
+import { useTheme } from '../../hooks/useTheme';
 
-export const VegNonVegIcon = ({isVeg, size = 16}) => (
-  <View style={[
+export const VegNonVegIcon = ({isVeg, size = 16}) => {
+  const Colors = useTheme();
+  return (
+    <View style={[
     styles.container,
     {
       width: size,
@@ -21,7 +23,8 @@ export const VegNonVegIcon = ({isVeg, size = 16}) => (
       }
     ]} />
   </View>
-);
+  );
+};
 
 const styles = StyleSheet.create({
   container: {

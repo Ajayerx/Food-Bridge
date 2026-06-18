@@ -1,11 +1,13 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import { Colors } from '../../constants/colors';
+import { useTheme } from '../../hooks/useTheme';
 import { VegNonVegIcon } from '../common/VegNonVegIcon';
 import { formatCurrency } from '../../utils/formatCurrency';
 
 export const CartItemCard = ({ item, onAdd, onRemove }) => {
+  const Colors = useTheme();
+  const styles = useMemo(() => createStyles(Colors), [Colors]);
   const { dish, quantity } = item;
 
   return (
@@ -31,13 +33,13 @@ export const CartItemCard = ({ item, onAdd, onRemove }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (C) => StyleSheet.create({
   card: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.divider,
+    borderBottomColor: C.divider,
     gap: 12,
   },
   left: {
@@ -47,11 +49,11 @@ const styles = StyleSheet.create({
   name: {
     fontSize: 15,
     fontWeight: '500',
-    color: Colors.textPrimary,
+    color: C.textPrimary,
   },
   price: {
     fontSize: 12,
-    color: Colors.textSecondary,
+    color: C.textSecondary,
   },
   right: {
     alignItems: 'flex-end',
@@ -61,7 +63,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1.5,
-    borderColor: Colors.border,
+    borderColor: C.border,
     borderRadius: 8,
     overflow: 'hidden',
   },
@@ -72,13 +74,13 @@ const styles = StyleSheet.create({
   qty: {
     fontSize: 14,
     fontWeight: '700',
-    color: Colors.textPrimary,
+    color: C.textPrimary,
     minWidth: 24,
     textAlign: 'center',
   },
   total: {
     fontSize: 14,
     fontWeight: '700',
-    color: Colors.textPrimary,
+    color: C.textPrimary,
   },
 });

@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {View, Text, StyleSheet} from 'react-native';
-import {Colors} from '../../constants/colors';
+import { useTheme } from '../../hooks/useTheme';
 
 export const OfferTag = ({offer, style}) => {
+  const Colors = useTheme();
+  const styles = useMemo(() => createStyles(Colors), [Colors]);
   if (!offer) return null;
   return (
     <View style={[styles.tag, style]}>
@@ -11,19 +13,19 @@ export const OfferTag = ({offer, style}) => {
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (C) => StyleSheet.create({
   tag: {
-    backgroundColor: Colors.primaryLight,
+    backgroundColor: C.primaryLight,
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 6,
     alignSelf: 'flex-start',
     borderWidth: 1,
-    borderColor: Colors.primary,
+    borderColor: C.primary,
   },
   tagText: {
     fontSize: 12,
     fontWeight: '600',
-    color: Colors.primary,
+    color: C.primary,
   },
 });

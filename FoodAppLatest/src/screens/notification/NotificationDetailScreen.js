@@ -1,11 +1,11 @@
 // screens/notification/NotificationDetailScreen.js
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useMemo } from "react";
 import {
     View, Text, StyleSheet, TouchableOpacity,
     ScrollView, Animated, Share,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Colors } from "../../constants/colors";
+import { useTheme } from "../../hooks/useTheme";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { resolveTypeKey, TYPE_CONFIG } from "../../utils/notificationTypes";
 
@@ -25,24 +25,10 @@ function timeAgo(dateStr) {
     return `${Math.floor(diff / 86400)}d ago`;
 }
 
-// ── Info row ─────────────────────────────────────────────────────────────
-function InfoRow({ icon, label, value, accent, last }) {
-    if (!value) return null;
-    return (
-        <View style={[styles.infoRow, last && styles.infoRowLast]}>
-            <View style={styles.infoRowLeft}>
-                {icon && <Text style={styles.infoRowIcon}>{icon}</Text>}
-                <Text style={styles.infoLabel}>{label}</Text>
-            </View>
-            <Text style={[styles.infoValue, accent ? { color: accent } : null]}>
-                {value}
-            </Text>
-        </View>
-    );
-}
-
 // ── Main screen ───────────────────────────────────────────────────────────
 export default function NotificationDetailScreen({ route, navigation }) {
+    const Colors = useTheme();
+    const styles = useMemo(() => createStyles(Colors), [Colors]);
     const { notification } = route.params ?? {};
     const insets = useSafeAreaInsets();
 
@@ -129,6 +115,21 @@ export default function NotificationDetailScreen({ route, navigation }) {
         });
     };
 
+    const InfoRow = ({ icon, label, value, accent, last }) => {
+        if (!value) return null;
+        return (
+            <View style={[styles.infoRow, last && styles.infoRowLast]}>
+                <View style={styles.infoRowLeft}>
+                    {icon && <Text style={styles.infoRowIcon}>{icon}</Text>}
+                    <Text style={styles.infoLabel}>{label}</Text>
+                </View>
+                <Text style={[styles.infoValue, accent ? { color: accent } : null]}>
+                    {value}
+                </Text>
+            </View>
+        );
+    };
+
     return (
         <View style={[styles.container, { paddingTop: insets.top }]}>
             {/* ── Header ── */}
@@ -192,7 +193,7 @@ export default function NotificationDetailScreen({ route, navigation }) {
 
                             {/* Time row */}
                             <View style={styles.heroTimeRow}>
-                                <Icon name="access-time" size={13} color="#9ca3af" />
+                                <Icon name="access-time" size={13} color={C.textLight} />
                                 <Text style={styles.heroTime}>
                                     {formatDate(notification.createdAt)}
                                     {"  ·  "}
@@ -265,7 +266,7 @@ export default function NotificationDetailScreen({ route, navigation }) {
                                         <Text style={styles.ctaBtnSub}>Share how your experience was</Text>
                                     </View>
                                 </View>
-                                <Icon name="chevron-right" size={22} color="#eab308" />
+                                <Icon name="chevron-right" size={22} color={C.warning} />
                             </TouchableOpacity>
                         )}
 
@@ -277,10 +278,10 @@ export default function NotificationDetailScreen({ route, navigation }) {
                                 activeOpacity={0.85}
                             >
                                 <View style={styles.ctaBtnInner}>
-                                    <Icon name="receipt-long" size={20} color="#fff" style={{ marginRight: 10 }} />
+                                    <Icon name="receipt-long" size={20} color={C.white} style={{ marginRight: 10 }} />
                                     <Text style={styles.ctaBtnTextWhite}>View Order</Text>
                                 </View>
-                                <Icon name="chevron-right" size={22} color="#fff" />
+                                <Icon name="chevron-right" size={22} color={C.white} />
                             </TouchableOpacity>
                         )}
                     </View>
@@ -292,8 +293,8 @@ export default function NotificationDetailScreen({ route, navigation }) {
 }
 
 // ── Styles ────────────────────────────────────────────────────────────────
-const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: "#f3f4f6" },
+const createStyles = (C) => StyleSheet.create({
+    container: { flex: 1, backgroundColor: C.background },
     centred: { alignItems: "center", justifyContent: "center" },
 
     // ── Header ──
@@ -302,9 +303,9 @@ const styles = StyleSheet.create({
         alignItems: "center",
         paddingHorizontal: 16,
         paddingVertical: 12,
-        backgroundColor: "#fff",
+        backgroundColor: C.surface,
         borderBottomWidth: 1,
-        borderBottomColor: "#f0f0f0",
+        borderBottomColor: C.border,
     },
     headerSide: {
         width: 44,
@@ -317,24 +318,24 @@ const styles = StyleSheet.create({
     headerTitle: {
         fontSize: 18,
         fontWeight: "700",
-        color: Colors.textPrimary,
+        color: C.textPrimary,
     },
     shareBtn: {
         width: 36, height: 36,
         alignItems: "center", justifyContent: "center",
-        borderRadius: 10, backgroundColor: "#f3f4f6",
+        borderRadius: 10, backgroundColor: C.background,
     },
 
     scroll: { padding: 14, paddingBottom: 48 },
 
     // ── Hero card ──
     heroCard: {
-        backgroundColor: "#fff",
+        backgroundColor: C.surface,
         borderRadius: 20,
         overflow: "hidden",
         borderWidth: 1,
         marginBottom: 12,
-        shadowColor: "#000",
+        shadowColor: C.black,
         shadowOffset: { width: 0, height: 3 },
         shadowOpacity: 0.07,
         shadowRadius: 10,
@@ -370,7 +371,7 @@ const styles = StyleSheet.create({
         borderRadius: 20,
     },
     typeBadgeText: {
-        color: "#fff", fontSize: 11,
+        color: C.white, fontSize: 11,
         fontWeight: "700", letterSpacing: 0.7,
     },
 
@@ -381,26 +382,26 @@ const styles = StyleSheet.create({
     },
     heroTitle: {
         fontSize: 18, fontWeight: "800",
-        color: "#111827", textAlign: "center",
+        color: C.textPrimary, textAlign: "center",
         marginBottom: 8, lineHeight: 25,
     },
     heroMessage: {
-        fontSize: 13.5, color: "#6b7280",
+        fontSize: 13.5, color: C.textSecondary,
         textAlign: "center", lineHeight: 20,
         marginBottom: 14,
     },
     heroTimeRow: {
         flexDirection: "row", alignItems: "center", gap: 5,
     },
-    heroTime: { fontSize: 12, color: "#9ca3af" },
+    heroTime: { fontSize: 12, color: C.textLight },
 
     // ── Info card ──
     infoCard: {
-        backgroundColor: "#fff",
+        backgroundColor: C.surface,
         borderRadius: 16,
         marginBottom: 12,
         overflow: "hidden",
-        shadowColor: "#000",
+        shadowColor: C.black,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.05,
         shadowRadius: 6,
@@ -409,7 +410,7 @@ const styles = StyleSheet.create({
     infoCardHeading: {
         fontSize: 11,
         fontWeight: "700",
-        color: "#9ca3af",
+        color: C.textLight,
         letterSpacing: 0.8,
         textTransform: "uppercase",
         paddingHorizontal: 16,
@@ -423,17 +424,17 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
         paddingVertical: 13,
         borderBottomWidth: 1,
-        borderBottomColor: "#f3f4f6",
+        borderBottomColor: C.divider,
         gap: 12,
     },
     infoRowLast: { borderBottomWidth: 0 },
     infoRowLeft: { flexDirection: "row", alignItems: "center", gap: 8 },
     infoRowIcon: { fontSize: 14 },
     infoLabel: {
-        fontSize: 13, color: "#6b7280", fontWeight: "500",
+        fontSize: 13, color: C.textSecondary, fontWeight: "500",
     },
     infoValue: {
-        fontSize: 13, color: "#111827", fontWeight: "600",
+        fontSize: 13, color: C.textPrimary, fontWeight: "600",
         textAlign: "right", flex: 1, flexWrap: "wrap",
     },
 
@@ -447,7 +448,7 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "space-between",
-        shadowColor: "#000",
+        shadowColor: C.black,
         shadowOffset: { width: 0, height: 3 },
         shadowOpacity: 0.12,
         shadowRadius: 8,
@@ -460,24 +461,24 @@ const styles = StyleSheet.create({
 
     // Review button — white card with yellow accents
     ctaBtnReview: {
-        backgroundColor: "#fff",
+        backgroundColor: C.surface,
         borderWidth: 1.5,
-        borderColor: "#fde68a",
+        borderColor: C.warning + '44',
     },
     ctaReviewIcon: { fontSize: 22, marginRight: 12 },
     ctaBtnTitle: {
-        fontSize: 14, fontWeight: "700", color: "#111827", marginBottom: 1,
+        fontSize: 14, fontWeight: "700", color: C.textPrimary, marginBottom: 1,
     },
     ctaBtnSub: {
-        fontSize: 11.5, color: "#9ca3af",
+        fontSize: 11.5, color: C.textLight,
     },
 
     // Solid colour button (view order)
     ctaBtnTextWhite: {
-        fontSize: 15, fontWeight: "700", color: "#fff",
+        fontSize: 15, fontWeight: "700", color: C.white,
     },
 
     // ── Empty state ──
     emptyIcon: { fontSize: 44, opacity: 0.25, marginBottom: 10 },
-    emptyText: { fontSize: 14, color: "#9ca3af" },
+    emptyText: { fontSize: 14, color: C.textLight },
 });

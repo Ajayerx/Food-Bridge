@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useFocusEffect } from "@react-navigation/native";
 import {
   View,
@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import { Colors } from '../../constants/colors';
+import { useTheme } from '../../hooks/useTheme';
 import { Button } from '../../components/common/Button';
 import { Divider } from '../../components/common/Divider';
 import { formatCurrency } from '../../utils/formatCurrency';
@@ -29,135 +29,6 @@ import { useAddressStore } from "../../store/addressStore";
 const STEPS = ['Cart', 'Address', 'Payment', 'Review'];
 
 
-// ─── Step Indicator ───────────────────────────────────────
-const StepIndicator = ({ currentStep }) => (
-  <View style={styles.stepIndicator}>
-    {STEPS.map((step, index) => {
-      const isDone = index < currentStep;
-      const isActive = index === currentStep;
-      return (
-        <React.Fragment key={step}>
-          <View style={styles.stepItem}>
-            <View style={[
-              styles.stepCircle,
-              isDone && styles.stepCircleDone,
-              isActive && styles.stepCircleActive,
-            ]}>
-              {isDone ? (
-                <Icon name="check" size={12} color={Colors.white} />
-              ) : (
-                <Text style={[
-                  styles.stepNum,
-                  isActive && styles.stepNumActive,
-                ]}>
-                  {index + 1}
-                </Text>
-              )}
-            </View>
-            <Text style={[
-              styles.stepLabel,
-              isActive && styles.stepLabelActive,
-              isDone && styles.stepLabelDone,
-            ]}>
-              {step}
-            </Text>
-          </View>
-          {index < STEPS.length - 1 && (
-            <View style={[styles.stepLine, isDone && styles.stepLineDone]} />
-          )}
-        </React.Fragment>
-      );
-    })}
-  </View>
-);
-
-// ─── Address Card ─────────────────────────────────────────
-const AddressCard = ({ addr, selected, onSelect }) => (
-  <TouchableOpacity
-    style={[styles.addressCard, selected && styles.addressCardSelected]}
-    onPress={onSelect}
-    activeOpacity={0.75}>
-    <View style={[styles.addressIconBox, selected && styles.addressIconBoxSelected]}>
-      <Icon name="location-on"
-        size={18}
-        color={selected ? Colors.primary : Colors.textSecondary}
-      />
-    </View>
-    <View style={styles.addressInfo}>
-      <View style={styles.addressTopRow}>
-        <Text style={styles.addressType}>{addr.label}</Text>
-        {!!addr.is_default && (
-          <View style={styles.defaultBadge}>
-            <Text style={styles.defaultBadgeText}>Default</Text>
-          </View>
-        )}
-      </View>
-      <Text style={styles.addressText}>{addr.address_line1}</Text>
-      <Text style={styles.addressCity}>
-        {addr.city} — {addr.pin_code}
-      </Text>
-    </View>
-    <View style={[styles.radioOuter, selected && styles.radioOuterSelected]}>
-      {selected && <View style={styles.radioInner} />}
-    </View>
-  </TouchableOpacity>
-);
-
-// ─── Payment Method Card ──────────────────────────────────
-const PaymentCard = ({ method, selected, onSelect }) => (
-  <TouchableOpacity
-    style={[styles.paymentCard, selected && styles.paymentCardSelected]}
-    onPress={onSelect}
-    activeOpacity={0.75}>
-    <View style={[styles.paymentIconBox, selected && styles.paymentIconBoxSelected]}>
-      <Icon
-        name={method.icon}
-        size={20}
-        color={selected ? Colors.primary : Colors.textSecondary}
-      />
-    </View>
-    <View style={styles.paymentInfo}>
-      <View style={styles.paymentTopRow}>
-        <Text style={[styles.paymentLabel, selected && styles.paymentLabelSelected]}>
-          {method.label}
-        </Text>
-        {method.badge && (
-          <View style={[styles.methodBadge, { backgroundColor: method.badgeColor + '22' }]}>
-            <Text style={[styles.methodBadgeText, { color: method.badgeColor }]}>
-              {method.badge}
-            </Text>
-          </View>
-        )}
-      </View>
-      <Text style={styles.paymentSubtitle}>{method.subtitle}</Text>
-    </View>
-    <View style={[styles.radioOuter, selected && styles.radioOuterSelected]}>
-      {selected && <View style={styles.radioInner} />}
-    </View>
-  </TouchableOpacity>
-);
-
-// ─── Order Item Row ───────────────────────────────────────
-const OrderItemRow = ({ item }) => (
-  <View style={styles.orderItemRow}>
-    <View style={styles.orderItemLeft}>
-      <View style={[
-        styles.vegDot,
-        { backgroundColor: item.veg ? Colors.vegGreen : Colors.nonVegRed },
-      ]} />
-      <Text style={styles.orderItemName} numberOfLines={1}>
-        {item.name}
-      </Text>
-    </View>
-
-    <Text style={styles.orderItemQty}>×{item.quantity}</Text>
-
-    <Text style={styles.orderItemPrice}>
-      {formatCurrency((Number(item.price) || 0) * (Number(item.quantity) || 1))}
-    </Text>
-  </View>
-);
-
 // ─── Main Screen ──────────────────────────────────────────
 export const CheckoutScreen = ({ route, navigation }) => {
   // ✅ FIX: Use breakdown passed from CartScreen — no recalculation here
@@ -170,6 +41,9 @@ export const CheckoutScreen = ({ route, navigation }) => {
     total = 0,
     couponCode,
   } = route.params;
+  const Colors = useTheme();
+  const darkMode = useUserStore(s => s.darkMode);
+  const styles = useMemo(() => createStyles(Colors), [Colors]);
   const [selectedMethod, setSelectedMethod] = useState(null);
 
   const user = useUserStore(s => s.user);
@@ -180,7 +54,7 @@ export const CheckoutScreen = ({ route, navigation }) => {
     {
       category: "Online Payment",
       methods: [
-        { id: "online", label: "Online Payment", icon: "payment", subtitle: "UPI, Cards, Net Banking", badge: "SECURE", badgeColor: "#2E7D32" },
+        { id: "online", label: "Online Payment", icon: "payment", subtitle: "UPI, Cards, Net Banking", badge: "SECURE", badgeColor: Colors.success },
       ]
     },
     {
@@ -286,10 +160,136 @@ export const CheckoutScreen = ({ route, navigation }) => {
 
     setLoading(false);
   };
+
+  const StepIndicator = ({ currentStep }) => (
+    <View style={styles.stepIndicator}>
+      {STEPS.map((step, index) => {
+        const isDone = index < currentStep;
+        const isActive = index === currentStep;
+        return (
+          <React.Fragment key={step}>
+            <View style={styles.stepItem}>
+              <View style={[
+                styles.stepCircle,
+                isDone && styles.stepCircleDone,
+                isActive && styles.stepCircleActive,
+              ]}>
+                {isDone ? (
+                  <Icon name="check" size={12} color={Colors.white} />
+                ) : (
+                  <Text style={[
+                    styles.stepNum,
+                    isActive && styles.stepNumActive,
+                  ]}>
+                    {index + 1}
+                  </Text>
+                )}
+              </View>
+              <Text style={[
+                styles.stepLabel,
+                isActive && styles.stepLabelActive,
+                isDone && styles.stepLabelDone,
+              ]}>
+                {step}
+              </Text>
+            </View>
+            {index < STEPS.length - 1 && (
+              <View style={[styles.stepLine, isDone && styles.stepLineDone]} />
+            )}
+          </React.Fragment>
+        );
+      })}
+    </View>
+  );
+
+  const AddressCard = ({ addr, selected, onSelect }) => (
+    <TouchableOpacity
+      style={[styles.addressCard, selected && styles.addressCardSelected]}
+      onPress={onSelect}
+      activeOpacity={0.75}>
+      <View style={[styles.addressIconBox, selected && styles.addressIconBoxSelected]}>
+        <Icon name="location-on"
+          size={18}
+          color={selected ? Colors.primary : Colors.textSecondary}
+        />
+      </View>
+      <View style={styles.addressInfo}>
+        <View style={styles.addressTopRow}>
+          <Text style={styles.addressType}>{addr.label}</Text>
+          {!!addr.is_default && (
+            <View style={styles.defaultBadge}>
+              <Text style={styles.defaultBadgeText}>Default</Text>
+            </View>
+          )}
+        </View>
+        <Text style={styles.addressText}>{addr.address_line1}</Text>
+        <Text style={styles.addressCity}>
+          {addr.city} — {addr.pin_code}
+        </Text>
+      </View>
+      <View style={[styles.radioOuter, selected && styles.radioOuterSelected]}>
+        {selected && <View style={styles.radioInner} />}
+      </View>
+    </TouchableOpacity>
+  );
+
+  const PaymentCard = ({ method, selected, onSelect }) => (
+    <TouchableOpacity
+      style={[styles.paymentCard, selected && styles.paymentCardSelected]}
+      onPress={onSelect}
+      activeOpacity={0.75}>
+      <View style={[styles.paymentIconBox, selected && styles.paymentIconBoxSelected]}>
+        <Icon
+          name={method.icon}
+          size={20}
+          color={selected ? Colors.primary : Colors.textSecondary}
+        />
+      </View>
+      <View style={styles.paymentInfo}>
+        <View style={styles.paymentTopRow}>
+          <Text style={[styles.paymentLabel, selected && styles.paymentLabelSelected]}>
+            {method.label}
+          </Text>
+          {method.badge && (
+            <View style={[styles.methodBadge, { backgroundColor: method.badgeColor + '22' }]}>
+              <Text style={[styles.methodBadgeText, { color: method.badgeColor }]}>
+                {method.badge}
+              </Text>
+            </View>
+          )}
+        </View>
+        <Text style={styles.paymentSubtitle}>{method.subtitle}</Text>
+      </View>
+      <View style={[styles.radioOuter, selected && styles.radioOuterSelected]}>
+        {selected && <View style={styles.radioInner} />}
+      </View>
+    </TouchableOpacity>
+  );
+
+  const OrderItemRow = ({ item }) => (
+    <View style={styles.orderItemRow}>
+      <View style={styles.orderItemLeft}>
+        <View style={[
+          styles.vegDot,
+          { backgroundColor: item.veg ? Colors.vegGreen : Colors.nonVegRed },
+        ]} />
+        <Text style={styles.orderItemName} numberOfLines={1}>
+          {item.name}
+        </Text>
+      </View>
+
+      <Text style={styles.orderItemQty}>×{item.quantity}</Text>
+
+      <Text style={styles.orderItemPrice}>
+        {formatCurrency((Number(item.price) || 0) * (Number(item.quantity) || 1))}
+      </Text>
+    </View>
+  );
+
   console.log("PAYMENT METHODS:", paymentMethods);
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <StatusBar backgroundColor={Colors.white} barStyle="dark-content" />
+      <StatusBar backgroundColor={Colors.surface} barStyle={darkMode ? 'light-content' : 'dark-content'} />
 
       {/* ── Step Indicator ── */}
       <View style={styles.stepsContainer}>
@@ -510,7 +510,7 @@ export const CheckoutScreen = ({ route, navigation }) => {
                 )}
                 <View style={styles.reviewBillRow}>
                   <Text style={styles.reviewBillLabel}>Delivery Fee</Text>
-                  <Text style={[styles.reviewBillValue, deliveryFee === 0 && { color: '#27AE60', fontWeight: '700' }]}>
+                  <Text style={[styles.reviewBillValue, deliveryFee === 0 && { color: Colors.success, fontWeight: '700' }]}>
                     {deliveryFee === 0 ? 'FREE' : formatCurrency(deliveryFee)}
                   </Text>
                 </View>
@@ -578,17 +578,17 @@ export const CheckoutScreen = ({ route, navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
+const createStyles = (C) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: C.background },
   scrollContent: { paddingBottom: 32 },
 
   // ── Step Indicator ──
   stepsContainer: {
-    backgroundColor: Colors.white,
+    backgroundColor: C.surface,
     paddingVertical: 16,
     paddingHorizontal: 20,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    borderBottomColor: C.border,
   },
   stepIndicator: {
     flexDirection: 'row',
@@ -603,54 +603,54 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: Colors.background,
+    backgroundColor: C.background,
     borderWidth: 2,
-    borderColor: Colors.border,
+    borderColor: C.border,
     justifyContent: 'center',
     alignItems: 'center',
   },
   stepCircleActive: {
-    borderColor: Colors.primary,
-    backgroundColor: Colors.primaryLight,
+    borderColor: C.primary,
+    backgroundColor: C.primaryLight,
   },
   stepCircleDone: {
-    borderColor: Colors.success,
-    backgroundColor: Colors.success,
+    borderColor: C.success,
+    backgroundColor: C.success,
   },
   stepNum: {
     fontSize: 11,
     fontWeight: '700',
-    color: Colors.textLight,
+    color: C.textLight,
   },
   stepNumActive: {
-    color: Colors.primary,
+    color: C.primary,
   },
   stepLabel: {
     fontSize: 10,
-    color: Colors.textLight,
+    color: C.textLight,
     fontWeight: '500',
   },
   stepLabelActive: {
-    color: Colors.primary,
+    color: C.primary,
     fontWeight: '700',
   },
   stepLabelDone: {
-    color: Colors.success,
+    color: C.success,
   },
   stepLine: {
     flex: 1,
     height: 2,
-    backgroundColor: Colors.border,
+    backgroundColor: C.border,
     marginBottom: 16,
     marginHorizontal: 4,
   },
   stepLineDone: {
-    backgroundColor: Colors.success,
+    backgroundColor: C.success,
   },
 
   // ── Step Section ──
   stepSection: {
-    backgroundColor: Colors.white,
+    backgroundColor: C.surface,
     padding: 16,
   },
   stepSectionLocked: {
@@ -671,29 +671,29 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: Colors.border,
+    backgroundColor: C.border,
     justifyContent: 'center',
     alignItems: 'center',
   },
   stepSectionNumActive: {
-    backgroundColor: Colors.primary,
+    backgroundColor: C.primary,
   },
   stepSectionNumText: {
     fontSize: 13,
     fontWeight: '800',
-    color: Colors.white,
+    color: C.white,
   },
   stepSectionTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: Colors.textPrimary,
+    color: C.textPrimary,
   },
   stepSectionTitleLocked: {
-    color: Colors.textLight,
+    color: C.textLight,
   },
   changeBtn: {
     fontSize: 13,
-    color: Colors.primary,
+    color: C.primary,
     fontWeight: '700',
   },
   stepContent: { gap: 12 },
@@ -704,13 +704,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: Colors.background,
+    backgroundColor: C.background,
     padding: 10,
     borderRadius: 10,
   },
   collapsedText: {
     fontSize: 13,
-    color: Colors.textSecondary,
+    color: C.textSecondary,
     flex: 1,
   },
 
@@ -721,24 +721,24 @@ const styles = StyleSheet.create({
     padding: 14,
     borderRadius: 14,
     borderWidth: 1.5,
-    borderColor: Colors.border,
-    backgroundColor: Colors.white,
+    borderColor: C.border,
+    backgroundColor: C.surface,
     gap: 12,
   },
   addressCardSelected: {
-    borderColor: Colors.primary,
-    backgroundColor: Colors.primaryLight,
+    borderColor: C.primary,
+    backgroundColor: C.primaryLight,
   },
   addressIconBox: {
     width: 38,
     height: 38,
     borderRadius: 10,
-    backgroundColor: Colors.background,
+    backgroundColor: C.background,
     justifyContent: 'center',
     alignItems: 'center',
   },
   addressIconBoxSelected: {
-    backgroundColor: Colors.white,
+    backgroundColor: C.surface,
   },
   addressInfo: { flex: 1, gap: 2 },
   addressTopRow: {
@@ -750,10 +750,10 @@ const styles = StyleSheet.create({
   addressType: {
     fontSize: 14,
     fontWeight: '700',
-    color: Colors.textPrimary,
+    color: C.textPrimary,
   },
   defaultBadge: {
-    backgroundColor: Colors.primaryLight,
+    backgroundColor: C.primaryLight,
     paddingHorizontal: 7,
     paddingVertical: 2,
     borderRadius: 6,
@@ -761,15 +761,15 @@ const styles = StyleSheet.create({
   defaultBadgeText: {
     fontSize: 10,
     fontWeight: '600',
-    color: Colors.primary,
+    color: C.primary,
   },
   addressText: {
     fontSize: 13,
-    color: Colors.textSecondary,
+    color: C.textSecondary,
   },
   addressCity: {
     fontSize: 12,
-    color: Colors.textLight,
+    color: C.textLight,
     marginTop: 2,
   },
   addNewBtn: {
@@ -780,14 +780,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     borderRadius: 12,
     borderWidth: 1.5,
-    borderColor: Colors.primary,
+    borderColor: C.primary,
     borderStyle: 'dashed',
     justifyContent: 'center',
   },
   addNewBtnText: {
     fontSize: 14,
     fontWeight: '600',
-    color: Colors.primary,
+    color: C.primary,
   },
 
   // ── Payment ──
@@ -797,24 +797,24 @@ const styles = StyleSheet.create({
     padding: 14,
     borderRadius: 14,
     borderWidth: 1.5,
-    borderColor: Colors.border,
-    backgroundColor: Colors.white,
+    borderColor: C.border,
+    backgroundColor: C.surface,
     gap: 12,
   },
   paymentCardSelected: {
-    borderColor: Colors.primary,
-    backgroundColor: Colors.primaryLight,
+    borderColor: C.primary,
+    backgroundColor: C.primaryLight,
   },
   paymentIconBox: {
     width: 42,
     height: 42,
     borderRadius: 12,
-    backgroundColor: Colors.background,
+    backgroundColor: C.background,
     justifyContent: 'center',
     alignItems: 'center',
   },
   paymentIconBoxSelected: {
-    backgroundColor: Colors.white,
+    backgroundColor: C.surface,
   },
   paymentInfo: { flex: 1 },
   paymentTopRow: {
@@ -825,15 +825,15 @@ const styles = StyleSheet.create({
   paymentLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: Colors.textPrimary,
+    color: C.textPrimary,
   },
   paymentLabelSelected: {
-    color: Colors.primary,
+    color: C.primary,
     fontWeight: '700',
   },
   paymentSubtitle: {
     fontSize: 12,
-    color: Colors.textLight,
+    color: C.textLight,
     marginTop: 2,
   },
   methodBadge: {
@@ -848,7 +848,7 @@ const styles = StyleSheet.create({
   paymentCategory: {
     fontSize: 13,
     fontWeight: "700",
-    color: Colors.textLight,
+    color: C.textLight,
     marginTop: 10,
     marginBottom: 6
   },
@@ -859,18 +859,18 @@ const styles = StyleSheet.create({
     height: 20,
     borderRadius: 10,
     borderWidth: 2,
-    borderColor: Colors.border,
+    borderColor: C.border,
     justifyContent: 'center',
     alignItems: 'center',
   },
   radioOuterSelected: {
-    borderColor: Colors.primary,
+    borderColor: C.primary,
   },
   radioInner: {
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: Colors.primary,
+    backgroundColor: C.primary,
   },
 
   // ── Review ──
@@ -883,7 +883,7 @@ const styles = StyleSheet.create({
   reviewRestName: {
     fontSize: 15,
     fontWeight: '700',
-    color: Colors.textPrimary,
+    color: C.textPrimary,
   },
   reviewItems: {
     gap: 10,
@@ -907,19 +907,19 @@ const styles = StyleSheet.create({
   },
   orderItemName: {
     fontSize: 14,
-    color: Colors.textPrimary,
+    color: C.textPrimary,
     flex: 1,
   },
   orderItemQty: {
     fontSize: 13,
-    color: Colors.textSecondary,
+    color: C.textSecondary,
     width: 28,
     textAlign: 'center',
   },
   orderItemPrice: {
     fontSize: 14,
     fontWeight: '600',
-    color: Colors.textPrimary,
+    color: C.textPrimary,
     width: 70,
     textAlign: 'right',
   },
@@ -931,28 +931,28 @@ const styles = StyleSheet.create({
   },
   reviewBillLabel: {
     fontSize: 13,
-    color: Colors.textSecondary,
+    color: C.textSecondary,
   },
   reviewBillValue: {
     fontSize: 13,
-    color: Colors.textPrimary,
+    color: C.textPrimary,
     fontWeight: '500',
   },
   reviewTotalLabel: {
     fontSize: 15,
     fontWeight: '800',
-    color: Colors.textPrimary,
+    color: C.textPrimary,
   },
   reviewTotalValue: {
     fontSize: 15,
     fontWeight: '800',
-    color: Colors.textPrimary,
+    color: C.textPrimary,
   },
   reviewMetaRow: {
     gap: 6,
     marginTop: 12,
     padding: 12,
-    backgroundColor: Colors.background,
+    backgroundColor: C.background,
     borderRadius: 10,
   },
   reviewMeta: {
@@ -962,19 +962,19 @@ const styles = StyleSheet.create({
   },
   reviewMetaText: {
     fontSize: 12,
-    color: Colors.textSecondary,
+    color: C.textSecondary,
     flex: 1,
   },
 
   // ── Footer ──
   footer: {
-    backgroundColor: Colors.white,
+    backgroundColor: C.surface,
     paddingHorizontal: 16,
     paddingVertical: 14,
     borderTopWidth: 1,
-    borderTopColor: Colors.border,
+    borderTopColor: C.border,
     elevation: 10,
-    shadowColor: '#000',
+    shadowColor: C.black,
     shadowOffset: { width: 0, height: -3 },
     shadowOpacity: 0.08,
     shadowRadius: 8,
@@ -988,11 +988,11 @@ const styles = StyleSheet.create({
   footerTotal: {
     fontSize: 22,
     fontWeight: '900',
-    color: Colors.textPrimary,
+    color: C.textPrimary,
   },
   footerSub: {
     fontSize: 13,
-    color: Colors.textSecondary,
+    color: C.textSecondary,
   },
   placeOrderBtn: { marginBottom: 0 },
 });

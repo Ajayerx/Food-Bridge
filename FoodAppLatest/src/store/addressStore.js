@@ -29,10 +29,21 @@ export const useAddressStore = create((set, get) => ({
             const res = await getAddresses();
             const data = res?.data ?? [];
             const sorted = sortAddresses(data);
-            const defaultAddress = sorted.find(a => a.is_default);
+
+            const currentSelected = get().selectedAddress;
+
+            let newSelected;
+            if (currentSelected) {
+                // Refresh selected address data from latest fetch (keeps selection, updates fields)
+                newSelected = sorted.find(a => a.id === currentSelected.id) || currentSelected;
+            } else {
+                // No selection yet — default to is_default address
+                newSelected = sorted.find(a => a.is_default) || null;
+            }
+
             set({
                 addresses: sorted,
-                selectedAddress: defaultAddress || null,
+                selectedAddress: newSelected,
                 loading: false,
             });
         } catch (error) {
@@ -86,6 +97,8 @@ export const useAddressStore = create((set, get) => ({
                 addresses: sortAddresses(
                     state.addresses.map(addr => addr.id === id ? updated : addr)
                 ),
+                // Also refresh selectedAddress if it was the one edited
+                selectedAddress: state.selectedAddress?.id === id ? updated : state.selectedAddress,
             }));
         } catch (error) {
             console.log("Update address error", error);

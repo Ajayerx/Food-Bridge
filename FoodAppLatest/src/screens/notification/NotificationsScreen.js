@@ -1,5 +1,5 @@
 // screens/notification/NotificationsScreen.js
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useMemo } from "react";
 import {
     View,
     Text,
@@ -14,7 +14,7 @@ import { useNotifications } from "../../hooks/useNotifications";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { notificationService } from "../../services/notification/notificationService";
 import Icon from "react-native-vector-icons/MaterialIcons";
-import { Colors } from "../../constants/colors";
+import { useTheme } from "../../hooks/useTheme";
 import NotificationCard from "../../components/cards/NotificationCard";
 import { resolveTypeKey } from "../../utils/notificationTypes";
 
@@ -46,6 +46,8 @@ function filterNotifs(notifs, filter) {
 
 // ── Main screen ──────────────────────────────────────────────────────────
 export default function NotificationsScreen({ route, navigation }) {
+    const Colors = useTheme();
+    const styles = useMemo(() => createStyles(Colors), [Colors]);
     const userId = route?.params?.userId;
     const { notifications, badgeCount, isLoading } = useNotificationStore();
     const { markRead, markAllRead, loadMore } = useNotifications(userId);
@@ -162,7 +164,7 @@ export default function NotificationsScreen({ route, navigation }) {
             {/* ── List ── */}
             {isLoading && filtered.length === 0 ? (
                 <View style={styles.loadingContainer}>
-                    <ActivityIndicator size="large" color="#f97316" />
+                    <ActivityIndicator size="large" color={Colors.primary} />
                 </View>
             ) : (
                 <FlatList
@@ -178,8 +180,8 @@ export default function NotificationsScreen({ route, navigation }) {
                         <RefreshControl
                             refreshing={refreshing}
                             onRefresh={handleRefresh}
-                            colors={["#f97316"]}
-                            tintColor="#f97316"
+                            colors={[Colors.primary]}
+                            tintColor={Colors.primary}
                         />
                     }
                     contentContainerStyle={[
@@ -193,10 +195,10 @@ export default function NotificationsScreen({ route, navigation }) {
     );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (C) => StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: "#f3f4f6",
+        backgroundColor: C.background,
     },
 
     // ── Header ──
@@ -205,9 +207,9 @@ const styles = StyleSheet.create({
         alignItems: "center",
         paddingHorizontal: 16,
         paddingVertical: 12,
-        backgroundColor: Colors.white,
+        backgroundColor: C.surface,
         borderBottomWidth: 1,
-        borderBottomColor: "#f0f0f0",
+        borderBottomColor: C.border,
     },
     headerLeft: {
         width: 40,
@@ -226,20 +228,20 @@ const styles = StyleSheet.create({
     headerTitle: {
         fontSize: 18,
         fontWeight: "700",
-        color: Colors.textPrimary,
+        color: C.textPrimary,
     },
     markAllBtn: {
-        backgroundColor: "#fff7ed",
+        backgroundColor: C.primaryLight,
         paddingHorizontal: 10,
         paddingVertical: 5,
         borderRadius: 16,
         borderWidth: 1,
-        borderColor: "#fed7aa",
+        borderColor: C.primary + '66',
     },
     markAllText: {
         fontSize: 11,
         fontWeight: "600",
-        color: "#f97316",
+        color: C.primary,
         letterSpacing: -0.2,
     },
 
@@ -249,26 +251,26 @@ const styles = StyleSheet.create({
         paddingHorizontal: 14,
         paddingVertical: 10,
         gap: 8,
-        backgroundColor: "#ffffff",
+        backgroundColor: C.surface,
         borderBottomWidth: 1,
-        borderBottomColor: "#f0f0f0",
+        borderBottomColor: C.border,
     },
     filterChip: {
         paddingHorizontal: 14,
         paddingVertical: 7,
         borderRadius: 20,
-        backgroundColor: "#f3f4f6",
+        backgroundColor: C.background,
     },
     filterChipActive: {
-        backgroundColor: "#f97316",
-        shadowColor: "#f97316",
+        backgroundColor: C.primary,
+        shadowColor: C.primary,
         shadowOffset: { width: 0, height: 3 },
         shadowOpacity: 0.35,
         shadowRadius: 6,
         elevation: 4,
     },
-    filterText: { fontSize: 13, fontWeight: "500", color: "#6b7280" },
-    filterTextActive: { color: "#ffffff", fontWeight: "700" },
+    filterText: { fontSize: 13, fontWeight: "500", color: C.textSecondary },
+    filterTextActive: { color: C.white, fontWeight: "700" },
 
     // ── List ──
     loadingContainer: {
@@ -290,6 +292,6 @@ const styles = StyleSheet.create({
     },
     emptyFill: { flex: 1 },
     emptyIcon: { fontSize: 52, marginBottom: 14, opacity: 0.25 },
-    emptyTitle: { fontSize: 16, fontWeight: "700", color: "#374151", marginBottom: 4 },
-    emptySub: { fontSize: 13, color: "#9ca3af", textAlign: "center" },
+    emptyTitle: { fontSize: 16, fontWeight: "700", color: C.textPrimary, marginBottom: 4 },
+    emptySub: { fontSize: 13, color: C.textLight, textAlign: "center" },
 });

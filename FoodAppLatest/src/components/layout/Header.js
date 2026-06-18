@@ -1,31 +1,35 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {View, Text, TouchableOpacity, StyleSheet, Platform} from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import {Colors} from '../../constants/colors';
+import {useTheme} from '../../hooks/useTheme';
 
-export const Header = ({title, onBack, rightComponent, transparent = false}) => (
-  <View style={[styles.header, transparent && styles.transparent]}>
-    {onBack && (
-      <TouchableOpacity style={styles.backBtn} onPress={onBack}>
-        <Icon name="arrow-back-ios" size={22} color={Colors.textPrimary} />
-      </TouchableOpacity>
-    )}
-    <Text style={styles.title} numberOfLines={1}>{title}</Text>
-    <View style={styles.right}>
-      {rightComponent || <View style={styles.placeholder} />}
+export const Header = ({title, onBack, rightComponent, transparent = false}) => {
+  const Colors = useTheme();
+  const styles = useMemo(() => createStyles(Colors), [Colors]);
+  return (
+    <View style={[styles.header, transparent && styles.transparent]}>
+      {onBack && (
+        <TouchableOpacity style={styles.backBtn} onPress={onBack}>
+          <Icon name="arrow-back-ios" size={22} color={Colors.textPrimary} />
+        </TouchableOpacity>
+      )}
+      <Text style={styles.title} numberOfLines={1}>{title}</Text>
+      <View style={styles.right}>
+        {rightComponent || <View style={styles.placeholder} />}
+      </View>
     </View>
-  </View>
-);
+  );
+};
 
-const styles = StyleSheet.create({
+const createStyles = (C) => StyleSheet.create({
   header: {
     height: 56,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.white,
+    backgroundColor: C.surface,
     paddingHorizontal: 16,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    borderBottomColor: C.border,
   },
   transparent: {
     backgroundColor: 'transparent',
@@ -39,7 +43,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 18,
     fontWeight: '700',
-    color: Colors.textPrimary,
+    color: C.textPrimary,
   },
   right: {
     minWidth: 40,

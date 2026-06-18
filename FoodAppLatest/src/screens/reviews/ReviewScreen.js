@@ -1,16 +1,18 @@
 // screens/reviews/ReviewScreen.js
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import {
     View, Text, StyleSheet, TouchableOpacity,
     ScrollView, StatusBar, Platform, ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import { Colors } from '../../constants/colors';
+import { useTheme } from '../../hooks/useTheme';
 import { ReviewCard } from '../../components/common/ReviewCard';
 import { useOrderStore } from '../../store/orderStore';
 
 export const ReviewScreen = ({ route, navigation }) => {
+    const Colors = useTheme();
+    const styles = useMemo(() => createStyles(Colors), [Colors]);
     const {
         orderId,
         restaurantId,
@@ -59,7 +61,7 @@ export const ReviewScreen = ({ route, navigation }) => {
                 <SafeAreaView style={[styles.safeTop, { backgroundColor: Colors.primary }]} edges={['top']}>
                     <View style={styles.topBar}>
                         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-                            <Icon name="arrow-back-ios" size={20} color="#fff" />
+<Icon name="arrow-back-ios" size={20} color={Colors.white} />
                         </TouchableOpacity>
                         <View style={styles.topBarCenter}>
                             <Text style={styles.topBarTitle}>Rate Your Order</Text>
@@ -107,7 +109,7 @@ export const ReviewScreen = ({ route, navigation }) => {
                         <Text style={styles.contextOrder}>Order #{resolvedOrderCode}</Text>
                     </View>
                     <View style={styles.contextBadge}>
-                        <Icon name="check-circle" size={12} color="#27AE60" />
+                        <Icon name="check-circle" size={12} color={Colors.success} />
                         <Text style={styles.contextBadgeText}>Delivered</Text>
                     </View>
                 </View>
@@ -168,10 +170,10 @@ export const ReviewScreen = ({ route, navigation }) => {
 
 export default ReviewScreen;
 
-const styles = StyleSheet.create({
-    root: { flex: 1, backgroundColor: Colors.background },
+const createStyles = (C) => StyleSheet.create({
+    root: { flex: 1, backgroundColor: C.background },
 
-    safeTop: { backgroundColor: Colors.primary },
+    safeTop: { backgroundColor: C.primary },
 
     topBar: {
         flexDirection: 'row',
@@ -189,7 +191,7 @@ const styles = StyleSheet.create({
     topBarTitle: {
         fontSize: 18,
         fontWeight: '700',
-        color: '#fff',
+        color: C.white,
     },
 
     contextStrip: {
@@ -202,14 +204,14 @@ const styles = StyleSheet.create({
     contextIconBox: {
         width: 44, height: 44,
         borderRadius: 12,
-        backgroundColor: '#fff',
+        backgroundColor: C.surface,
         justifyContent: 'center',
         alignItems: 'center',
         flexShrink: 0,
     },
     contextText: { flex: 1, gap: 3 },
     contextRestaurant: {
-        fontSize: 15, fontWeight: '700', color: '#fff',
+        fontSize: 15, fontWeight: '700', color: C.white,
     },
     contextOrder: {
         fontSize: 12, color: 'rgba(255,255,255,0.75)',
@@ -218,19 +220,19 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         gap: 5,
-        backgroundColor: '#fff',
+        backgroundColor: C.surface,
         paddingHorizontal: 10,
         paddingVertical: 6,
         borderRadius: 20,
         flexShrink: 0,
     },
     contextBadgeText: {
-        fontSize: 12, fontWeight: '700', color: '#27AE60',
+        fontSize: 12, fontWeight: '700', color: C.success,
     },
 
     loadingBody: {
         flex: 1,
-        backgroundColor: Colors.background,
+        backgroundColor: C.background,
         borderTopLeftRadius: 20,
         borderTopRightRadius: 20,
         justifyContent: 'center',
@@ -240,12 +242,12 @@ const styles = StyleSheet.create({
     },
     loadingText: {
         fontSize: 13,
-        color: Colors.textSecondary,
+        color: C.textSecondary,
     },
 
     body: {
         flex: 1,
-        backgroundColor: Colors.background,
+        backgroundColor: C.background,
         borderTopLeftRadius: 20,
         borderTopRightRadius: 20,
         marginTop: -1,
@@ -263,20 +265,20 @@ const styles = StyleSheet.create({
     },
     promptEmoji: { fontSize: 36 },
     promptTitle: {
-        fontSize: 20, fontWeight: '800', color: Colors.textPrimary,
+        fontSize: 20, fontWeight: '800', color: C.textPrimary,
     },
     promptSub: {
-        fontSize: 13, color: Colors.textSecondary,
+        fontSize: 13, color: C.textSecondary,
         textAlign: 'center', lineHeight: 20,
         paddingHorizontal: 16,
     },
 
     itemsPreview: {
-        backgroundColor: Colors.white,
+        backgroundColor: C.surface,
         borderRadius: 14,
         padding: 16,
         elevation: 1,
-        shadowColor: '#000',
+        shadowColor: C.black,
         shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.05,
         shadowRadius: 4,
@@ -285,7 +287,7 @@ const styles = StyleSheet.create({
     itemsPreviewTitle: {
         fontSize: 12,
         fontWeight: '700',
-        color: Colors.textSecondary,
+        color: C.textSecondary,
         letterSpacing: 0.5,
         textTransform: 'uppercase',
         marginBottom: 4,
@@ -299,35 +301,35 @@ const styles = StyleSheet.create({
         width: 8,
         height: 8,
         borderRadius: 4,
-        backgroundColor: Colors.success,
+        backgroundColor: C.success,
         flexShrink: 0,
     },
     itemName: {
         flex: 1,
         fontSize: 13,
-        color: Colors.textPrimary,
+        color: C.textPrimary,
     },
     itemQty: {
         fontSize: 12,
-        color: Colors.textSecondary,
+        color: C.textSecondary,
         fontWeight: '500',
     },
 
     errorBox: {
-        backgroundColor: Colors.white,
+        backgroundColor: C.surface,
         borderRadius: 16,
         padding: 24,
         alignItems: 'center',
         gap: 12,
     },
     errorText: {
-        fontSize: 13, color: Colors.textSecondary,
+        fontSize: 13, color: C.textSecondary,
         textAlign: 'center', lineHeight: 20,
     },
 
     footer: {
         fontSize: 11,
-        color: Colors.textLight,
+        color: C.textLight,
         textAlign: 'center',
         paddingHorizontal: 24,
     },

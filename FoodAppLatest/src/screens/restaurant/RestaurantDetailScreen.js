@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -13,7 +13,8 @@ import {
   Modal,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import { Colors } from '../../constants/colors';
+import { useTheme } from '../../hooks/useTheme';
+import { useUserStore } from '../../store/userStore';
 import { RatingStars } from '../../components/common/RatingStars';
 import { DishCard } from '../../components/cards/DishCard';
 import { CartBar } from '../../components/layout/CartBar';
@@ -37,50 +38,7 @@ const NAVBAR_HEIGHT = 56;
 const TAB_BAR_HEIGHT = 48;
 const COLLAPSE_AT = HERO_HEIGHT - NAVBAR_HEIGHT - STATUS_BAR_HEIGHT;
 
-const ListDivider = () => <Divider />;
 
-const CategoryTab = ({ label, active, onPress }) => {
-  const scaleAnim = useRef(new Animated.Value(1)).current;
-
-  const handlePressIn = useCallback(() => {
-    Animated.spring(scaleAnim, {
-      toValue: 0.92,
-      useNativeDriver: true,
-      speed: 60,
-      bounciness: 0,
-    }).start();
-  }, []);
-
-  const handlePressOut = useCallback(() => {
-    Animated.spring(scaleAnim, {
-      toValue: 1,
-      useNativeDriver: true,
-      speed: 50,
-      bounciness: 10,
-    }).start();
-  }, []);
-
-  return (
-    <TouchableOpacity
-      onPress={onPress}
-      onPressIn={handlePressIn}
-      onPressOut={handlePressOut}
-      activeOpacity={0.7}
-    >
-      <Animated.View
-        style={[
-          styles.tab,
-          active && styles.tabActive,
-          { transform: [{ scale: scaleAnim }] },
-        ]}
-      >
-        <Text style={[styles.tabText, active && styles.tabTextActive]}>
-          {String(label ?? '')}
-        </Text>
-      </Animated.View>
-    </TouchableOpacity>
-  );
-};
 
 export const RestaurantDetailScreen = ({ route, navigation }) => {
   const restaurantId = route?.params?.restaurantId;
@@ -299,6 +257,55 @@ export const RestaurantDetailScreen = ({ route, navigation }) => {
   if (loadingM) return <Loader />;
   if (!restaurant) return null;
 
+  const Colors = useTheme();
+  const darkMode = useUserStore(s => s.darkMode);
+  const styles = useMemo(() => createStyles(Colors), [Colors]);
+
+  const ListDivider = () => <Divider />;
+
+  const CategoryTab = ({ label, active, onPress }) => {
+    const scaleAnim = useRef(new Animated.Value(1)).current;
+
+    const handlePressIn = useCallback(() => {
+      Animated.spring(scaleAnim, {
+        toValue: 0.92,
+        useNativeDriver: true,
+        speed: 60,
+        bounciness: 0,
+      }).start();
+    }, []);
+
+    const handlePressOut = useCallback(() => {
+      Animated.spring(scaleAnim, {
+        toValue: 1,
+        useNativeDriver: true,
+        speed: 50,
+        bounciness: 10,
+      }).start();
+    }, []);
+
+    return (
+      <TouchableOpacity
+        onPress={onPress}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        activeOpacity={0.7}
+      >
+        <Animated.View
+          style={[
+            styles.tab,
+            active && styles.tabActive,
+            { transform: [{ scale: scaleAnim }] },
+          ]}
+        >
+          <Text style={[styles.tabText, active && styles.tabTextActive]}>
+            {String(label ?? '')}
+          </Text>
+        </Animated.View>
+      </TouchableOpacity>
+    );
+  };
+
   const ListHeader = () => (
     <View style={styles.infoContainer}>
       <View style={styles.nameRow}>
@@ -317,7 +324,7 @@ export const RestaurantDetailScreen = ({ route, navigation }) => {
 
       <View style={styles.statsRow}>
         <View style={styles.ratingBadge}>
-          <Icon name="star" size={13} color="#fff" />
+          <Icon name="star" size={13} color={Colors.white} />
           <Text style={styles.ratingText}>
             {restaurant?.avg_rating ? Number(restaurant.avg_rating).toFixed(1) : 'New'}
           </Text>
@@ -363,7 +370,7 @@ export const RestaurantDetailScreen = ({ route, navigation }) => {
 
   return (
     <View style={styles.root}>
-      <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
+      <StatusBar translucent backgroundColor="transparent" barStyle={darkMode ? 'light-content' : 'dark-content'} />
 
       <Animated.View style={[styles.hero, { opacity: heroOpacity, transform: [{ translateY: heroTranslate }, { scale: heroScale }] }]}>
         <Image
@@ -409,7 +416,7 @@ export const RestaurantDetailScreen = ({ route, navigation }) => {
         contentContainerStyle={{
           paddingTop: HERO_HEIGHT + STATUS_BAR_HEIGHT + TAB_BAR_HEIGHT,
           paddingBottom: 140,
-          backgroundColor: Colors.white,
+          backgroundColor: Colors.surface,
         }}
         renderItem={({ item }) => {
           if (item.type === 'header') {
@@ -445,7 +452,7 @@ export const RestaurantDetailScreen = ({ route, navigation }) => {
 
       <View style={[styles.navbar, { paddingTop: STATUS_BAR_HEIGHT }]}>
         <Animated.View style={[StyleSheet.absoluteFill, {
-          backgroundColor: Colors.white,
+          backgroundColor: Colors.surface,
           opacity: navBgOpacity,
           borderBottomWidth: StyleSheet.hairlineWidth,
           borderBottomColor: Colors.border,
@@ -540,8 +547,8 @@ export const RestaurantDetailScreen = ({ route, navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: Colors.white },
+const createStyles = (C) => StyleSheet.create({
+  root: { flex: 1, backgroundColor: C.surface },
 
   hero: {
     position: 'absolute',
@@ -577,7 +584,7 @@ const styles = StyleSheet.create({
     right: 0,
     height: 4,
     backgroundColor: 'transparent',
-    shadowColor: '#000',
+    shadowColor: C.black,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 1,
     shadowRadius: 4,
@@ -602,7 +609,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 17,
     fontWeight: '700',
-    color: Colors.textPrimary,
+    color: C.textPrimary,
     textAlign: 'center',
     marginHorizontal: 4,
   },
@@ -612,9 +619,9 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     zIndex: 15,
-    backgroundColor: Colors.white,
+    backgroundColor: C.surface,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: Colors.border,
+    borderBottomColor: C.border,
     height: TAB_BAR_HEIGHT,
     justifyContent: 'center',
   },
@@ -624,7 +631,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: TAB_BAR_HEIGHT,
-    backgroundColor: Colors.white,
+    backgroundColor: C.surface,
   },
   tabsContent: {
     paddingHorizontal: 12,
@@ -637,14 +644,14 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 999,
     borderWidth: 1.5,
-    borderColor: Colors.border,
-    backgroundColor: Colors.white,
+    borderColor: C.border,
+    backgroundColor: C.surface,
   },
   tabActive: {
-    borderColor: Colors.primary,
-    backgroundColor: Colors.primaryLight,
+    borderColor: C.primary,
+    backgroundColor: C.primaryLight,
     elevation: 2,
-    shadowColor: Colors.primary,
+    shadowColor: C.primary,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.15,
     shadowRadius: 4,
@@ -652,15 +659,15 @@ const styles = StyleSheet.create({
   tabText: {
     fontSize: 13,
     fontWeight: '500',
-    color: Colors.textSecondary,
+    color: C.textSecondary,
   },
   tabTextActive: {
-    color: Colors.primary,
+    color: C.primary,
     fontWeight: '700',
   },
 
   infoContainer: {
-    backgroundColor: Colors.white,
+    backgroundColor: C.surface,
     paddingHorizontal: 16,
     paddingTop: 16,
     paddingBottom: 14,
@@ -674,7 +681,7 @@ const styles = StyleSheet.create({
   restaurantName: {
     fontSize: 22,
     fontWeight: '800',
-    color: Colors.textPrimary,
+    color: C.textPrimary,
     flex: 1,
     marginRight: 8,
   },
@@ -682,15 +689,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: '#E8F5E9',
+    backgroundColor: C.secondaryLight,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 6,
   },
-  vegBadgeText: { fontSize: 11, fontWeight: '700', color: '#2E7D32' },
+  vegBadgeText: { fontSize: 11, fontWeight: '700', color: C.vegGreen },
   cuisinesText: {
     fontSize: 13,
-    color: Colors.textSecondary,
+    color: C.textSecondary,
     marginBottom: 12,
   },
   statsRow: {
@@ -699,7 +706,7 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 10,
     marginBottom: 10,
-    backgroundColor: '#F8F9FB',
+    backgroundColor: C.inputBg,
     paddingVertical: 10,
     paddingHorizontal: 14,
     borderRadius: 12,
@@ -707,18 +714,18 @@ const styles = StyleSheet.create({
   ratingBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#2E7D32',
+    backgroundColor: C.vegGreen,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 6,
     gap: 3,
   },
-  ratingText: { color: '#fff', fontWeight: '800', fontSize: 13 },
+  ratingText: { color: C.white, fontWeight: '800', fontSize: 13 },
   ratingCount: { color: 'rgba(255,255,255,0.8)', fontSize: 11 },
-  statDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: Colors.border },
+  statDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: C.border },
   statItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  metaText: { fontSize: 13, color: Colors.textSecondary, fontWeight: '500' },
-  statText: { fontSize: 13, color: Colors.textSecondary, fontWeight: '500' },
+  metaText: { fontSize: 13, color: C.textSecondary, fontWeight: '500' },
+  statText: { fontSize: 13, color: C.textSecondary, fontWeight: '500' },
   addressRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -726,14 +733,14 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     paddingTop: 2,
   },
-  addressText: { fontSize: 12, color: Colors.textLight, flex: 1 },
+  addressText: { fontSize: 12, color: C.textLight, flex: 1 },
   minOrderRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
     paddingVertical: 6,
   },
-  minOrderText: { fontSize: 12, color: Colors.textLight },
+  minOrderText: { fontSize: 12, color: C.textLight },
 
   sectionHeader: {
     flexDirection: 'row',
@@ -741,32 +748,32 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 0,
     paddingVertical: 14,
-    backgroundColor: Colors.background,
+    backgroundColor: C.surface,
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
   },
   sectionTitle: {
     fontSize: 17,
     fontWeight: '800',
-    color: Colors.textPrimary,
+    color: C.textPrimary,
   },
 
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: C.overlayDense,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 24,
   },
   modalSheet: {
-    backgroundColor: Colors.white,
+    backgroundColor: C.surface,
     borderRadius: 20,
     paddingHorizontal: 20,
     paddingTop: 20,
     paddingBottom: 24,
     width: '100%',
     elevation: 20,
-    shadowColor: '#000',
+    shadowColor: C.black,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 12,
@@ -780,19 +787,19 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 18,
     fontWeight: '800',
-    color: Colors.textPrimary,
+    color: C.textPrimary,
     marginBottom: 8,
     marginTop: 4,
     paddingRight: 24,
   },
   modalMessage: {
     fontSize: 13,
-    color: Colors.textSecondary,
+    color: C.textSecondary,
     textAlign: 'left',
     lineHeight: 20,
     marginBottom: 24,
   },
-  modalRestName: { fontWeight: '700', color: Colors.textPrimary },
+  modalRestName: { fontWeight: '700', color: C.textPrimary },
   modalBtns: {
     flexDirection: 'row',
     gap: 10,
@@ -802,23 +809,23 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 13,
     borderRadius: 12,
-    backgroundColor: '#FFF3E0',
+    backgroundColor: C.primaryLight,
     alignItems: 'center',
     borderWidth: 1.5,
-    borderColor: '#FFCC80',
+    borderColor: C.primary,
   },
-  modalBtnNoText: { fontSize: 14, fontWeight: '700', color: Colors.primary },
+  modalBtnNoText: { fontSize: 14, fontWeight: '700', color: C.primary },
   modalBtnReplace: {
     flex: 1,
     paddingVertical: 13,
     borderRadius: 12,
-    backgroundColor: Colors.primary,
+    backgroundColor: C.primary,
     alignItems: 'center',
     elevation: 2,
-    shadowColor: Colors.primary,
+    shadowColor: C.primary,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
   },
-  modalBtnReplaceText: { fontSize: 14, fontWeight: '700', color: Colors.white },
+  modalBtnReplaceText: { fontSize: 14, fontWeight: '700', color: C.white },
 });

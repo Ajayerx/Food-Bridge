@@ -23,7 +23,7 @@ import { useAddressStore } from "../../store/addressStore";
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import LinearGradient from 'react-native-linear-gradient';
-import { Colors } from '../../constants/colors';
+import { useTheme } from '../../hooks/useTheme';
 import { RestaurantCard } from '../../components/cards/RestaurantCard';
 import { Chip } from '../../components/common/Chip';
 import { EmptyState } from '../../components/common/EmptyState';
@@ -84,6 +84,8 @@ const sortRestaurants = (restaurants, sortId) => {
 // SkeletonCard
 // ─────────────────────────────────────────────────────────
 const SkeletonCard = () => {
+  const C = useTheme();
+  const styles = useMemo(() => createStyles(C), [C]);
   const shimmer = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     const loop = Animated.loop(Animated.sequence([
@@ -110,6 +112,8 @@ const SkeletonCard = () => {
 // DishSkeleton
 // ─────────────────────────────────────────────────────────
 const DishSkeleton = () => {
+  const C = useTheme();
+  const styles = useMemo(() => createStyles(C), [C]);
   const shimmer = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     const loop = Animated.loop(Animated.sequence([
@@ -132,40 +136,46 @@ const DishSkeleton = () => {
 // ─────────────────────────────────────────────────────────
 // BannerCard — static, no per-card animations
 // ─────────────────────────────────────────────────────────
-const BannerCard = React.memo(({ item }) => (
-  <View style={styles.bannerOuter}>
-    <LinearGradient colors={item.colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.bannerGradient}>
-      <View style={styles.bannerHighlight} />
-      <View style={styles.bannerCircle1} />
-      <View style={styles.bannerCircle2} />
-      <View style={styles.bannerCircle3} />
-      <View style={styles.bannerTag}>
-        <View style={styles.bannerTagDot} />
-        <Text style={styles.bannerTagText}>{item.tag}</Text>
-      </View>
-      <View style={styles.bannerContent}>
-        <View style={styles.bannerLeft}>
-          <Text style={styles.bannerTitle}>{item.title}</Text>
-          <Text style={styles.bannerSubtitle}>{item.subtitle}</Text>
-          <View style={styles.bannerCtaBtn}>
-            <Text style={styles.bannerCtaText}>{item.cta}</Text>
-            <Icon name="arrow-forward-ios" size={11} color="#333" />
+const BannerCard = React.memo(({ item }) => {
+  const C = useTheme();
+  const styles = useMemo(() => createStyles(C), [C]);
+  return (
+    <View style={styles.bannerOuter}>
+      <LinearGradient colors={item.colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.bannerGradient}>
+        <View style={styles.bannerHighlight} />
+        <View style={styles.bannerCircle1} />
+        <View style={styles.bannerCircle2} />
+        <View style={styles.bannerCircle3} />
+        <View style={styles.bannerTag}>
+          <View style={styles.bannerTagDot} />
+          <Text style={styles.bannerTagText}>{item.tag}</Text>
+        </View>
+        <View style={styles.bannerContent}>
+          <View style={styles.bannerLeft}>
+            <Text style={styles.bannerTitle}>{item.title}</Text>
+            <Text style={styles.bannerSubtitle}>{item.subtitle}</Text>
+            <View style={styles.bannerCtaBtn}>
+              <Text style={styles.bannerCtaText}>{item.cta}</Text>
+              <Icon name="arrow-forward-ios" size={11} color={C.textPrimary} />
+            </View>
+          </View>
+          <View style={styles.bannerEmojiContainer}>
+            <Text style={styles.bannerEmoji}>{item.emoji}</Text>
           </View>
         </View>
-        <View style={styles.bannerEmojiContainer}>
-          <Text style={styles.bannerEmoji}>{item.emoji}</Text>
-        </View>
-      </View>
-    </LinearGradient>
-  </View>
-));
+      </LinearGradient>
+    </View>
+  );
+});
 
 // ─────────────────────────────────────────────────────────
 // BannerSection — seamless infinite loop via translateX
 // No FlatList, no flicker. One slide animation for all.
 // ─────────────────────────────────────────────────────────
 const BannerSection = React.memo(() => {
-  const ITEM_WIDTH = BANNER_WIDTH + 16;
+    const C = useTheme();
+    const styles = useMemo(() => createStyles(C), [C]);
+    const ITEM_WIDTH = BANNER_WIDTH + 16;
   const START = 1; // first real banner index in EXTENDED_BANNERS
 
   const translateX = useRef(new Animated.Value(-ITEM_WIDTH * START)).current;
@@ -257,7 +267,9 @@ const BannerSection = React.memo(() => {
 // CategoryCard
 // ─────────────────────────────────────────────────────────
 const CategoryCard = React.memo(({ item, index, onPress }) => {
-  const scaleAnim = useRef(new Animated.Value(1)).current;
+    const C = useTheme();
+    const styles = useMemo(() => createStyles(C), [C]);
+    const scaleAnim = useRef(new Animated.Value(1)).current;
   return (
     <TouchableOpacity
       onPress={onPress}
@@ -278,8 +290,10 @@ const CategoryCard = React.memo(({ item, index, onPress }) => {
 // HomeDishCard
 // ─────────────────────────────────────────────────────────
 const HomeDishCard = React.memo(({ item, quantity, onAdd, onRemove, onPress }) => {
-  const isVeg = item?.dietary_tag?.toLowerCase() === 'veg' ||
-    item?.dietary_tag?.toLowerCase() === 'vegan';
+    const C = useTheme();
+    const styles = useMemo(() => createStyles(C), [C]);
+    const isVeg = item?.dietary_tag?.toLowerCase() === 'veg' ||
+      item?.dietary_tag?.toLowerCase() === 'vegan';
   const price = Number(item?.base_price ?? item?.price ?? 0);
   const originalPrice = item?.original_price ?? item?.mrp ?? null;
 
@@ -295,8 +309,8 @@ const HomeDishCard = React.memo(({ item, quantity, onAdd, onRemove, onPress }) =
             </View>
           )}
 
-          <View style={[styles.vegBadgeSmall, { borderColor: isVeg ? '#2E7D32' : '#C62828' }]}>
-            <View style={[styles.vegDotSmall, { backgroundColor: isVeg ? '#2E7D32' : '#C62828' }]} />
+          <View style={[styles.vegBadgeSmall, { borderColor: isVeg ? C.vegGreen : C.nonVegRed }]}>
+            <View style={[styles.vegDotSmall, { backgroundColor: isVeg ? C.vegGreen : C.nonVegRed }]} />
           </View>
         </View>
         <View style={styles.homeDishInfo}>
@@ -337,7 +351,9 @@ const HomeDishCard = React.memo(({ item, quantity, onAdd, onRemove, onPress }) =
 // PopularDishesSection
 // ─────────────────────────────────────────────────────────
 const PopularDishesSection = React.memo(({ onDishPress, onAdd, onRemove, getQuantity }) => {
-  const [dishes, setDishes] = useState([]);
+    const C = useTheme();
+    const styles = useMemo(() => createStyles(C), [C]);
+    const [dishes, setDishes] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -383,6 +399,8 @@ const PopularDishesSection = React.memo(({ onDishPress, onAdd, onRemove, getQuan
 // AnimatedRestaurantCard
 // ─────────────────────────────────────────────────────────
 const AnimatedRestaurantCard = React.memo(({ item, index, onPress }) => {
+  const C = useTheme();
+  const styles = useMemo(() => createStyles(C), [C]);
   const cardAnim = useRef(new Animated.Value(0)).current;
   const hasAnimated = useRef(false); // ✅ only animate once
 
@@ -413,6 +431,8 @@ const AnimatedRestaurantCard = React.memo(({ item, index, onPress }) => {
 // SortBottomSheet
 // ─────────────────────────────────────────────────────────
 const SortBottomSheet = React.memo(({ visible, onClose, activeSort, onSelectSort }) => {
+  const C = useTheme();
+  const styles = useMemo(() => createStyles(C), [C]);
   const slideAnim = useRef(new Animated.Value(300)).current;
   const overlayAnim = useRef(new Animated.Value(0)).current;
   useEffect(() => {
@@ -442,10 +462,10 @@ const SortBottomSheet = React.memo(({ visible, onClose, activeSort, onSelectSort
           return (
             <TouchableOpacity key={option.id} style={[styles.sortOption, isActive && styles.sortOptionActive]} onPress={() => { onSelectSort(option.id); onClose(); }} activeOpacity={0.75}>
               <View style={[styles.sortOptionIcon, isActive && styles.sortOptionIconActive]}>
-                <Icon name={option.icon} size={16} color={isActive ? Colors.primary : Colors.textSecondary} />
+                <Icon name={option.icon} size={16} color={isActive ? C.primary : C.textSecondary} />
               </View>
               <Text style={[styles.sortOptionText, isActive && styles.sortOptionTextActive]}>{option.label}</Text>
-              {isActive && <Icon name="check-circle" size={18} color={Colors.primary} />}
+              {isActive && <Icon name="check-circle" size={18} color={C.primary} />}
             </TouchableOpacity>
           );
         })}
@@ -458,11 +478,13 @@ const SortBottomSheet = React.memo(({ visible, onClose, activeSort, onSelectSort
 // HomeListHeader
 // ─────────────────────────────────────────────────────────
 const HomeListHeader = React.memo(({
-  activeFilters, onToggleFilter, onClearFilters,
-  restaurantCount, navigation, fadeAnims, activeSort,
-  onOpenSort, onDishPress, onDishAdd, onDishRemove, getQuantity,
-}) => {
-  const { bannerFade, filterFade, catFade, restFade } = fadeAnims;
+    activeFilters, onToggleFilter, onClearFilters,
+    restaurantCount, navigation, fadeAnims, activeSort,
+    onOpenSort, onDishPress, onDishAdd, onDishRemove, getQuantity,
+  }) => {
+    const C = useTheme();
+    const styles = useMemo(() => createStyles(C), [C]);
+    const { bannerFade, filterFade, catFade, restFade } = fadeAnims;
   return (
     <View>
       <Animated.View style={{ opacity: bannerFade }}>
@@ -475,7 +497,7 @@ const HomeListHeader = React.memo(({
           ))}
           {activeFilters.length > 0 && (
             <TouchableOpacity style={styles.clearBtn} onPress={onClearFilters}>
-              <Icon name="close" size={12} color={Colors.error} />
+              <Icon name="close" size={12} color={C.error} />
               <Text style={styles.clearBtnText}>Clear</Text>
             </TouchableOpacity>
           )}
@@ -504,7 +526,7 @@ const HomeListHeader = React.memo(({
           <Text style={styles.restSubtitle}>{restaurantCount} places near you</Text>
         </View>
         <TouchableOpacity style={styles.sortBtn} onPress={onOpenSort}>
-          <Icon name="tune" size={14} color={Colors.primary} />
+          <Icon name="tune" size={14} color={C.primary} />
           <Text style={styles.sortText}>Sort</Text>
           {activeSort !== 'relevance' && <View style={styles.sortActiveDot} />}
         </TouchableOpacity>
@@ -517,7 +539,9 @@ const HomeListHeader = React.memo(({
 // DishBottomModal
 // ─────────────────────────────────────────────────────────
 const DishBottomModal = ({ visible, dish, onClose, onAdd, navigation }) => {
-  const slideAnim = useRef(new Animated.Value(500)).current;
+    const C = useTheme();
+    const styles = useMemo(() => createStyles(C), [C]);
+    const slideAnim = useRef(new Animated.Value(500)).current;
   useEffect(() => {
     if (visible) {
       Animated.spring(slideAnim, { toValue: 0, friction: 8, tension: 50, useNativeDriver: true }).start();
@@ -557,8 +581,8 @@ const DishBottomModal = ({ visible, dish, onClose, onAdd, navigation }) => {
 
           </View>
           <View style={styles.dishModalContent}>
-            <View style={[styles.vegIndicator, { borderColor: isVeg ? '#2E7D32' : '#C62828' }]}>
-              <View style={[styles.vegDot, { backgroundColor: isVeg ? '#2E7D32' : '#C62828' }]} />
+            <View style={[styles.vegIndicator, { borderColor: isVeg ? C.vegGreen : C.nonVegRed }]}>
+              <View style={[styles.vegDot, { backgroundColor: isVeg ? C.vegGreen : C.nonVegRed }]} />
             </View>
             <Text style={styles.dishModalTitle}>{dish?.name}</Text>
             <View style={styles.priceRow}>
@@ -573,7 +597,7 @@ const DishBottomModal = ({ visible, dish, onClose, onAdd, navigation }) => {
             </TouchableOpacity>
           </View>
           <TouchableOpacity style={styles.dishModalCloseBtnCenter} onPress={onClose}>
-            <Icon name="close" size={20} color="#fff" />
+            <Icon name="close" size={20} color={C.white} />
           </TouchableOpacity>
         </Animated.View>
       </View>
@@ -584,37 +608,43 @@ const DishBottomModal = ({ visible, dish, onClose, onAdd, navigation }) => {
 // ─────────────────────────────────────────────────────────
 // CartConflictModal
 // ─────────────────────────────────────────────────────────
-const CartConflictModal = ({ visible, currentRestaurantName, newRestaurantName, onCancel, onReplace }) => (
-  <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel}>
-    <TouchableOpacity style={styles.conflictOverlay} activeOpacity={1} onPress={onCancel}>
-      <TouchableOpacity style={styles.conflictSheet} activeOpacity={1} onPress={() => { }}>
-        <TouchableOpacity style={styles.conflictClose} onPress={onCancel}>
-          <Icon name="close" size={20} color={Colors.textSecondary} />
+const CartConflictModal = ({ visible, currentRestaurantName, newRestaurantName, onCancel, onReplace }) => {
+  const C = useTheme();
+  const styles = useMemo(() => createStyles(C), [C]);
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel}>
+      <TouchableOpacity style={styles.conflictOverlay} activeOpacity={1} onPress={onCancel}>
+        <TouchableOpacity style={styles.conflictSheet} activeOpacity={1} onPress={() => { }}>
+          <TouchableOpacity style={styles.conflictClose} onPress={onCancel}>
+            <Icon name="close" size={20} color={C.textSecondary} />
+          </TouchableOpacity>
+          <Text style={styles.conflictTitle}>Replace cart item?</Text>
+          <Text style={styles.conflictMessage}>
+            Your cart contains dishes from{' '}
+            <Text style={styles.conflictRestName}>{currentRestaurantName}</Text>
+            {'. Do you want to discard the selection and add dishes from '}
+            <Text style={styles.conflictRestName}>{newRestaurantName}</Text>{'?'}
+          </Text>
+          <View style={styles.conflictBtns}>
+            <TouchableOpacity style={styles.conflictBtnNo} onPress={onCancel} activeOpacity={0.8}>
+              <Text style={styles.conflictBtnNoText}>No</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.conflictBtnReplace} onPress={onReplace} activeOpacity={0.85}>
+              <Text style={styles.conflictBtnReplaceText}>Replace</Text>
+            </TouchableOpacity>
+          </View>
         </TouchableOpacity>
-        <Text style={styles.conflictTitle}>Replace cart item?</Text>
-        <Text style={styles.conflictMessage}>
-          Your cart contains dishes from{' '}
-          <Text style={styles.conflictRestName}>{currentRestaurantName}</Text>
-          {'. Do you want to discard the selection and add dishes from '}
-          <Text style={styles.conflictRestName}>{newRestaurantName}</Text>{'?'}
-        </Text>
-        <View style={styles.conflictBtns}>
-          <TouchableOpacity style={styles.conflictBtnNo} onPress={onCancel} activeOpacity={0.8}>
-            <Text style={styles.conflictBtnNoText}>No</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.conflictBtnReplace} onPress={onReplace} activeOpacity={0.85}>
-            <Text style={styles.conflictBtnReplaceText}>Replace</Text>
-          </TouchableOpacity>
-        </View>
       </TouchableOpacity>
-    </TouchableOpacity>
-  </Modal>
-);
+    </Modal>
+  );
+};
 
 // ─────────────────────────────────────────────────────────
 // HomeScreen
 // ─────────────────────────────────────────────────────────
 export const HomeScreen = ({ navigation }) => {
+  const C = useTheme();
+  const styles = useMemo(() => createStyles(C), [C]);
   const [activeSort, setActiveSort] = useState('relevance');
   const [sortSheetVisible, setSortSheetVisible] = useState(false);
   const [selectedDish, setSelectedDish] = useState(null);
@@ -674,43 +704,16 @@ export const HomeScreen = ({ navigation }) => {
     if (selectedDish) handleAddDish(selectedDish);
   }, [selectedDish, handleAddDish]);
 
-  // ── Address Dropdown ───────────────────────────────────
-  const [dropdownOpen, setDropdownOpen] = useState(false);
-  const dropdownAnim = useRef(new Animated.Value(0)).current;
-  const overlayAnim = useRef(new Animated.Value(0)).current;
-  const arrowAnim = useRef(new Animated.Value(0)).current;
-
-  const openDropdown = useCallback(() => {
-    setDropdownOpen(true);
-    Animated.parallel([
-      Animated.spring(dropdownAnim, { toValue: 1, friction: 8, tension: 60, useNativeDriver: true }),
-      Animated.timing(overlayAnim, { toValue: 1, duration: 200, useNativeDriver: true }),
-      Animated.timing(arrowAnim, { toValue: 1, duration: 200, useNativeDriver: true }),
-    ]).start();
-  }, []);
-
-  const closeDropdown = useCallback(() => {
-    Animated.parallel([
-      Animated.timing(dropdownAnim, { toValue: 0, duration: 180, useNativeDriver: true }),
-      Animated.timing(overlayAnim, { toValue: 0, duration: 180, useNativeDriver: true }),
-      Animated.timing(arrowAnim, { toValue: 0, duration: 180, useNativeDriver: true }),
-    ]).start(() => setDropdownOpen(false));
-  }, []);
-
+  // ── Address ────────────────────────────────────────────
   const selectedAddress = useAddressStore(s => s.selectedAddress);
-  const addresses = useAddressStore(s => s.addresses);
   const fetchAddresses = useAddressStore(s => s.fetchAddresses);
-  const setSelectedAddress = useAddressStore(s => s.setSelectedAddress);
-  const selectAddressFromDropdown = useCallback((address) => {
-    setSelectedAddress(address);
-    closeDropdown();
-  }, [setSelectedAddress, closeDropdown]);
 
   useEffect(() => { fetchAddresses(); }, []);
 
   const [activeFilters, setActiveFilters] = useState([]);
   const queryClient = useQueryClient();
   const user = useUserStore(s => s.user);
+  const darkMode = useUserStore(s => s.darkMode);
   const badgeCount = useNotificationStore(s => s.badgeCount);
   const scrollY = useRef(new Animated.Value(0)).current;
 
@@ -776,11 +779,6 @@ export const HomeScreen = ({ navigation }) => {
     } catch (error) { console.log("Address fetch error", error?.message || error); }
   };
 
-  const getCurrentLocation = useCallback(() => {
-    closeDropdown();
-    navigation.navigate('LocationPickerScreen', {});
-  }, [closeDropdown, navigation]);
-
   const restaurantCount = sortedRestaurants?.length ?? 0;
 
   const openRestaurant = useCallback(async (restaurant) => {
@@ -824,7 +822,7 @@ export const HomeScreen = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <StatusBar backgroundColor={Colors.white} barStyle="dark-content" />
+      <StatusBar backgroundColor={C.surface} barStyle={darkMode ? 'light-content' : 'dark-content'} />
 
       {/* Top Bar */}
       <Animated.View style={[styles.topBar, { elevation: topBarElevation }]}>
@@ -832,39 +830,36 @@ export const HomeScreen = ({ navigation }) => {
           <Text style={styles.greeting}>Hey {user?.full_name?.split(' ')[0] ?? 'Foodie'} 👋, hungry?</Text>
         </Animated.View>
         <View style={styles.locationCartRow}>
-          <TouchableOpacity style={styles.locationBtn}>
-            <View style={styles.locationIconBox}>
-              <Icon name="location-on" size={16} color={Colors.primary} />
-            </View>
-            <View style={styles.locationTexts}>
-              <Text style={styles.locationLabel}>DELIVERING TO</Text>
-              <TouchableOpacity style={styles.locationValueRow} onPress={dropdownOpen ? closeDropdown : openDropdown} activeOpacity={0.7}>
-                <View style={styles.locationTextBlock}>
-                  <Text style={styles.locationCityText} numberOfLines={1}>
-                    {selectedAddress?.city || "Select Location"}
-                  </Text>
-                  {selectedAddress && (
-                    <Text style={styles.locationAddressText} numberOfLines={1}>
-                      {[selectedAddress.address_line1, selectedAddress.city, selectedAddress.pin_code]
-                        .filter(Boolean).join(', ')}
-                    </Text>
-                  )}
-                </View>
-                <Animated.View style={{ transform: [{ rotate: arrowAnim.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '180deg'] }) }] }}>
-                  <Icon name="keyboard-arrow-down" size={18} color={Colors.primary} />
-                </Animated.View>
-              </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.locationBtn}
+            onPress={() => navigation.navigate('LocationSelectScreen')}
+            activeOpacity={0.7}
+          >
+            <Icon name="location-on" size={20} color={C.primary} />
+            <View style={{ flex: 1 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                <Text style={styles.locationCityText} numberOfLines={1}>
+                  {selectedAddress?.city || "Select Location"}
+                </Text>
+                <Icon name="keyboard-arrow-down" size={18} color={C.textPrimary} />
+              </View>
+              {selectedAddress ? (
+                <Text style={styles.locationAddressText} numberOfLines={1}>
+                  {[selectedAddress.address_line1, selectedAddress.city, selectedAddress.pin_code]
+                    .filter(Boolean).join(', ')}
+                </Text>
+              ) : null}
             </View>
           </TouchableOpacity>
           <View style={styles.topBarActions}>
             <TouchableOpacity
               style={styles.iconBtn}
               onPress={() => navigation.navigate('NotificationsScreen', { userId: user?.user_id })}>
-              <Icon name="notifications-none" size={22} color={Colors.textPrimary} />
+              <Icon name="notifications-none" size={22} color={C.textPrimary} />
               {badgeCount > 0 && <View style={styles.notifDot} />}
             </TouchableOpacity>
             <TouchableOpacity style={styles.iconBtn} onPress={() => navigation.navigate('CartScreen')}>
-              <Icon name="shopping-cart" size={22} color={Colors.textPrimary} />
+              <Icon name="shopping-cart" size={22} color={C.textPrimary} />
               {itemCount > 0 && (
                 <View style={styles.cartBadge}><Text style={styles.cartBadgeText}>{itemCount}</Text></View>
               )}
@@ -873,10 +868,10 @@ export const HomeScreen = ({ navigation }) => {
         </View>
         <TouchableOpacity style={styles.searchBar} onPress={() => navigation.navigate('SearchScreen')} activeOpacity={0.8}>
           <View style={styles.searchLeft}>
-            <Icon name="search" size={20} color={Colors.textSecondary} />
+            <Icon name="search" size={20} color={C.textSecondary} />
             <Text style={styles.searchText}>Search restaurants & dishes...</Text>
           </View>
-          <View style={styles.micBtn}><Icon name="mic" size={16} color={Colors.white} /></View>
+          <View style={styles.micBtn}><Icon name="mic" size={16} color={C.white} /></View>
         </TouchableOpacity>
       </Animated.View>
 
@@ -903,8 +898,8 @@ export const HomeScreen = ({ navigation }) => {
             <RefreshControl
               refreshing={isRefetching}
               onRefresh={refetch}
-              colors={[Colors.primary]}
-              tintColor={Colors.primary}
+              colors={[C.primary]}
+              tintColor={C.primary}
             />
           }
           ListEmptyComponent={
@@ -917,71 +912,6 @@ export const HomeScreen = ({ navigation }) => {
             />
           }
         />
-      )}
-
-      {/* Address Dropdown */}
-      {dropdownOpen && (
-        <>
-          <TouchableWithoutFeedback onPress={closeDropdown}>
-            <Animated.View style={[styles.dropdownOverlay, { opacity: overlayAnim }]} />
-          </TouchableWithoutFeedback>
-          <Animated.View style={[styles.dropdown, {
-            opacity: dropdownAnim,
-            transform: [
-              { translateY: dropdownAnim.interpolate({ inputRange: [0, 1], outputRange: [-16, 0] }) },
-              { scale: dropdownAnim.interpolate({ inputRange: [0, 1], outputRange: [0.97, 1] }) },
-            ]
-          }]}>
-            <View style={styles.dropdownHeader}>
-              <Text style={styles.dropdownTitle}>Deliver to</Text>
-              <TouchableOpacity onPress={() => { closeDropdown(); navigation.navigate("LocationPickerScreen", {}); }} style={styles.dropdownAddBtn}>
-                <Icon name="add" size={14} color={Colors.primary} />
-                <Text style={styles.dropdownAddText}>Add New</Text>
-              </TouchableOpacity>
-            </View>
-            <TouchableOpacity style={styles.dropdownLocationBtn} onPress={() => { getCurrentLocation(); closeDropdown(); }} activeOpacity={0.75}>
-              <View style={styles.dropdownLocationIcon}><Icon name="my-location" size={18} color={Colors.primary} /></View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.dropdownLocationTitle}>Use Current Location</Text>
-                <Text style={styles.dropdownLocationSub}>Enable GPS to detect automatically</Text>
-              </View>
-              <Icon name="chevron-right" size={18} color={Colors.textLight} />
-            </TouchableOpacity>
-            {addresses?.length > 0 && (
-              <View style={styles.dropdownDivider}>
-                <View style={styles.dropdownDividerLine} />
-                <Text style={styles.dropdownDividerText}>SAVED ADDRESSES</Text>
-                <View style={styles.dropdownDividerLine} />
-              </View>
-            )}
-            {addresses?.map((addr) => {
-              const isSelected = selectedAddress?.id === addr.id;
-              const iconName = addr.label === 'Home' ? 'home' : addr.label === 'Work' ? 'work' : 'location-on';
-              return (
-                <TouchableOpacity key={addr.id} style={[styles.dropdownItem, isSelected && styles.dropdownItemSelected]} onPress={() => selectAddressFromDropdown(addr)} activeOpacity={0.75}>
-                  <View style={[styles.dropdownItemIcon, isSelected && styles.dropdownItemIconSelected]}>
-                    <Icon name={iconName} size={16} color={isSelected ? Colors.primary : Colors.textSecondary} />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <View style={styles.dropdownItemTop}>
-                      <Text style={[styles.dropdownItemLabel, isSelected && styles.dropdownItemLabelSelected]}>{addr.label}</Text>
-                      {!!addr.is_default && <View style={styles.dropdownDefaultBadge}><Text style={styles.dropdownDefaultText}>Default</Text></View>}
-                    </View>
-                    <Text style={styles.dropdownItemAddr} numberOfLines={1}>
-                      {[addr.address_line1, addr.city, addr.pin_code].filter(Boolean).join(', ')}
-                    </Text>
-                  </View>
-                  {isSelected && <Icon name="check-circle" size={18} color={Colors.primary} />}
-                </TouchableOpacity>
-              );
-            })}
-            <TouchableOpacity style={styles.dropdownManageBtn} onPress={() => { closeDropdown(); navigation.navigate("AddressesScreen"); }}>
-              <Icon name="edit-location-alt" size={14} color={Colors.textSecondary} />
-              <Text style={styles.dropdownManageText}>Manage all addresses</Text>
-              <Icon name="chevron-right" size={14} color={Colors.textLight} />
-            </TouchableOpacity>
-          </Animated.View>
-        </>
       )}
 
       {/* Sort Bottom Sheet */}
@@ -1016,18 +946,18 @@ export const HomeScreen = ({ navigation }) => {
 // ─────────────────────────────────────────────────────────
 // Styles
 // ─────────────────────────────────────────────────────────
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
+const createStyles = (C) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: C.background },
 
   // ── Top Bar ──
   topBar: {
-    backgroundColor: Colors.white,
+    backgroundColor: C.surface,
     paddingHorizontal: 16,
     paddingBottom: 14,
     borderBottomWidth: 0,
     borderBottomColor: 'transparent',
     overflow: 'visible',
-    shadowColor: '#000',
+    shadowColor: C.black,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
     shadowRadius: 8,
@@ -1035,7 +965,7 @@ const styles = StyleSheet.create({
   },
   greeting: {
     fontSize: 13,
-    color: Colors.textSecondary,
+    color: C.textPrimary,
     fontWeight: '600',
     paddingTop: 4,
     letterSpacing: 0.2,
@@ -1047,33 +977,16 @@ const styles = StyleSheet.create({
     marginTop: 6,
     marginBottom: 10,
   },
-  locationBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 },
-  locationIconBox: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
-    backgroundColor: Colors.primaryLight,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  locationTexts: { gap: 1 },
-  locationLabel: {
-    fontSize: 9,
-    color: Colors.textLight,
-    fontWeight: '700',
-    letterSpacing: 0.8,
-  },
-  locationValueRow: { flexDirection: 'row', alignItems: 'center', gap: 2 },
-  locationTextBlock: { gap: 1, flex: 1 },
+  locationBtn: { flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 },
   locationCityText: {
     fontSize: 15,
     fontWeight: '800',
-    color: Colors.textPrimary,
+    color: C.textPrimary,
     maxWidth: 170,
   },
   locationAddressText: {
     fontSize: 11,
-    color: Colors.textSecondary,
+    color: C.textSecondary,
     maxWidth: 170,
   },
   topBarActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
@@ -1081,7 +994,9 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 13,
-    backgroundColor: Colors.background,
+    backgroundColor: C.cardBg,
+    borderWidth: 1.5,
+    borderColor: C.border,
     justifyContent: 'center',
     alignItems: 'center',
     position: 'relative',
@@ -1093,15 +1008,15 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: Colors.error,
+    backgroundColor: C.error,
     borderWidth: 1.5,
-    borderColor: Colors.white,
+    borderColor: C.white,
   },
   cartBadge: {
     position: 'absolute',
     top: 4,
     right: 4,
-    backgroundColor: Colors.primary,
+    backgroundColor: C.primary,
     borderRadius: 9,
     minWidth: 18,
     height: 18,
@@ -1109,34 +1024,34 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 4,
     borderWidth: 1.5,
-    borderColor: Colors.white,
+    borderColor: C.white,
   },
-  cartBadgeText: { color: Colors.white, fontSize: 9, fontWeight: '800' },
+  cartBadgeText: { color: C.white, fontSize: 9, fontWeight: '800' },
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: Colors.background,
+    backgroundColor: C.inputBg,
     borderRadius: 14,
     paddingLeft: 14,
     paddingRight: 6,
     paddingVertical: 10,
     borderWidth: 1.5,
-    borderColor: Colors.border,
+    borderColor: C.border,
     // ✨ Enhanced shadow for depth
-    shadowColor: '#000',
+    shadowColor: C.black,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.04,
     shadowRadius: 4,
     elevation: 1,
   },
   searchLeft: { flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 },
-  searchText: { fontSize: 14, color: Colors.textLight },
+  searchText: { fontSize: 14, color: C.textLight },
   micBtn: {
     width: 36,
     height: 36,
     borderRadius: 11,
-    backgroundColor: Colors.primary,
+    backgroundColor: C.primary,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -1157,7 +1072,7 @@ const styles = StyleSheet.create({
     marginRight: 16,
     overflow: 'hidden',
     elevation: 5,
-    shadowColor: '#000',
+    shadowColor: C.black,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.18,
     shadowRadius: 14,
@@ -1195,29 +1110,29 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.3)',
     marginBottom: 10,
   },
-  bannerTagDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: Colors.white },
-  bannerTagText: { fontSize: 9, fontWeight: '800', color: Colors.white, letterSpacing: 1 },
+  bannerTagDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: C.white },
+  bannerTagText: { fontSize: 9, fontWeight: '800', color: C.white, letterSpacing: 1 },
   bannerContent: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   bannerLeft: { flex: 1, gap: 5 },
-  bannerTitle: { fontSize: 24, fontWeight: '900', color: Colors.white, letterSpacing: -0.5 },
+  bannerTitle: { fontSize: 24, fontWeight: '900', color: C.white, letterSpacing: -0.5 },
   bannerSubtitle: { fontSize: 13, color: 'rgba(255,255,255,0.88)', fontWeight: '500' },
   bannerCtaBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    backgroundColor: Colors.white,
+    backgroundColor: C.primary,
     paddingHorizontal: 14,
     paddingVertical: 7,
     borderRadius: 20,
     alignSelf: 'flex-start',
     marginTop: 8,
     elevation: 3,
-    shadowColor: '#000',
+    shadowColor: C.black,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
   },
-  bannerCtaText: { fontSize: 12, fontWeight: '800', color: '#1A1A1A' },
+  bannerCtaText: { fontSize: 12, fontWeight: '800', color: C.white },
   bannerEmoji: { fontSize: 48, lineHeight: 52 },
   bannerEmojiContainer: { width: 70, alignItems: 'center', justifyContent: 'center' },
 
@@ -1231,11 +1146,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 999,
-    backgroundColor: '#FFECEC',
+    backgroundColor: C.errorBg,
     borderWidth: 1,
-    borderColor: '#FFAAAA',
+    borderColor: C.errorBorder,
   },
-  clearBtnText: { fontSize: 12, color: Colors.error, fontWeight: '600' },
+  clearBtnText: { fontSize: 12, color: C.error, fontWeight: '600' },
 
   // ── Section Headers ──
   sectionHeaderRow: {
@@ -1252,22 +1167,22 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '800',
-    color: Colors.textPrimary,
+    color: C.textPrimary,
     letterSpacing: -0.2,
   },
   sectionSubtitle: {
     fontSize: 12,
-    color: Colors.textSecondary,
+    color: C.textSecondary,
     marginTop: 1,
   },
   sectionAccentLine: {
     width: 28,
     height: 3,
     borderRadius: 2,
-    backgroundColor: Colors.primary,
+    backgroundColor: C.primary,
     marginTop: 2,
   },
-  seeAll: { fontSize: 13, color: Colors.primary, fontWeight: '700' },
+  seeAll: { fontSize: 13, color: C.primary, fontWeight: '700' },
 
   // ── Categories ──
   catsContent: { paddingHorizontal: 16, gap: 10, paddingBottom: 4 },
@@ -1279,7 +1194,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     elevation: 3,
-    shadowColor: '#000',
+    shadowColor: C.black,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
     shadowRadius: 6,
@@ -1288,7 +1203,7 @@ const styles = StyleSheet.create({
   catName: {
     fontSize: 11,
     fontWeight: '600',
-    color: Colors.textPrimary,
+    color: C.textPrimary,
     textAlign: 'center',
   },
 
@@ -1298,11 +1213,11 @@ const styles = StyleSheet.create({
   homeDishCard: {
     width: 160,
     borderRadius: 20,
-    backgroundColor: '#fff',
+    backgroundColor: C.surface,
     marginRight: 12,
     overflow: 'hidden',
     elevation: 5,
-    shadowColor: '#000',
+    shadowColor: C.black,
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.1,
     shadowRadius: 10,
@@ -1313,7 +1228,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   homeDishImg: { width: '100%', height: '100%' },
-  homeDishPlaceholder: { justifyContent: 'center', alignItems: 'center', backgroundColor: '#F5F5F5' },
+  homeDishPlaceholder: { justifyContent: 'center', alignItems: 'center', backgroundColor: C.background },
   vegBadgeSmall: {
     position: 'absolute',
     top: 7,
@@ -1324,32 +1239,32 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: Colors.white,
+    backgroundColor: C.white,
   },
   vegDotSmall: { width: 8, height: 8, borderRadius: 4 },
   homeDishInfo: { padding: 10, gap: 2 },
   homeDishName: {
     fontSize: 13,
     fontWeight: '700',
-    color: Colors.textPrimary,
+    color: C.textPrimary,
     letterSpacing: 0.1,
   },
   priceRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 2 },
-  originalPrice: { fontSize: 11, color: Colors.textLight, textDecorationLine: 'line-through' },
-  homeDishPrice: { fontSize: 13, fontWeight: '800', color: Colors.textPrimary },
-  homeDishDesc: { fontSize: 11, color: Colors.textSecondary, lineHeight: 15, marginTop: 2 },
+  originalPrice: { fontSize: 11, color: C.textLight, textDecorationLine: 'line-through' },
+  homeDishPrice: { fontSize: 13, fontWeight: '800', color: C.textPrimary },
+  homeDishDesc: { fontSize: 11, color: C.textSecondary, lineHeight: 15, marginTop: 2 },
   addBtn: {
     borderWidth: 1.5,
-    borderColor: Colors.primary,
+    borderColor: C.primary,
     paddingVertical: 6,
     borderRadius: 10,
     alignItems: 'center',
     marginTop: 6,
     // ✨ Enhanced ADD button
-    backgroundColor: Colors.primaryLight + '30',
+    backgroundColor: C.primaryLight + '30',
   },
   addBtnText: {
-    color: Colors.primary,
+    color: C.primary,
     fontWeight: '800',
     fontSize: 12,
     letterSpacing: 0.5,
@@ -1358,7 +1273,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: Colors.primary,
+    backgroundColor: C.primary,
     borderRadius: 10,
     paddingHorizontal: 6,
     paddingVertical: 4,
@@ -1370,12 +1285,12 @@ const styles = StyleSheet.create({
   },
   stepperBtnFilled: {
     fontSize: 18,
-    color: Colors.white,
+    color: C.white,
     fontWeight: 'bold',
   },
   stepperCountFilled: {
     fontWeight: '700',
-    color: Colors.white,
+    color: C.white,
     fontSize: 13,
     minWidth: 20,
     textAlign: 'center',
@@ -1384,14 +1299,14 @@ const styles = StyleSheet.create({
   // ── Dish Skeleton ──
   dishSkeletonCard: {
     width: 160,
-    backgroundColor: Colors.white,
+    backgroundColor: C.white,
     borderRadius: 20,
     overflow: 'hidden',
     elevation: 2,
     marginRight: 12,
   },
-  dishSkeletonImg: { width: '100%', height: 115, backgroundColor: Colors.border },
-  dishSkeletonLine: { height: 11, backgroundColor: Colors.border, borderRadius: 6, margin: 10, marginBottom: 5 },
+  dishSkeletonImg: { width: '100%', height: 115, backgroundColor: C.border },
+  dishSkeletonLine: { height: 11, backgroundColor: C.border, borderRadius: 6, margin: 10, marginBottom: 5 },
 
   // ── Restaurant Header ──
   restHeaderRow: {
@@ -1402,63 +1317,63 @@ const styles = StyleSheet.create({
     marginTop: 16,
     marginBottom: 10,
   },
-  restSubtitle: { fontSize: 12, color: Colors.textSecondary, marginTop: 2 },
+  restSubtitle: { fontSize: 12, color: C.textSecondary, marginTop: 2 },
   sortBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    backgroundColor: Colors.primaryLight,
+    backgroundColor: C.primaryLight,
     paddingHorizontal: 14,
     paddingVertical: 9,
     borderRadius: 22,
     borderWidth: 1,
-    borderColor: Colors.primary + '33',
+    borderColor: C.primary + '33',
     position: 'relative',
     elevation: 2,
-    shadowColor: Colors.primary,
+    shadowColor: C.primary,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
   },
-  sortText: { fontSize: 12, fontWeight: '700', color: Colors.primary },
-  sortActiveDot: { width: 7, height: 7, borderRadius: 3.5, backgroundColor: Colors.primary, position: 'absolute', top: -2, right: -2 },
+  sortText: { fontSize: 12, fontWeight: '700', color: C.primary },
+  sortActiveDot: { width: 7, height: 7, borderRadius: 3.5, backgroundColor: C.primary, position: 'absolute', top: -2, right: -2 },
 
   // ── List Content ──
   listContent: { paddingHorizontal: 16, paddingBottom: 40 },
   skeletonContainer: { paddingHorizontal: 16, paddingBottom: 32 },
   skeletonCard: {
-    backgroundColor: Colors.white,
+    backgroundColor: C.white,
     borderRadius: 18,
     marginBottom: 16,
     overflow: 'hidden',
   },
-  skeletonImg: { width: '100%', height: 150, backgroundColor: Colors.border },
+  skeletonImg: { width: '100%', height: 150, backgroundColor: C.border },
   skeletonBody: { padding: 14, gap: 10 },
-  skeletonLine: { backgroundColor: Colors.border, borderRadius: 6 },
+  skeletonLine: { backgroundColor: C.border, borderRadius: 6 },
 
   // ── Sort Bottom Sheet ──
-  sortOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.4)', zIndex: 200 },
+  sortOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: C.overlayMedium, zIndex: 200 },
   sortSheet: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: Colors.white,
+    backgroundColor: C.white,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     zIndex: 300,
     elevation: 20,
     paddingBottom: 32,
   },
-  sortHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: Colors.border, alignSelf: 'center', marginTop: 12, marginBottom: 4 },
+  sortHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: C.border, alignSelf: 'center', marginTop: 12, marginBottom: 4 },
   sortSheetTitle: {
     fontSize: 16,
     fontWeight: '800',
-    color: Colors.textPrimary,
+    color: C.textPrimary,
     paddingHorizontal: 20,
     paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    borderBottomColor: C.border,
   },
   sortOption: {
     flexDirection: 'row',
@@ -1467,123 +1382,27 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.border + '80',
+    borderBottomColor: C.border + '80',
   },
-  sortOptionActive: { backgroundColor: Colors.primaryLight + '60' },
+  sortOptionActive: { backgroundColor: C.primaryLight + '60' },
   sortOptionIcon: {
     width: 38,
     height: 38,
     borderRadius: 12,
-    backgroundColor: Colors.background,
+    backgroundColor: C.background,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  sortOptionIconActive: { backgroundColor: Colors.primaryLight },
-  sortOptionText: { flex: 1, fontSize: 14, fontWeight: '600', color: Colors.textPrimary },
-  sortOptionTextActive: { color: Colors.primary, fontWeight: '700' },
+  sortOptionIconActive: { backgroundColor: C.primaryLight },
+  sortOptionText: { flex: 1, fontSize: 14, fontWeight: '600', color: C.textPrimary },
+  sortOptionTextActive: { color: C.primary, fontWeight: '700' },
 
   // ── Address Dropdown ──
-  dropdownOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.35)', zIndex: 50 },
-  dropdown: {
-    position: 'absolute',
-    top: 0,
-    left: 12,
-    right: 12,
-    backgroundColor: Colors.white,
-    borderRadius: 20,
-    zIndex: 100,
-    elevation: 16,
-    overflow: 'hidden',
-    marginTop: 8,
-  },
-  dropdownHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-  },
-  dropdownTitle: { fontSize: 15, fontWeight: '800', color: Colors.textPrimary },
-  dropdownAddBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: Colors.primaryLight,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 20,
-  },
-  dropdownAddText: { fontSize: 12, fontWeight: '700', color: Colors.primary },
-  dropdownLocationBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-  },
-  dropdownLocationIcon: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
-    backgroundColor: Colors.primaryLight,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  dropdownLocationTitle: { fontSize: 13, fontWeight: '700', color: Colors.textPrimary, marginBottom: 2 },
-  dropdownLocationSub: { fontSize: 11, color: Colors.textLight },
-  dropdownDivider: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 16, paddingVertical: 10 },
-  dropdownDividerLine: { flex: 1, height: 1, backgroundColor: Colors.border },
-  dropdownDividerText: { fontSize: 10, fontWeight: '700', color: Colors.textLight, letterSpacing: 0.8 },
-  dropdownItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-  },
-  dropdownItemSelected: { backgroundColor: '#FFFAF7' },
-  dropdownItemIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: '#F5F5F5',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  dropdownItemIconSelected: { backgroundColor: Colors.primaryLight },
-  dropdownItemTop: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 },
-  dropdownItemLabel: { fontSize: 13, fontWeight: '700', color: Colors.textPrimary },
-  dropdownItemLabelSelected: { color: Colors.primary },
-  dropdownDefaultBadge: {
-    backgroundColor: Colors.primaryLight,
-    paddingHorizontal: 6,
-    paddingVertical: 1,
-    borderRadius: 6,
-  },
-  dropdownDefaultText: { fontSize: 9, fontWeight: '700', color: Colors.primary },
-  dropdownItemAddr: { fontSize: 11, color: Colors.textSecondary },
-  dropdownManageBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 16,
-    paddingVertical: 13,
-    justifyContent: 'center',
-  },
-  dropdownManageText: { fontSize: 12, fontWeight: '600', color: Colors.textSecondary, flex: 1 },
-
   // ── Dish Modal ──
   dishModalContainer: { flex: 1, justifyContent: 'flex-end' },
-  dishModalOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.5)' },
+  dishModalOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: C.overlayDense },
   dishModalSheet: {
-    backgroundColor: Colors.white,
+    backgroundColor: C.white,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     maxHeight: '85%',
@@ -1600,26 +1419,26 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: Colors.white,
+    backgroundColor: C.white,
     marginBottom: 8,
   },
   vegDot: { width: 8, height: 8, borderRadius: 4 },
-  dishModalTitle: { fontSize: 18, fontWeight: '800', color: Colors.textPrimary },
-  dishModalPrice: { fontSize: 16, fontWeight: '800', color: Colors.textPrimary, marginTop: 2 },
-  dishModalDesc: { fontSize: 13, color: Colors.textSecondary, lineHeight: 20 },
+  dishModalTitle: { fontSize: 18, fontWeight: '800', color: C.textPrimary },
+  dishModalPrice: { fontSize: 16, fontWeight: '800', color: C.textPrimary, marginTop: 2 },
+  dishModalDesc: { fontSize: 13, color: C.textSecondary, lineHeight: 20 },
   dishModalAddBtnFull: {
-    backgroundColor: Colors.primary,
+    backgroundColor: C.primary,
     borderRadius: 14,
     paddingVertical: 15,
     alignItems: 'center',
     width: '100%',
     elevation: 3,
-    shadowColor: Colors.primary,
+    shadowColor: C.primary,
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.2,
     shadowRadius: 6,
   },
-  dishModalAddTextFull: { color: Colors.white, fontWeight: '800', fontSize: 15, letterSpacing: 0.5 },
+  dishModalAddTextFull: { color: C.white, fontWeight: '800', fontSize: 15, letterSpacing: 0.5 },
   dishModalCloseBtnCenter: {
     alignSelf: 'center',
     marginTop: 4,
@@ -1627,52 +1446,52 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(0,0,0,0.55)',
+    backgroundColor: C.overlayDense,
     justifyContent: 'center',
     alignItems: 'center',
   },
 
   // ── Conflict Modal ──
-  conflictOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', paddingHorizontal: 24 },
+  conflictOverlay: { flex: 1, backgroundColor: C.overlayDense, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 24 },
   conflictSheet: {
-    backgroundColor: Colors.white,
+    backgroundColor: C.white,
     borderRadius: 22,
     paddingHorizontal: 20,
     paddingTop: 20,
     paddingBottom: 24,
     width: '100%',
     elevation: 20,
-    shadowColor: '#000',
+    shadowColor: C.black,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 12,
   },
   conflictClose: { position: 'absolute', top: 12, right: 12, padding: 4 },
-  conflictTitle: { fontSize: 18, fontWeight: '800', color: Colors.textPrimary, marginBottom: 8, marginTop: 4, paddingRight: 24 },
-  conflictMessage: { fontSize: 13, color: Colors.textSecondary, lineHeight: 20, marginBottom: 24 },
-  conflictRestName: { fontWeight: '700', color: Colors.textPrimary },
+  conflictTitle: { fontSize: 18, fontWeight: '800', color: C.textPrimary, marginBottom: 8, marginTop: 4, paddingRight: 24 },
+  conflictMessage: { fontSize: 13, color: C.textSecondary, lineHeight: 20, marginBottom: 24 },
+  conflictRestName: { fontWeight: '700', color: C.textPrimary },
   conflictBtns: { flexDirection: 'row', gap: 10 },
   conflictBtnNo: {
     flex: 1,
     paddingVertical: 13,
     borderRadius: 14,
-    backgroundColor: '#FFF3E0',
+    backgroundColor: C.primaryLight,
     alignItems: 'center',
     borderWidth: 1.5,
-    borderColor: '#FFCC80',
+    borderColor: C.primary,
   },
-  conflictBtnNoText: { fontSize: 14, fontWeight: '700', color: Colors.primary },
+  conflictBtnNoText: { fontSize: 14, fontWeight: '700', color: C.primary },
   conflictBtnReplace: {
     flex: 1,
     paddingVertical: 13,
     borderRadius: 14,
-    backgroundColor: Colors.primary,
+    backgroundColor: C.primary,
     alignItems: 'center',
     elevation: 3,
-    shadowColor: Colors.primary,
+    shadowColor: C.primary,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.15,
     shadowRadius: 4,
   },
-  conflictBtnReplaceText: { fontSize: 14, fontWeight: '700', color: Colors.white },
+  conflictBtnReplaceText: { fontSize: 14, fontWeight: '700', color: C.white },
 });

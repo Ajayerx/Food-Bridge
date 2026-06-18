@@ -1,19 +1,21 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {View, StyleSheet} from 'react-native';
-import {Colors} from '../../constants/colors';
+import { useTheme } from '../../hooks/useTheme';
 
-export const Divider = ({style, thick = false}) => (
-  <View style={[styles.divider, thick && styles.thick, style]} />
-);
+export const Divider = ({style, thick = false}) => {
+  const Colors = useTheme();
+  const styles = useMemo(() => createStyles(Colors), [Colors]);
+  return <View style={[styles.divider, thick && styles.thick, style]} />;
+};
 
-const styles = StyleSheet.create({
+const createStyles = (C) => StyleSheet.create({
   divider: {
     height: 1,
-    backgroundColor: Colors.divider,
+    backgroundColor: C.divider,
     width: '100%',
   },
   thick: {
     height: 8,
-    backgroundColor: Colors.background,
+    backgroundColor: C.background,
   },
 });

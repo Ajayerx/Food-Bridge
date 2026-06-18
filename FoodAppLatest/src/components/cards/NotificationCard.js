@@ -1,5 +1,5 @@
 // components/cards/NotificationCard.js
-import React, { useRef } from "react";
+import React, { useRef, useMemo } from "react";
 import {
     View,
     Text,
@@ -7,6 +7,7 @@ import {
     StyleSheet,
     Animated,
 } from "react-native";
+import { useTheme } from "../../hooks/useTheme";
 import { TYPE_CONFIG, DEFAULT_CONFIG, resolveTypeKey } from "../../utils/notificationTypes";
 
 export function timeAgo(dateStr) {
@@ -22,6 +23,8 @@ const NotificationCard = React.memo(function NotificationCard({ item, onPress })
     // ✅ FIX: resolve raw type (number / PascalCase) → SCREAMING_SNAKE_CASE key
     const resolvedType = resolveTypeKey(item.type);
     const config = TYPE_CONFIG[resolvedType] ?? DEFAULT_CONFIG;
+    const Colors = useTheme();
+    const styles = useMemo(() => createStyles(Colors), [Colors]);
     const scaleAnim = useRef(new Animated.Value(1)).current;
 
     const handlePressIn = () => {
@@ -113,29 +116,27 @@ const NotificationCard = React.memo(function NotificationCard({ item, onPress })
 
 export default NotificationCard;
 
-const styles = StyleSheet.create({
+const createStyles = (C) => StyleSheet.create({
     cardWrapper: {
         marginHorizontal: 14,
         marginVertical: 5,
     },
     card: {
-        backgroundColor: "#ffffff",
+        backgroundColor: C.surface,
         borderRadius: 16,
         overflow: "hidden",
-        // Shadow
-        shadowColor: "#000",
+        shadowColor: C.black,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.06,
         shadowRadius: 8,
         elevation: 2,
     },
     cardUnread: {
-        backgroundColor: "#fffbf7",
+        backgroundColor: C.cardBg,
         shadowOpacity: 0.10,
         elevation: 3,
     },
 
-    // Left accent bar — only shown when unread
     accentBar: {
         position: "absolute",
         left: 0,
@@ -150,10 +151,9 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         alignItems: "center",
         padding: 14,
-        paddingLeft: 18,               // extra left pad to clear the accent bar
+        paddingLeft: 18,
     },
 
-    // Icon
     iconBubble: {
         width: 50,
         height: 50,
@@ -165,13 +165,12 @@ const styles = StyleSheet.create({
     },
     iconRing: {
         position: "absolute",
-        inset: -2,                     // equivalent to top:-2,left:-2,right:-2,bottom:-2
+        inset: -2,
         borderRadius: 17,
         borderWidth: 1.5,
     },
     iconText: { fontSize: 22 },
 
-    // Content
     content: { flex: 1, minWidth: 0 },
 
     topRow: {
@@ -185,26 +184,25 @@ const styles = StyleSheet.create({
         flex: 1,
         fontSize: 13.5,
         fontWeight: "700",
-        color: "#111827",
+        color: C.textPrimary,
         letterSpacing: -0.1,
     },
-    titleRead: { fontWeight: "500", color: "#6b7280" },
+    titleRead: { fontWeight: "500", color: C.textLight },
     time: {
         fontSize: 11,
-        color: "#9ca3af",
+        color: C.textLight,
         flexShrink: 0,
         marginTop: 1,
     },
 
     body: {
         fontSize: 12.5,
-        color: "#4b5563",
+        color: C.textSecondary,
         lineHeight: 18,
         marginBottom: 8,
     },
-    bodyRead: { color: "#9ca3af" },
+    bodyRead: { color: C.textLight },
 
-    // Footer
     footer: {
         flexDirection: "row",
         alignItems: "center",
@@ -235,7 +233,7 @@ const styles = StyleSheet.create({
     unreadBadgeText: {
         fontSize: 9.5,
         fontWeight: "700",
-        color: "#fff",
+        color: C.white,
         letterSpacing: 0.3,
     },
 });

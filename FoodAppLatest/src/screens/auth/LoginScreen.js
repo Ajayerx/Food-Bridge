@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -14,7 +14,7 @@ import {
   StatusBar,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Colors } from '../../constants/colors';
+import { useTheme } from '../../hooks/useTheme';
 import { Button } from '../../components/common/Button';
 import { sendOTP } from "../../services/auth/authService";
 import { validatePhone } from '../../utils/validators';
@@ -24,6 +24,9 @@ import { useUserStore } from "../../store/userStore";
 const { height } = Dimensions.get('window');
 
 export const LoginScreen = ({ navigation }) => {
+  const Colors = useTheme();
+  const darkMode = useUserStore(s => s.darkMode);
+  const styles = useMemo(() => createStyles(Colors), [Colors]);
   const [phone, setPhone] = useState('');
   const [loading, setLoading] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
@@ -96,7 +99,7 @@ export const LoginScreen = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-      <StatusBar backgroundColor={Colors.white} barStyle="dark-content" />
+      <StatusBar backgroundColor={Colors.surface} barStyle={darkMode ? 'light-content' : 'dark-content'} />
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.flex}>
@@ -197,8 +200,8 @@ export const LoginScreen = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: Colors.white },
+const createStyles = (C) => StyleSheet.create({
+  safe: { flex: 1, backgroundColor: C.surface },
   flex: { flex: 1 },
   scroll: { flexGrow: 1, paddingBottom: 32 },
 
@@ -207,7 +210,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     height: height * 0.28,
-    backgroundColor: Colors.primaryLight,
+    backgroundColor: C.primaryLight,
     marginBottom: 8,
     position: 'relative',
     overflow: 'hidden',
@@ -216,19 +219,19 @@ const styles = StyleSheet.create({
     width: 120,
     height: 120,
     borderRadius: 60,
-    backgroundColor: Colors.primary,
+    backgroundColor: C.primary,
     justifyContent: 'center',
     alignItems: 'center',
   },
   illustrationEmoji: { fontSize: 56 },
   floatingBadge: {
     position: 'absolute',
-    backgroundColor: Colors.white,
+    backgroundColor: C.surface,
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 20,
     elevation: 4,
-    shadowColor: Colors.black,
+    shadowColor: C.black,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.12,
     shadowRadius: 4,
@@ -236,13 +239,13 @@ const styles = StyleSheet.create({
   badge1: { top: 20, left: 24 },
   badge2: { top: 20, right: 24 },
   badge3: { bottom: 20, right: '30%' },
-  badgeText: { fontSize: 12, fontWeight: '600', color: Colors.textPrimary },
+  badgeText: { fontSize: 12, fontWeight: '600', color: C.textPrimary },
 
   // Form
   formBox: { paddingHorizontal: 24, paddingTop: 24 },
-  title: { fontSize: 26, fontWeight: '800', color: Colors.textPrimary, marginBottom: 8 },
-  subtitle: { fontSize: 14, color: Colors.textSecondary, lineHeight: 21, marginBottom: 28 },
-  label: { fontSize: 13, fontWeight: '600', color: Colors.textPrimary, marginBottom: 8 },
+  title: { fontSize: 26, fontWeight: '800', color: C.textPrimary, marginBottom: 8 },
+  subtitle: { fontSize: 14, color: C.textSecondary, lineHeight: 21, marginBottom: 28 },
+  label: { fontSize: 13, fontWeight: '600', color: C.textPrimary, marginBottom: 8 },
 
   phoneInputWrapper: {
     flexDirection: 'row',
@@ -250,32 +253,32 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderRadius: 14,
     overflow: 'hidden',
-    backgroundColor: Colors.white,
+    backgroundColor: C.surface,
   },
   prefixBox: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 14,
     paddingVertical: 16,
-    backgroundColor: Colors.background,
+    backgroundColor: C.background,
     gap: 6,
   },
   flag: { fontSize: 18 },
-  prefixText: { fontSize: 15, fontWeight: '600', color: Colors.textPrimary },
-  dividerLine: { width: 1, height: '60%', backgroundColor: Colors.border },
+  prefixText: { fontSize: 15, fontWeight: '600', color: C.textPrimary },
+  dividerLine: { width: 1, height: '60%', backgroundColor: C.border },
   input: {
     flex: 1,
     paddingHorizontal: 14,
     paddingVertical: 16,
     fontSize: 17,
-    color: Colors.textPrimary,
+    color: C.textPrimary,
     letterSpacing: 1,
   },
   checkmark: { paddingRight: 12, fontSize: 18 },
   charCount: {
     textAlign: 'right',
     fontSize: 11,
-    color: Colors.textLight,
+    color: C.textLight,
     marginTop: 4,
     marginBottom: 20,
   },
@@ -285,22 +288,22 @@ const styles = StyleSheet.create({
 
   terms: {
     fontSize: 12,
-    color: Colors.textLight,
+    color: C.textLight,
     textAlign: 'center',
     lineHeight: 18,
     marginBottom: 24,
   },
-  link: { color: Colors.primary, fontWeight: '500' },
+  link: { color: C.primary, fontWeight: '500' },
 
   demoBox: {
-    backgroundColor: '#FFF8F0',
+    backgroundColor: C.primaryLight,
     borderWidth: 1,
-    borderColor: Colors.primaryLight,
+    borderColor: C.primaryLight,
     borderRadius: 12,
     padding: 14,
     alignItems: 'center',
   },
-  demoTitle: { fontSize: 13, fontWeight: '700', color: Colors.primary, marginBottom: 4 },
-  demoText: { fontSize: 12, color: Colors.textSecondary, textAlign: 'center' },
-  demoBold: { fontWeight: '700', color: Colors.textPrimary },
+  demoTitle: { fontSize: 13, fontWeight: '700', color: C.primary, marginBottom: 4 },
+  demoText: { fontSize: 12, color: C.textSecondary, textAlign: 'center' },
+  demoBold: { fontWeight: '700', color: C.textPrimary },
 });

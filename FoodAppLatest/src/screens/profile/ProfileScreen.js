@@ -1,4 +1,4 @@
-import React, { useRef, useCallback } from 'react';
+import React, { useRef, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import { Colors } from '../../constants/colors';
+import { useTheme } from '../../hooks/useTheme';
 import { Divider } from '../../components/common/Divider';
 import { useUserStore } from '../../store/userStore';
 import { useOrderStore } from '../../store/orderStore';
@@ -57,7 +57,7 @@ const MENU_SECTIONS = [
 /* ─── Animated Menu Row with press feedback ─── */
 const AnimatedTouchableOpacity = Animated.createAnimatedComponent(TouchableOpacity);
 
-const MenuRow = ({ item, onPress, toggleValue, onToggle }) => {
+const MenuRow = ({ item, onPress, toggleValue, onToggle, C, s }) => {
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
   const handlePressIn = useCallback(() => {
@@ -80,34 +80,34 @@ const MenuRow = ({ item, onPress, toggleValue, onToggle }) => {
 
   return (
     <AnimatedTouchableOpacity
-      style={[styles.menuRow, { transform: [{ scale: scaleAnim }] }]}
+      style={[s.menuRow, { transform: [{ scale: scaleAnim }] }]}
       onPress={item.toggle ? undefined : onPress}
       onPressIn={item.toggle ? undefined : handlePressIn}
       onPressOut={item.toggle ? undefined : handlePressOut}
       activeOpacity={item.toggle ? 1 : 0.7}>
-      <View style={styles.menuIconBox}>
-        <Icon name={item.icon} size={20} color={Colors.primary} />
+      <View style={s.menuIconBox}>
+        <Icon name={item.icon} size={20} color={C.primary} />
       </View>
-      <View style={styles.menuTextWrap}>
-        <Text style={styles.menuLabel}>{item.label}</Text>
-        {item.desc ? <Text style={styles.menuDesc}>{item.desc}</Text> : null}
+      <View style={s.menuTextWrap}>
+        <Text style={s.menuLabel}>{item.label}</Text>
+        {item.desc ? <Text style={s.menuDesc}>{item.desc}</Text> : null}
       </View>
-      <View style={styles.menuRight}>
+      <View style={s.menuRight}>
         {item.badge && (
-          <View style={styles.menuBadge}>
-            <Text style={styles.menuBadgeText}>{item.badge}</Text>
+          <View style={s.menuBadge}>
+            <Text style={s.menuBadgeText}>{item.badge}</Text>
           </View>
         )}
         {item.toggle ? (
           <Switch
             value={toggleValue}
             onValueChange={onToggle}
-            trackColor={{ false: Colors.border, true: Colors.primaryLight }}
-            thumbColor={toggleValue ? Colors.primary : Colors.textLight}
-            ios_backgroundColor={Colors.border}
+            trackColor={{ false: C.border, true: C.primaryLight }}
+            thumbColor={toggleValue ? C.primary : C.textLight}
+            ios_backgroundColor={C.border}
           />
         ) : (
-          <Icon name="chevron-right" size={20} color={Colors.textLight} />
+          <Icon name="chevron-right" size={20} color={C.textLight} />
         )}
       </View>
     </AnimatedTouchableOpacity>
@@ -115,7 +115,7 @@ const MenuRow = ({ item, onPress, toggleValue, onToggle }) => {
 };
 
 /* ─── Animated Logout Button ─── */
-const LogoutButton = ({ onPress }) => {
+const LogoutButton = ({ onPress, C, s }) => {
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
   const handlePressIn = useCallback(() => {
@@ -138,17 +138,17 @@ const LogoutButton = ({ onPress }) => {
 
   return (
     <AnimatedTouchableOpacity
-      style={[styles.logoutBtn, { transform: [{ scale: scaleAnim }] }]}
+      style={[s.logoutBtn, { transform: [{ scale: scaleAnim }] }]}
       onPress={onPress}
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
       activeOpacity={0.8}>
-      <View style={styles.logoutIconWrap}>
-        <Icon name="logout" size={20} color={Colors.error} />
+      <View style={s.logoutIconWrap}>
+        <Icon name="logout" size={20} color={C.error} />
       </View>
-      <View style={styles.logoutTextWrap}>
-        <Text style={styles.logoutText}>Logout</Text>
-        <Text style={styles.logoutDesc}>Sign out of your account</Text>
+      <View style={s.logoutTextWrap}>
+        <Text style={s.logoutText}>Logout</Text>
+        <Text style={s.logoutDesc}>Sign out of your account</Text>
       </View>
       <Icon name="chevron-right" size={20} color="#FFCCCC" />
     </AnimatedTouchableOpacity>
@@ -156,6 +156,8 @@ const LogoutButton = ({ onPress }) => {
 };
 
 export const ProfileScreen = ({ navigation }) => {
+  const Colors = useTheme();
+  const styles = useMemo(() => createStyles(Colors), [Colors]);
   const user = useUserStore(s => s.user);
   const logout = useUserStore(s => s.logout);
   const orders = useOrderStore(s => s.orders);
@@ -317,6 +319,7 @@ export const ProfileScreen = ({ navigation }) => {
                       onPress={() => handleMenuPress(item)}
                       toggleValue={toggleVal}
                       onToggle={val => setToggleVal(val)}
+                      C={Colors} s={styles}
                     />
                     {i < section.items.length - 1 && <Divider style={styles.menuDivider} />}
                   </React.Fragment>
@@ -326,7 +329,7 @@ export const ProfileScreen = ({ navigation }) => {
           </View>
         ))}
 
-        <LogoutButton onPress={handleLogout} />
+        <LogoutButton onPress={handleLogout} C={Colors} s={styles} />
 
         <View style={styles.versionRow}>
           <View style={styles.versionDivider} />
@@ -340,24 +343,24 @@ export const ProfileScreen = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (C) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: C.background,
   },
 
   /* ─── Header (flat top, rounded bottom only) ─── */
   header: {
-    backgroundColor: Colors.primary,
+    backgroundColor: C.primary,
     paddingTop: 16,
     paddingBottom: 30,
     paddingHorizontal: 20,
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
+    // borderTopLeftRadius: 28,
+    // borderTopRightRadius: 28,
     borderBottomLeftRadius: 28,
     borderBottomRightRadius: 28,
     elevation: 6,
-    shadowColor: Colors.primary,
+    shadowColor: C.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 12,
@@ -377,7 +380,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 20,
     fontWeight: '800',
-    color: Colors.white,
+    color: C.white,
   },
   editBtn: {
     flexDirection: 'row',
@@ -391,7 +394,7 @@ const styles = StyleSheet.create({
   editBtnText: {
     fontSize: 12,
     fontWeight: '600',
-    color: Colors.white,
+    color: C.white,
   },
 
   /* ─── Profile Row ─── */
@@ -408,7 +411,7 @@ const styles = StyleSheet.create({
     height: 86,
     borderRadius: 43,
     borderWidth: 3,
-    borderColor: Colors.white,
+    borderColor: C.white,
   },
   avatarFallback: {
     width: 86,
@@ -416,14 +419,14 @@ const styles = StyleSheet.create({
     borderRadius: 43,
     backgroundColor: 'rgba(255,255,255,0.25)',
     borderWidth: 3,
-    borderColor: Colors.white,
+    borderColor: C.white,
     justifyContent: 'center',
     alignItems: 'center',
   },
   avatarInitials: {
     fontSize: 32,
     fontWeight: '900',
-    color: Colors.white,
+    color: C.white,
   },
   avatarOnline: {
     position: 'absolute',
@@ -432,9 +435,9 @@ const styles = StyleSheet.create({
     width: 16,
     height: 16,
     borderRadius: 8,
-    backgroundColor: Colors.success,
+    backgroundColor: C.success,
     borderWidth: 2.5,
-    borderColor: Colors.primary,
+    borderColor: C.primary,
   },
 
   /* ─── Contact Pills ─── */
@@ -473,18 +476,18 @@ const styles = StyleSheet.create({
   menuSectionTitle: {
     fontSize: 12,
     fontWeight: '700',
-    color: Colors.textSecondary,
+    color: C.textSecondary,
     textTransform: 'uppercase',
     letterSpacing: 0.8,
     marginBottom: 8,
     marginLeft: 4,
   },
   menuCard: {
-    backgroundColor: Colors.white,
+    backgroundColor: C.surface,
     borderRadius: 16,
     overflow: 'hidden',
     elevation: 1,
-    shadowColor: '#000',
+    shadowColor: C.black,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.04,
     shadowRadius: 3,
@@ -500,7 +503,7 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 11,
-    backgroundColor: Colors.primaryLight,
+    backgroundColor: C.primaryLight,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -510,13 +513,13 @@ const styles = StyleSheet.create({
   },
   menuLabel: {
     fontSize: 15,
-    color: Colors.textPrimary,
+    color: C.textPrimary,
     fontWeight: '500',
     marginBottom: 1,
   },
   menuDesc: {
     fontSize: 11.5,
-    color: Colors.textLight,
+    color: C.textLight,
     fontWeight: '400',
     lineHeight: 15,
   },
@@ -526,7 +529,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   menuBadge: {
-    backgroundColor: Colors.primaryLight,
+    backgroundColor: C.primaryLight,
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 8,
@@ -534,7 +537,7 @@ const styles = StyleSheet.create({
   menuBadgeText: {
     fontSize: 11,
     fontWeight: '700',
-    color: Colors.primary,
+    color: C.primary,
   },
   menuDivider: {
     marginHorizontal: 16,
@@ -544,19 +547,19 @@ const styles = StyleSheet.create({
   logoutBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFF5F5',
+    backgroundColor: C.errorBg,
     paddingVertical: 14,
     paddingHorizontal: 16,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#FEE2E2',
+    borderColor: C.errorBorder,
     gap: 12,
   },
   logoutIconWrap: {
     width: 38,
     height: 38,
     borderRadius: 11,
-    backgroundColor: '#FEE2E2',
+    backgroundColor: C.errorBorder,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -566,11 +569,11 @@ const styles = StyleSheet.create({
   logoutText: {
     fontSize: 15,
     fontWeight: '700',
-    color: Colors.error,
+    color: C.error,
   },
   logoutDesc: {
     fontSize: 11.5,
-    color: Colors.textLight,
+    color: C.textLight,
     fontWeight: '400',
     marginTop: 1,
   },
@@ -586,11 +589,11 @@ const styles = StyleSheet.create({
   versionDivider: {
     flex: 1,
     height: 1,
-    backgroundColor: Colors.border,
+    backgroundColor: C.border,
   },
   versionText: {
     fontSize: 12,
-    color: Colors.textLight,
+    color: C.textLight,
     fontWeight: '500',
   },
 

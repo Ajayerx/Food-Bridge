@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
     View,
     Text,
@@ -9,8 +9,12 @@ import {
 } from "react-native";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import axios from "axios";
+import { useTheme } from "../../hooks/useTheme";
 
 const AddCardScreen = ({ navigation }) => {
+
+    const Colors = useTheme();
+    const styles = useMemo(() => createStyles(Colors), [Colors]);
 
     const [cardNumber, setCardNumber] = useState("");
     const [cardName, setCardName] = useState("");
@@ -122,7 +126,7 @@ const AddCardScreen = ({ navigation }) => {
             <View style={styles.header}>
 
                 <TouchableOpacity onPress={() => navigation.goBack()}>
-                    <Icon name="arrow-back" size={26} />
+                    <Icon name="arrow-back" size={26} color={Colors.black} />
                 </TouchableOpacity>
 
                 <Text style={styles.headerTitle}>Add Card</Text>
@@ -207,16 +211,16 @@ const AddCardScreen = ({ navigation }) => {
 
 export default AddCardScreen;
 
-const styles = StyleSheet.create({
+const createStyles = C => StyleSheet.create({
 
-    container: { flex: 1, backgroundColor: "#fff" },
+    container: { flex: 1, backgroundColor: C.surface },
 
     header: {
         flexDirection: "row",
         alignItems: "center",
         padding: 16,
         borderBottomWidth: 1,
-        borderColor: "#eee"
+        borderColor: C.border
     },
 
     headerTitle: {
@@ -231,12 +235,12 @@ const styles = StyleSheet.create({
 
     label: {
         marginBottom: 6,
-        color: "#555"
+        color: C.textSecondary
     },
 
     input: {
         borderWidth: 1,
-        borderColor: "#ddd",
+        borderColor: C.border,
         borderRadius: 10,
         padding: 14,
         marginBottom: 16
@@ -247,7 +251,7 @@ const styles = StyleSheet.create({
     },
 
     button: {
-        backgroundColor: "#FF6D00",
+        backgroundColor: C.primary,
         padding: 16,
         borderRadius: 10,
         alignItems: "center",
@@ -255,14 +259,14 @@ const styles = StyleSheet.create({
     },
 
     buttonText: {
-        color: "#fff",
+        color: C.white,
         fontWeight: "700",
         fontSize: 16
     },
 
     brand: {
         marginBottom: 10,
-        color: "#FF6D00",
+        color: C.primary,
         fontWeight: "600"
     }
 

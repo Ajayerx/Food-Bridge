@@ -1,5 +1,5 @@
 import { useFocusEffect } from "@react-navigation/native";
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useMemo } from "react";
 import axios from "axios";
 import {
     View,
@@ -9,8 +9,12 @@ import {
     ScrollView
 } from "react-native";
 import Icon from "react-native-vector-icons/MaterialIcons";
+import { useTheme } from "../../hooks/useTheme";
 
 const PaymentMethodsScreen = ({ navigation }) => {
+
+    const Colors = useTheme();
+    const styles = useMemo(() => createStyles(Colors), [Colors]);
 
     const [cards, setCards] = useState([]);
     const fetchCards = async () => {
@@ -38,7 +42,7 @@ const PaymentMethodsScreen = ({ navigation }) => {
     const Row = ({ icon, title, action }) => (
         <TouchableOpacity style={styles.row}>
             <View style={styles.rowLeft}>
-                <Icon name={icon} size={24} color="#444" />
+                <Icon name={icon} size={24} color={Colors.textSecondary} />
                 <Text style={styles.rowText}>{title}</Text>
             </View>
 
@@ -54,7 +58,7 @@ const PaymentMethodsScreen = ({ navigation }) => {
             <View style={styles.header}>
 
                 <TouchableOpacity onPress={() => navigation.goBack()}>
-                    <Icon name="arrow-back" size={26} color="#000" />
+                    <Icon name="arrow-back" size={26} color={Colors.black} />
                 </TouchableOpacity>
 
                 <Text style={styles.headerTitle}>PAYMENTS</Text>
@@ -83,7 +87,7 @@ const PaymentMethodsScreen = ({ navigation }) => {
                 >
 
                     <View style={styles.addIcon}>
-                        <Icon name="add" size={20} color="#FF6D00" />
+                        <Icon name="add" size={20} color={Colors.primary} />
                     </View>
 
                     <Text style={styles.addText}>ADD NEW CARD</Text>
@@ -146,20 +150,20 @@ const PaymentMethodsScreen = ({ navigation }) => {
 
 export default PaymentMethodsScreen;
 
-const styles = StyleSheet.create({
+const createStyles = C => StyleSheet.create({
 
     container: {
         flex: 1,
-        backgroundColor: "#F5F5F5"
+        backgroundColor: C.background
     },
 
     header: {
         flexDirection: "row",
         alignItems: "center",
         padding: 16,
-        backgroundColor: "#fff",
+        backgroundColor: C.surface,
         borderBottomWidth: 1,
-        borderColor: "#eee"
+        borderColor: C.border
     },
 
     headerTitle: {
@@ -173,17 +177,17 @@ const styles = StyleSheet.create({
         marginBottom: 8,
         paddingHorizontal: 16,
         fontWeight: "600",
-        color: "#777"
+        color: C.textLight
     },
 
     row: {
-        backgroundColor: "#fff",
+        backgroundColor: C.surface,
         padding: 16,
         flexDirection: "row",
         justifyContent: "space-between",
         alignItems: "center",
         borderBottomWidth: 1,
-        borderColor: "#eee"
+        borderColor: C.border
     },
 
     rowLeft: {
@@ -197,12 +201,12 @@ const styles = StyleSheet.create({
     },
 
     actionText: {
-        color: "#FF6D00",
+        color: C.primary,
         fontWeight: "600"
     },
 
     addCard: {
-        backgroundColor: "#fff",
+        backgroundColor: C.surface,
         flexDirection: "row",
         alignItems: "center",
         padding: 16
@@ -210,13 +214,13 @@ const styles = StyleSheet.create({
 
     addIcon: {
         borderWidth: 1,
-        borderColor: "#FF6D00",
+        borderColor: C.primary,
         padding: 4,
         marginRight: 10
     },
 
     addText: {
-        color: "#FF6D00",
+        color: C.primary,
         fontWeight: "700",
         fontSize: 16
     },
@@ -224,20 +228,20 @@ const styles = StyleSheet.create({
     cardBrands: {
         flexDirection: "row",
         justifyContent: "space-around",
-        backgroundColor: "#fff",
+        backgroundColor: C.surface,
         paddingVertical: 12
     },
 
     brand: {
-        color: "#888",
+        color: C.textLight,
         fontWeight: "600"
     },
 
     cardItem: {
-        backgroundColor: "#fff",
+        backgroundColor: C.surface,
         padding: 16,
         borderBottomWidth: 1,
-        borderColor: "#eee"
+        borderColor: C.border
     },
 
     cardText: {

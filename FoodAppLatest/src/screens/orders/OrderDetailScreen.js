@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import {
     View,
     Text,
@@ -12,7 +12,7 @@ import {
     Platform,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import { Colors } from '../../constants/colors';
+import { useTheme } from '../../hooks/useTheme';
 import { useOrderStore } from '../../store/orderStore';
 import { formatCurrency } from '../../utils/formatCurrency';
 import { useCartStore } from '../../store/cartStore';
@@ -33,21 +33,23 @@ const STATUS_MAP_LOCAL = {
     Cancelled: 'Cancelled', Refunded: 'Refunded',
 };
 
-const STATUS_CONFIG = {
-    Placed: { color: '#3498DB', icon: 'receipt-long' },
-    Confirmed: { color: '#9B59B6', icon: 'check-circle' },
-    Preparing: { color: '#E67E22', icon: 'restaurant' },
-    'Ready for Pickup': { color: '#F39C12', icon: 'hourglass-empty' },
-    'Out for Delivery': { color: Colors.primary, icon: 'delivery-dining' },
-    Delivered: { color: '#27AE60', icon: 'check-circle' },
-    Cancelled: { color: '#E53935', icon: 'cancel' },
-    Refunded: { color: '#7F8C8D', icon: 'replay' },
-};
 
 // ─────────────────────────────────────────────────────────────────────────────
 // MAIN SCREEN
 // ─────────────────────────────────────────────────────────────────────────────
 export const OrderDetailScreen = ({ route, navigation }) => {
+    const Colors = useTheme();
+    const STATUS_CONFIG = {
+        Placed: { color: Colors.info, icon: 'receipt-long' },
+        Confirmed: { color: '#9B59B6', icon: 'check-circle' },
+        Preparing: { color: '#E67E22', icon: 'restaurant' },
+        'Ready for Pickup': { color: Colors.warning, icon: 'hourglass-empty' },
+        'Out for Delivery': { color: Colors.primary, icon: 'delivery-dining' },
+        Delivered: { color: Colors.success, icon: 'check-circle' },
+        Cancelled: { color: Colors.error, icon: 'cancel' },
+        Refunded: { color: '#7F8C8D', icon: 'replay' },
+    };
+    const styles = useMemo(() => createStyles(Colors), [Colors]);
     const { orderId } = route.params;
     const [isReordering, setIsReordering] = useState(false);
 
@@ -159,7 +161,7 @@ export const OrderDetailScreen = ({ route, navigation }) => {
             <SafeAreaView style={styles.safeTop}>
                 <View style={styles.topBar}>
                     <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-                        <Icon name="arrow-back-ios" size={20} color="#fff" />
+                        <Icon name="arrow-back-ios" size={20} color={Colors.white} />
                     </TouchableOpacity>
                     <Text style={styles.topBarTitle}>Order Details</Text>
                     <View style={{ width: 36 }} />
@@ -267,7 +269,7 @@ export const OrderDetailScreen = ({ route, navigation }) => {
                     <View style={styles.section}>
                         <Text style={styles.sectionTitle}>Cancellation Reason</Text>
                         <View style={[styles.card, styles.cancelReasonCard]}>
-                            <Icon name="info-outline" size={18} color="#E53935" />
+                            <Icon name="info-outline" size={18} color={Colors.error} />
                             <Text style={styles.cancelReasonText}>{String(order.cancel_reason)}</Text>
                         </View>
                     </View>
@@ -284,7 +286,7 @@ export const OrderDetailScreen = ({ route, navigation }) => {
                         >
                             <View style={styles.reviewNavLeft}>
                                 <View style={styles.reviewNavIconBox}>
-                                    <Icon name="star" size={22} color="#F39C12" />
+                                    <Icon name="star" size={22} color={Colors.warning} />
                                 </View>
                                 <View style={styles.reviewNavText}>
                                     <Text style={styles.reviewNavTitle}>Rate Your Order</Text>
@@ -306,9 +308,9 @@ export const OrderDetailScreen = ({ route, navigation }) => {
                     activeOpacity={0.85}
                 >
                     {isReordering
-                        ? <ActivityIndicator color="#fff" size="small" />
+                        ? <ActivityIndicator color={Colors.white} size="small" />
                         : <>
-                            <Icon name="replay" size={18} color="#fff" style={{ marginRight: 8 }} />
+                            <Icon name="replay" size={18} color={Colors.white} style={{ marginRight: 8 }} />
                             <Text style={styles.reorderText}>Reorder</Text>
                         </>
                     }
@@ -321,9 +323,9 @@ export const OrderDetailScreen = ({ route, navigation }) => {
 // ─────────────────────────────────────────────────────────────────────────────
 // STYLES
 // ─────────────────────────────────────────────────────────────────────────────
-const styles = StyleSheet.create({
+const createStyles = (C) => StyleSheet.create({
     root: { flex: 1 },
-    center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.background },
+    center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: C.background },
     safeTop: { paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0 },
 
     topBar: {
@@ -331,7 +333,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16, paddingVertical: 14,
     },
     backBtn: { padding: 4, width: 36 },
-    topBarTitle: { fontSize: 18, fontWeight: '700', color: '#fff' },
+    topBarTitle: { fontSize: 18, fontWeight: '700', color: C.white },
 
     heroSection: {
         flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
@@ -340,16 +342,16 @@ const styles = StyleSheet.create({
     heroLeft: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
     heroIconBox: {
         width: 44, height: 44, borderRadius: 12,
-        backgroundColor: '#fff',
+        backgroundColor: C.surface,
         justifyContent: 'center', alignItems: 'center', flexShrink: 0,
     },
     heroText: { flex: 1, gap: 3 },
-    heroRestaurant: { fontSize: 15, fontWeight: '700', color: '#fff' },
+    heroRestaurant: { fontSize: 15, fontWeight: '700', color: C.white },
     heroDate: { fontSize: 12, color: 'rgba(255,255,255,0.8)' },
     heroOrderId: { fontSize: 11, color: 'rgba(255,255,255,0.65)' },
     heroBadge: {
         flexDirection: 'row', alignItems: 'center', gap: 5,
-        backgroundColor: '#fff',
+        backgroundColor: C.surface,
         paddingHorizontal: 10, paddingVertical: 6,
         borderRadius: 20, flexShrink: 0,
     },
@@ -357,19 +359,19 @@ const styles = StyleSheet.create({
 
     body: {
         flex: 1,
-        backgroundColor: Colors.background,
+        backgroundColor: C.background,
         borderTopLeftRadius: 20,
         borderTopRightRadius: 20,
     },
     scrollContent: { padding: 16, gap: 16, paddingBottom: 40 },
 
     section: { gap: 8 },
-    sectionTitle: { fontSize: 14, fontWeight: '700', color: Colors.textSecondary, paddingLeft: 2, letterSpacing: 0.3 },
+    sectionTitle: { fontSize: 14, fontWeight: '700', color: C.textSecondary, paddingLeft: 2, letterSpacing: 0.3 },
 
     card: {
-        backgroundColor: Colors.white, borderRadius: 14,
+        backgroundColor: C.surface, borderRadius: 14,
         paddingHorizontal: 16, paddingVertical: 12,
-        elevation: 1, shadowColor: '#000',
+        elevation: 1, shadowColor: C.black,
         shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 4,
     },
 
@@ -378,45 +380,45 @@ const styles = StyleSheet.create({
         alignItems: 'center', paddingVertical: 10,
     },
     itemLeft: { flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 },
-    vegDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: Colors.success, flexShrink: 0 },
-    itemName: { fontSize: 14, color: Colors.textPrimary, flex: 1 },
+    vegDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: C.success, flexShrink: 0 },
+    itemName: { fontSize: 14, color: C.textPrimary, flex: 1 },
     itemRight: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-    itemQty: { fontSize: 13, color: Colors.textSecondary, width: 28, textAlign: 'center' },
-    itemPrice: { fontSize: 14, fontWeight: '600', color: Colors.textPrimary, width: 64, textAlign: 'right' },
-    divider: { height: 1, backgroundColor: Colors.border },
+    itemQty: { fontSize: 13, color: C.textSecondary, width: 28, textAlign: 'center' },
+    itemPrice: { fontSize: 14, fontWeight: '600', color: C.textPrimary, width: 64, textAlign: 'right' },
+    divider: { height: 1, backgroundColor: C.border },
 
     billRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 5 },
-    billLabel: { fontSize: 13, color: Colors.textSecondary },
-    billValue: { fontSize: 13, color: Colors.textPrimary },
-    discountValue: { color: '#27AE60', fontWeight: '600' },
-    billDivider: { height: 1, backgroundColor: Colors.border, marginVertical: 8 },
-    totalLabel: { fontSize: 15, fontWeight: '700', color: Colors.textPrimary },
+    billLabel: { fontSize: 13, color: C.textSecondary },
+    billValue: { fontSize: 13, color: C.textPrimary },
+    discountValue: { color: C.success, fontWeight: '600' },
+    billDivider: { height: 1, backgroundColor: C.border, marginVertical: 8 },
+    totalLabel: { fontSize: 15, fontWeight: '700', color: C.textPrimary },
     totalAmount: { fontSize: 17, fontWeight: '800' },
     paymentChip: {
         flexDirection: 'row', alignItems: 'center', gap: 5,
         alignSelf: 'flex-end', marginTop: 10,
-        backgroundColor: Colors.primaryLight,
+        backgroundColor: C.primaryLight,
         paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20,
     },
-    paymentChipText: { fontSize: 11, fontWeight: '700', color: Colors.primary },
+    paymentChipText: { fontSize: 11, fontWeight: '700', color: C.primary },
 
     cancelReasonCard: {
         flexDirection: 'row', alignItems: 'flex-start', gap: 10,
-        backgroundColor: '#FFF5F5', borderWidth: 1, borderColor: '#FADBD8',
+        backgroundColor: C.errorBg, borderWidth: 1, borderColor: C.errorBorder,
     },
-    cancelReasonText: { flex: 1, fontSize: 13, color: '#E53935', lineHeight: 20 },
+    cancelReasonText: { flex: 1, fontSize: 13, color: C.error, lineHeight: 20 },
 
     // ── Review navigation card (replaces inline ReviewCard) ──
     reviewNavCard: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        backgroundColor: Colors.white,
+        backgroundColor: C.surface,
         borderRadius: 14,
         paddingHorizontal: 16,
         paddingVertical: 16,
         elevation: 1,
-        shadowColor: '#000',
+        shadowColor: C.black,
         shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.05,
         shadowRadius: 4,
@@ -431,17 +433,17 @@ const styles = StyleSheet.create({
         width: 44,
         height: 44,
         borderRadius: 14,
-        backgroundColor: '#FFF8E1',
+        backgroundColor: C.warning + '20',
         justifyContent: 'center',
         alignItems: 'center',
     },
     reviewNavText: { flex: 1, gap: 2 },
-    reviewNavTitle: { fontSize: 15, fontWeight: '700', color: Colors.textPrimary },
-    reviewNavSub: { fontSize: 12, color: Colors.textSecondary },
+    reviewNavTitle: { fontSize: 15, fontWeight: '700', color: C.textPrimary },
+    reviewNavSub: { fontSize: 12, color: C.textSecondary },
 
     reorderBtn: {
         flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
         paddingVertical: 15, borderRadius: 14,
     },
-    reorderText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+    reorderText: { color: C.white, fontSize: 16, fontWeight: '700' },
 });

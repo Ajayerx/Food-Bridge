@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {View, ActivityIndicator, StyleSheet, Text} from 'react-native';
-import {Colors} from '../../constants/colors';
+import { useTheme } from '../../hooks/useTheme';
 
 export const Loader = ({fullScreen, size = 'large', text = 'Loading...'}) => {
+  const Colors = useTheme();
+  const styles = useMemo(() => createStyles(Colors), [Colors]);
   if (fullScreen) {
     return (
       <View style={styles.fullScreen}>
@@ -14,16 +16,16 @@ export const Loader = ({fullScreen, size = 'large', text = 'Loading...'}) => {
   return <ActivityIndicator size={size} color={Colors.primary} />;
 };
 
-const styles = StyleSheet.create({
+const createStyles = (C) => StyleSheet.create({
   fullScreen: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: Colors.background,
+    backgroundColor: C.background,
   },
   text: {
     marginTop: 12,
-    color: Colors.textSecondary,
+    color: C.textSecondary,
     fontSize: 16,
   },
 });

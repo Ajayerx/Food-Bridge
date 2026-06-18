@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
     View,
     Text,
@@ -12,127 +12,17 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import { Colors } from '../../constants/colors';
+import { useTheme } from '../../hooks/useTheme';
+import { useUserStore } from '../../store/userStore';
 import { formatCurrency } from '../../utils/formatCurrency';
 import api from '../../services/api/base';
 
-// ─── Coupon Card ──────────────────────────────────────────
-const CouponCard = ({ coupon, cartTotal, onApply, applying }) => {
-    const [expanded, setExpanded] = useState(false);
-
-    // BUG 7 FIX: expandAnim was animated from 0→1 but never connected to any style.
-    // The description was always fully visible regardless of expanded state.
-    // Fix: interpolate expandAnim to maxHeight so description actually collapses.
-    // useNativeDriver: false is required because maxHeight is a layout property.
-    const expandAnim = useRef(new Animated.Value(0)).current;
-    const maxHeightInterp = expandAnim.interpolate({
-        inputRange: [0, 1],
-        outputRange: [0, 200],  // 0 = collapsed, 200 = enough for ~8 lines of description
-    });
-
-    const isEligible = cartTotal >= (coupon.min_order_amount ?? 0);
-    const shortfall = isEligible ? 0 : (coupon.min_order_amount ?? 0) - cartTotal;
-
-    const discountLabel = coupon.coupon_type === 'Percentage'
-        ? `${coupon.discount_value}% OFF${coupon.max_discount_amount
-            ? ` (max ₹${coupon.max_discount_amount})`
-            : ''}`
-        : `₹${coupon.discount_value} OFF`;
-
-    const toggleExpand = () => {
-        const toValue = expanded ? 0 : 1;
-        setExpanded(!expanded);
-        Animated.timing(expandAnim, {
-            toValue,
-            duration: 220,
-            useNativeDriver: false,  // layout property — cannot use native driver
-        }).start();
-    };
-
-    return (
-        <View style={[styles.couponCard, !isEligible && styles.couponCardDisabled]}>
-            {/* Left ticket stub */}
-            <View style={[styles.couponStub, !isEligible && styles.couponStubDisabled]}>
-                <Text style={styles.couponStubText} numberOfLines={2}>
-                    {discountLabel}
-                </Text>
-                <View style={styles.stubNotchTop} />
-                <View style={styles.stubNotchBottom} />
-            </View>
-
-            {/* Right content */}
-            <View style={styles.couponContent}>
-                <View style={styles.couponTop}>
-                    <View style={{ flex: 1 }}>
-                        <Text style={[styles.couponCode, !isEligible && styles.textDisabled]}>
-                            {coupon.code}
-                        </Text>
-                        {!isEligible && shortfall > 0 ? (
-                            <Text style={styles.couponShortfall}>
-                                Add {formatCurrency(shortfall)} more to avail this offer
-                            </Text>
-                        ) : (
-                            <Text style={[styles.couponSummary, !isEligible && styles.textDisabled]}>
-                                {discountLabel}
-                            </Text>
-                        )}
-                    </View>
-
-                    <TouchableOpacity
-                        style={[styles.applyBtn, !isEligible && styles.applyBtnDisabled]}
-                        onPress={() => isEligible && onApply(coupon.code)}
-                        disabled={!isEligible || applying}
-                        activeOpacity={0.75}
-                    >
-                        {applying ? (
-                            <ActivityIndicator
-                                size="small"
-                                color={isEligible ? Colors.primary : Colors.textLight}
-                            />
-                        ) : (
-                            <Text style={[
-                                styles.applyBtnText,
-                                !isEligible && styles.applyBtnTextDisabled,
-                            ]}>
-                                APPLY
-                            </Text>
-                        )}
-                    </TouchableOpacity>
-                </View>
-
-                {(coupon.min_order_amount ?? 0) > 0 && (
-                    <Text style={[styles.couponMinOrder, !isEligible && styles.textDisabled]}>
-                        Min order: {formatCurrency(coupon.min_order_amount)}
-                    </Text>
-                )}
-
-                <View style={styles.couponDivider} />
-
-                {/* BUG 7 FIX: Wrap description in Animated.View with interpolated maxHeight */}
-                <TouchableOpacity onPress={toggleExpand} activeOpacity={0.7}>
-                    <Animated.View style={{ maxHeight: maxHeightInterp, overflow: 'hidden' }}>
-                        <Text style={styles.couponDescription}>
-                            Use code {coupon.code} & get {discountLabel}
-                            {(coupon.min_order_amount ?? 0) > 0
-                                ? ` on orders above ₹${coupon.min_order_amount}`
-                                : ''}.
-                            {coupon.max_discount_amount
-                                ? ` Maximum discount: ₹${coupon.max_discount_amount}.`
-                                : ''}
-                        </Text>
-                    </Animated.View>
-                </TouchableOpacity>
-
-                <TouchableOpacity onPress={toggleExpand} activeOpacity={0.7}>
-                    <Text style={styles.moreText}>{expanded ? '- LESS' : '+ MORE'}</Text>
-                </TouchableOpacity>
-            </View>
-        </View>
-    );
-};
-
 // ─── Main Screen ──────────────────────────────────────────
 export const CouponScreen = ({ route, navigation }) => {
+    const Colors = useTheme();
+    const darkMode = useUserStore(s => s.darkMode);
+    const styles = useMemo(() => createStyles(Colors), [Colors]);
+
     const { restaurantId, cartTotal, onCouponApplied } = route.params;
 
     const [coupons, setCoupons] = useState([]);
@@ -256,13 +146,120 @@ export const CouponScreen = ({ route, navigation }) => {
         }
     };
 
+    const CouponCard = ({ coupon, cartTotal, onApply, applying }) => {
+        const [expanded, setExpanded] = useState(false);
+
+        const expandAnim = useRef(new Animated.Value(0)).current;
+        const maxHeightInterp = expandAnim.interpolate({
+            inputRange: [0, 1],
+            outputRange: [0, 200],
+        });
+
+        const isEligible = cartTotal >= (coupon.min_order_amount ?? 0);
+        const shortfall = isEligible ? 0 : (coupon.min_order_amount ?? 0) - cartTotal;
+
+        const discountLabel = coupon.coupon_type === 'Percentage'
+            ? `${coupon.discount_value}% OFF${coupon.max_discount_amount
+                ? ` (max ₹${coupon.max_discount_amount})`
+                : ''}`
+            : `₹${coupon.discount_value} OFF`;
+
+        const toggleExpand = () => {
+            const toValue = expanded ? 0 : 1;
+            setExpanded(!expanded);
+            Animated.timing(expandAnim, {
+                toValue,
+                duration: 220,
+                useNativeDriver: false,
+            }).start();
+        };
+
+        return (
+            <View style={[styles.couponCard, !isEligible && styles.couponCardDisabled]}>
+                <View style={[styles.couponStub, !isEligible && styles.couponStubDisabled]}>
+                    <Text style={styles.couponStubText} numberOfLines={2}>
+                        {discountLabel}
+                    </Text>
+                    <View style={styles.stubNotchTop} />
+                    <View style={styles.stubNotchBottom} />
+                </View>
+
+                <View style={styles.couponContent}>
+                    <View style={styles.couponTop}>
+                        <View style={{ flex: 1 }}>
+                            <Text style={[styles.couponCode, !isEligible && styles.textDisabled]}>
+                                {coupon.code}
+                            </Text>
+                            {!isEligible && shortfall > 0 ? (
+                                <Text style={styles.couponShortfall}>
+                                    Add {formatCurrency(shortfall)} more to avail this offer
+                                </Text>
+                            ) : (
+                                <Text style={[styles.couponSummary, !isEligible && styles.textDisabled]}>
+                                    {discountLabel}
+                                </Text>
+                            )}
+                        </View>
+
+                        <TouchableOpacity
+                            style={[styles.applyBtn, !isEligible && styles.applyBtnDisabled]}
+                            onPress={() => isEligible && onApply(coupon.code)}
+                            disabled={!isEligible || applying}
+                            activeOpacity={0.75}
+                        >
+                            {applying ? (
+                                <ActivityIndicator
+                                    size="small"
+                                    color={isEligible ? Colors.primary : Colors.textLight}
+                                />
+                            ) : (
+                                <Text style={[
+                                    styles.applyBtnText,
+                                    !isEligible && styles.applyBtnTextDisabled,
+                                ]}>
+                                    APPLY
+                                </Text>
+                            )}
+                        </TouchableOpacity>
+                    </View>
+
+                    {(coupon.min_order_amount ?? 0) > 0 && (
+                        <Text style={[styles.couponMinOrder, !isEligible && styles.textDisabled]}>
+                            Min order: {formatCurrency(coupon.min_order_amount)}
+                        </Text>
+                    )}
+
+                    <View style={styles.couponDivider} />
+
+                    <TouchableOpacity onPress={toggleExpand} activeOpacity={0.7}>
+                        <Animated.View style={{ maxHeight: maxHeightInterp, overflow: 'hidden' }}>
+                            <Text style={styles.couponDescription}>
+                                Use code {coupon.code} & get {discountLabel}
+                                {(coupon.min_order_amount ?? 0) > 0
+                                    ? ` on orders above ₹${coupon.min_order_amount}`
+                                    : ''}.
+                                {coupon.max_discount_amount
+                                    ? ` Maximum discount: ₹${coupon.max_discount_amount}.`
+                                    : ''}
+                            </Text>
+                        </Animated.View>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity onPress={toggleExpand} activeOpacity={0.7}>
+                        <Text style={styles.moreText}>{expanded ? '- LESS' : '+ MORE'}</Text>
+                    </TouchableOpacity>
+                </View>
+            </View>
+        );
+    };
+
     const eligibleCoupons = coupons.filter(c => cartTotal >= (c.min_order_amount ?? 0));
     const ineligibleCoupons = coupons.filter(c => cartTotal < (c.min_order_amount ?? 0));
     const sortedCoupons = [...eligibleCoupons, ...ineligibleCoupons];
 
     return (
         <SafeAreaView style={styles.container} edges={['top']}>
-            <StatusBar backgroundColor={Colors.white} barStyle="dark-content" />
+            <StatusBar backgroundColor={Colors.surface} barStyle={darkMode ? 'light-content' : 'dark-content'} />
 
             {/* Header */}
             <View style={styles.header}>
@@ -365,88 +362,88 @@ export const CouponScreen = ({ route, navigation }) => {
     );
 };
 
-const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#F5F5F5' },
+const createStyles = (C) => StyleSheet.create({
+    container: { flex: 1, backgroundColor: C.background },
 
     // Header
     header: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        backgroundColor: Colors.white,
+        backgroundColor: C.surface,
         paddingHorizontal: 16,
         paddingVertical: 14,
         borderBottomWidth: 1,
-        borderBottomColor: Colors.border,
+        borderBottomColor: C.border,
         elevation: 2,
     },
     backBtn: { padding: 4 },
-    headerTitle: { fontSize: 15, fontWeight: '900', color: Colors.textPrimary, letterSpacing: 0.5 },
-    headerSub: { fontSize: 12, color: Colors.textSecondary, marginTop: 1 },
+    headerTitle: { fontSize: 15, fontWeight: '900', color: C.textPrimary, letterSpacing: 0.5 },
+    headerSub: { fontSize: 12, color: C.textSecondary, marginTop: 1 },
 
     // Input
     inputSection: {
-        backgroundColor: Colors.white,
+        backgroundColor: C.surface,
         paddingHorizontal: 16,
         paddingVertical: 14,
         borderBottomWidth: 1,
-        borderBottomColor: Colors.border,
+        borderBottomColor: C.border,
         marginBottom: 8,
     },
     inputRow: {
         flexDirection: 'row',
         alignItems: 'center',
         borderWidth: 1.5,
-        borderColor: Colors.border,
+        borderColor: C.border,
         borderRadius: 12,
         overflow: 'hidden',
-        backgroundColor: Colors.white,
+        backgroundColor: C.surface,
     },
-    inputRowError: { borderColor: Colors.error },
+    inputRowError: { borderColor: C.error },
     input: {
         flex: 1,
         paddingHorizontal: 14,
         paddingVertical: 13,
         fontSize: 14,
         fontWeight: '600',
-        color: Colors.textPrimary,
+        color: C.textPrimary,
         letterSpacing: 1,
     },
     inputApplyBtn: {
         paddingHorizontal: 18,
         paddingVertical: 13,
         borderLeftWidth: 1,
-        borderLeftColor: Colors.border,
+        borderLeftColor: C.border,
     },
     inputApplyBtnDisabled: { opacity: 0.4 },
-    inputApplyText: { fontSize: 13, fontWeight: '800', color: Colors.primary },
-    inputApplyTextDisabled: { color: Colors.textLight },
+    inputApplyText: { fontSize: 13, fontWeight: '800', color: C.primary },
+    inputApplyTextDisabled: { color: C.textLight },
     errorRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 8 },
-    errorText: { fontSize: 12, color: Colors.error, flex: 1 },
+    errorText: { fontSize: 12, color: C.error, flex: 1 },
 
     // Loading / Empty
     loadingBox: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },
-    loadingText: { fontSize: 14, color: Colors.textSecondary },
+    loadingText: { fontSize: 14, color: C.textSecondary },
     emptyBox: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 10 },
     emptyEmoji: { fontSize: 52 },
-    emptyTitle: { fontSize: 18, fontWeight: '700', color: Colors.textPrimary },
-    emptySub: { fontSize: 13, color: Colors.textSecondary, textAlign: 'center', paddingHorizontal: 32 },
+    emptyTitle: { fontSize: 18, fontWeight: '700', color: C.textPrimary },
+    emptySub: { fontSize: 13, color: C.textSecondary, textAlign: 'center', paddingHorizontal: 32 },
     retryBtn: {
         marginTop: 8,
         paddingHorizontal: 24,
         paddingVertical: 10,
         borderRadius: 8,
         borderWidth: 1.5,
-        borderColor: Colors.primary,
+        borderColor: C.primary,
     },
-    retryBtnText: { fontSize: 14, fontWeight: '700', color: Colors.primary },
+    retryBtnText: { fontSize: 14, fontWeight: '700', color: C.primary },
 
     // List
     listContent: { padding: 16, paddingBottom: 40 },
     listTitle: {
         fontSize: 13,
         fontWeight: '700',
-        color: Colors.textSecondary,
+        color: C.textSecondary,
         textTransform: 'uppercase',
         letterSpacing: 0.8,
         marginBottom: 12,
@@ -455,11 +452,11 @@ const styles = StyleSheet.create({
     // Coupon Card
     couponCard: {
         flexDirection: 'row',
-        backgroundColor: Colors.white,
+        backgroundColor: C.surface,
         borderRadius: 14,
         overflow: 'hidden',
         elevation: 2,
-        shadowColor: '#000',
+        shadowColor: C.black,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.06,
         shadowRadius: 6,
@@ -469,15 +466,15 @@ const styles = StyleSheet.create({
     // Ticket stub (left side)
     couponStub: {
         width: 72,
-        backgroundColor: Colors.primary,
+        backgroundColor: C.primary,
         justifyContent: 'center',
         alignItems: 'center',
         padding: 10,
         position: 'relative',
     },
-    couponStubDisabled: { backgroundColor: '#BDBDBD' },
+    couponStubDisabled: { backgroundColor: C.borderDark },
     couponStubText: {
-        color: Colors.white,
+        color: C.white,
         fontWeight: '900',
         fontSize: 13,
         textAlign: 'center',
@@ -491,7 +488,7 @@ const styles = StyleSheet.create({
         width: 20,
         height: 20,
         borderRadius: 10,
-        backgroundColor: '#F5F5F5',
+        backgroundColor: C.background,
     },
     stubNotchBottom: {
         position: 'absolute',
@@ -500,27 +497,27 @@ const styles = StyleSheet.create({
         width: 20,
         height: 20,
         borderRadius: 10,
-        backgroundColor: '#F5F5F5',
+        backgroundColor: C.background,
     },
 
     // Card content
     couponContent: { flex: 1, padding: 14, gap: 4 },
     couponTop: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
-    couponCode: { fontSize: 15, fontWeight: '800', color: Colors.textPrimary, letterSpacing: 0.5 },
-    couponSummary: { fontSize: 12, color: Colors.textSecondary, marginTop: 2 },
-    couponShortfall: { fontSize: 12, color: Colors.primary, fontWeight: '600', marginTop: 2 },
-    couponMinOrder: { fontSize: 11, color: Colors.textLight },
+    couponCode: { fontSize: 15, fontWeight: '800', color: C.textPrimary, letterSpacing: 0.5 },
+    couponSummary: { fontSize: 12, color: C.textSecondary, marginTop: 2 },
+    couponShortfall: { fontSize: 12, color: C.primary, fontWeight: '600', marginTop: 2 },
+    couponMinOrder: { fontSize: 11, color: C.textLight },
     couponDivider: {
         height: 1,
         borderWidth: 1,
-        borderColor: Colors.border,
+        borderColor: C.border,
         borderStyle: 'dashed',
         marginVertical: 8,
     },
-    couponDescription: { fontSize: 12, color: Colors.textSecondary, lineHeight: 18 },
+    couponDescription: { fontSize: 12, color: C.textSecondary, lineHeight: 18 },
     moreRow: { flexDirection: 'row' },
-    moreText: { fontSize: 12, fontWeight: '700', color: Colors.primary, marginTop: 4 },
-    textDisabled: { color: Colors.textLight },
+    moreText: { fontSize: 12, fontWeight: '700', color: C.primary, marginTop: 4 },
+    textDisabled: { color: C.textLight },
 
     // Apply button inside card
     applyBtn: {
@@ -528,11 +525,11 @@ const styles = StyleSheet.create({
         paddingVertical: 6,
         borderRadius: 6,
         borderWidth: 1.5,
-        borderColor: Colors.primary,
+        borderColor: C.primary,
         minWidth: 64,
         alignItems: 'center',
     },
-    applyBtnDisabled: { borderColor: Colors.border },
-    applyBtnText: { fontSize: 12, fontWeight: '800', color: Colors.primary },
-    applyBtnTextDisabled: { color: Colors.textLight },
+    applyBtnDisabled: { borderColor: C.border },
+    applyBtnText: { fontSize: 12, fontWeight: '800', color: C.primary },
+    applyBtnTextDisabled: { color: C.textLight },
 });

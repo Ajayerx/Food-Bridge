@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import {
   View,
   Text,
@@ -15,7 +15,8 @@ import {
 } from "react-native";
 import Geolocation from "react-native-geolocation-service";
 import { useAddressStore } from "../../store/addressStore";
-import { Colors } from "../../constants/colors";
+import { useTheme } from '../../hooks/useTheme';
+import { useUserStore } from '../../store/userStore';
 import Icon from "react-native-vector-icons/MaterialIcons";
 import {
   reverseGeocode,
@@ -87,6 +88,10 @@ export const AddAddressScreen = ({ navigation, route }) => {
 
   const [errors, setErrors] = useState({});
   const [highlightedFields, setHighlightedFields] = useState({});
+
+  const Colors = useTheme();
+  const darkMode = useUserStore(s => s.darkMode);
+  const styles = useMemo(() => createStyles(Colors), [Colors]);
 
   useEffect(() => {
     if (!prefillData) return;
@@ -360,7 +365,7 @@ export const AddAddressScreen = ({ navigation, route }) => {
 
   return (
     <View style={styles.root}>
-      <StatusBar backgroundColor={Colors.white} barStyle="dark-content" />
+      <StatusBar backgroundColor={Colors.surface} barStyle={darkMode ? 'light-content' : 'dark-content'} />
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <Icon name="arrow-back-ios" size={20} color={Colors.textPrimary} />
@@ -409,7 +414,7 @@ export const AddAddressScreen = ({ navigation, route }) => {
 
         {latitude === 0 && longitude === 0 && (
           <View style={styles.coordHint}>
-            <Icon name="info" size={16} color="#1565C0" />
+            <Icon name="info" size={16} color={Colors.info} />
             <Text style={styles.coordHintText}>
               Tap 'Use Current Location' above to set your exact location for better delivery accuracy
             </Text>
@@ -807,8 +812,8 @@ export const AddAddressScreen = ({ navigation, route }) => {
   );
 };
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: Colors.white },
+const createStyles = (C) => StyleSheet.create({
+  root: { flex: 1, backgroundColor: C.surface },
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -816,19 +821,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-    backgroundColor: Colors.white,
+    borderBottomColor: C.border,
+    backgroundColor: C.surface,
   },
   backBtn: {
     width: 36,
     height: 36,
     borderRadius: 10,
-    backgroundColor: Colors.background,
+    backgroundColor: C.background,
     justifyContent: "center",
     alignItems: "center",
   },
-  headerTitle: { fontSize: 17, fontWeight: "700", color: Colors.textPrimary },
-  container: { flex: 1, backgroundColor: Colors.background },
+  headerTitle: { fontSize: 17, fontWeight: "700", color: C.textPrimary },
+  container: { flex: 1, backgroundColor: C.background },
   content: { padding: 20, paddingBottom: 40 },
 
   // GPS Button
@@ -837,59 +842,59 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    backgroundColor: Colors.primaryLight,
+    backgroundColor: C.primaryLight,
     paddingVertical: 14,
     borderRadius: 12,
     marginBottom: 12,
   },
-  gpsBtnText: { fontSize: 14, fontWeight: "700", color: Colors.primary },
+  gpsBtnText: { fontSize: 14, fontWeight: "700", color: C.primary },
   pickOnMapBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
     borderWidth: 1.5,
-    borderColor: Colors.primary,
+    borderColor: C.primary,
     borderStyle: 'dashed',
     paddingVertical: 10,
     borderRadius: 10,
     marginBottom: 12,
-    backgroundColor: Colors.primaryLight,
+    backgroundColor: C.primaryLight,
   },
   pickOnMapText: {
     fontSize: 13,
     fontWeight: '600',
-    color: Colors.primary,
+    color: C.primary,
   },
 
   // Search
   searchBox: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: Colors.white,
+    backgroundColor: C.surface,
     borderRadius: 12,
     paddingHorizontal: 14,
     height: 48,
     gap: 10,
     marginBottom: 4,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: C.border,
   },
-  searchError: { borderColor: Colors.error },
+  searchError: { borderColor: C.error },
   searchInput: {
     flex: 1,
     fontSize: 16,
-    color: Colors.textPrimary,
+    color: C.textPrimary,
     paddingVertical: 0,
   },
   clearBtn: { padding: 4 },
 
   // Suggestions
   suggestionContainer: {
-    backgroundColor: Colors.white,
+    backgroundColor: C.surface,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: C.border,
     marginBottom: 16,
     overflow: "hidden",
   },
@@ -900,15 +905,15 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 14,
   },
-  suggestionBorder: { borderBottomWidth: 1, borderBottomColor: Colors.border },
+  suggestionBorder: { borderBottomWidth: 1, borderBottomColor: C.border },
   suggestionContent: { flex: 1 },
-  suggestionText: { fontSize: 13, color: Colors.textSecondary, lineHeight: 18 },
+  suggestionText: { fontSize: 13, color: C.textSecondary, lineHeight: 18 },
 
   // Label Selector
   sectionTitle: {
     fontSize: 14,
     fontWeight: "700",
-    color: Colors.textPrimary,
+    color: C.textPrimary,
     marginBottom: 12,
   },
   labelRow: { flexDirection: "row", gap: 10, marginBottom: 16 },
@@ -917,38 +922,38 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 6,
     borderWidth: 1.5,
-    borderColor: Colors.border,
+    borderColor: C.border,
     paddingVertical: 8,
     paddingHorizontal: 14,
     borderRadius: 20,
-    backgroundColor: Colors.white,
+    backgroundColor: C.surface,
   },
-  labelSelected: { backgroundColor: Colors.primary, borderColor: Colors.primary },
-  labelText: { color: Colors.textSecondary, fontSize: 13, fontWeight: "600" },
-  labelTextSelected: { color: Colors.white },
+  labelSelected: { backgroundColor: C.primary, borderColor: C.primary },
+  labelText: { color: C.textSecondary, fontSize: 13, fontWeight: "600" },
+  labelTextSelected: { color: C.white },
 
   // Input Fields
   inputLabel: {
     fontSize: 13,
     fontWeight: "600",
-    color: Colors.textPrimary,
+    color: C.textPrimary,
     marginBottom: 6,
   },
-  required: { color: Colors.error },
-  optional: { color: Colors.textLight, fontWeight: "400" },
+  required: { color: C.error },
+  optional: { color: C.textLight, fontWeight: "400" },
   input: {
-    backgroundColor: Colors.white,
+    backgroundColor: C.surface,
     padding: 14,
     borderRadius: 12,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: C.border,
     fontSize: 16,
-    color: Colors.textPrimary,
+    color: C.textPrimary,
     minHeight: 48,
   },
-  inputError: { borderColor: Colors.error },
-  highlighted: { borderColor: Colors.warning, backgroundColor: "#FFFDE7" },
+  inputError: { borderColor: C.error },
+  highlighted: { borderColor: C.warning, backgroundColor: C.warning + '20' },
   row: { flexDirection: "row", gap: 12 },
   rowHalf: { flex: 1 },
 
@@ -957,11 +962,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "flex-start",
     gap: 12,
-    backgroundColor: Colors.white,
+    backgroundColor: C.surface,
     padding: 14,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: C.border,
     marginBottom: 24,
   },
   checkbox: {
@@ -969,18 +974,18 @@ const styles = StyleSheet.create({
     height: 22,
     borderRadius: 6,
     borderWidth: 2,
-    borderColor: Colors.border,
+    borderColor: C.border,
     justifyContent: "center",
     alignItems: "center",
     marginTop: 1,
   },
-  checkboxChecked: { backgroundColor: Colors.primary, borderColor: Colors.primary },
-  defaultLabel: { fontSize: 14, fontWeight: "600", color: Colors.textPrimary },
-  defaultSub: { fontSize: 12, color: Colors.textLight, marginTop: 2 },
+  checkboxChecked: { backgroundColor: C.primary, borderColor: C.primary },
+  defaultLabel: { fontSize: 14, fontWeight: "600", color: C.textPrimary },
+  defaultSub: { fontSize: 12, color: C.textLight, marginTop: 2 },
 
   // Save Button
   saveBtn: {
-    backgroundColor: Colors.primary,
+    backgroundColor: C.primary,
     padding: 16,
     borderRadius: 14,
     alignItems: "center",
@@ -990,14 +995,14 @@ const styles = StyleSheet.create({
     minHeight: 52,
   },
   saveBtnDisabled: { opacity: 0.6 },
-  saveText: { color: Colors.white, fontWeight: "700", fontSize: 16 },
+  saveText: { color: C.white, fontWeight: "700", fontSize: 16 },
 
   // Coordinate hint
   coordHint: {
     flexDirection: "row",
     alignItems: "flex-start",
     gap: 8,
-    backgroundColor: "#E3F2FD",
+    backgroundColor: C.infoBoxBg,
     padding: 12,
     borderRadius: 10,
     marginBottom: 12,
@@ -1005,19 +1010,19 @@ const styles = StyleSheet.create({
   coordHintText: {
     flex: 1,
     fontSize: 12,
-    color: "#1565C0",
+    color: C.infoBoxText,
     lineHeight: 17,
   },
 
   // Error Text
   errorText: {
-    color: Colors.error,
+    color: C.error,
     fontSize: 12,
     marginBottom: 12,
     marginLeft: 4,
   },
   fieldError: {
-    color: Colors.error,
+    color: C.error,
     fontSize: 12,
     marginTop: -12,
     marginBottom: 12,

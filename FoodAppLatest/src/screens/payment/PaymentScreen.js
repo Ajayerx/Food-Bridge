@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import {
     View,
     Text,
@@ -7,10 +7,13 @@ import {
     StyleSheet
 } from "react-native";
 import Icon from "react-native-vector-icons/MaterialIcons";
-import { Colors } from "../../constants/colors";
+import { useTheme } from "../../hooks/useTheme";
 import { useOrderStore } from "../../store/orderStore";
 
 const PaymentScreen = ({ navigation }) => {
+
+    const Colors = useTheme();
+    const styles = useMemo(() => createStyles(Colors), [Colors]);
 
     const { paymentMethods } = useOrderStore();
 
@@ -72,11 +75,12 @@ const PaymentScreen = ({ navigation }) => {
 };
 
 export default PaymentScreen;
-const styles = StyleSheet.create({
+
+const createStyles = C => StyleSheet.create({
 
     container: {
         flex: 1,
-        backgroundColor: Colors.background,
+        backgroundColor: C.background,
         padding: 16
     },
 
@@ -85,7 +89,7 @@ const styles = StyleSheet.create({
         fontWeight: "700",
         marginTop: 20,
         marginBottom: 8,
-        color: Colors.textLight
+        color: C.textLight
     },
 
     card: {
@@ -93,7 +97,7 @@ const styles = StyleSheet.create({
         alignItems: "center",
         padding: 14,
         borderRadius: 12,
-        backgroundColor: Colors.white,
+        backgroundColor: C.surface,
         marginBottom: 10,
         gap: 10
     },
@@ -105,7 +109,7 @@ const styles = StyleSheet.create({
 
     subtitle: {
         fontSize: 12,
-        color: Colors.textLight
+        color: C.textLight
     }
 
 });

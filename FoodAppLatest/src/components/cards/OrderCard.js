@@ -1,47 +1,51 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { Colors } from '../../constants/colors';
+import { useTheme } from '../../hooks/useTheme';
 import { formatCurrency } from '../../utils/formatCurrency';
 
-const STATUS_COLORS = {
-  Placed: Colors.primary,
-  Accepted: Colors.secondary,
+const STATUS_COLORS_MAP = {
+  Placed: '#22C55E',
+  Accepted: '#F59E0B',
   Preparing: '#F39C12',
-  'Out for Delivery': Colors.primary,
-  Delivered: Colors.success,
-  Cancelled: Colors.error,
+  'Out for Delivery': '#22C55E',
+  Delivered: '#22C55E',
+  Cancelled: '#EF4444',
 };
 
-export const OrderCard = ({ order, onReorder, onTrack }) => (
-  <View style={styles.card}>
-    <View style={styles.header}>
-      <Text style={styles.restaurantName}>{order.restaurantName}</Text>
-      <View style={[styles.statusBadge, { backgroundColor: STATUS_COLORS[order.status] || Colors.textLight }]}>
-        <Text style={styles.statusText}>{order.status}</Text>
+export const OrderCard = ({ order, onReorder, onTrack }) => {
+  const Colors = useTheme();
+  const styles = useMemo(() => createStyles(Colors), [Colors]);
+  return (
+    <View style={styles.card}>
+      <View style={styles.header}>
+        <Text style={styles.restaurantName}>{order.restaurantName}</Text>
+        <View style={[styles.statusBadge, { backgroundColor: STATUS_COLORS_MAP[order.status] || Colors.textLight }]}>
+          <Text style={styles.statusText}>{order.status}</Text>
+        </View>
       </View>
-    </View>
-    <Text style={styles.items} numberOfLines={1}>
-      {order.items?.map(i => i.name).filter(Boolean).join(', ') || 'Items not available'}
-    </Text>
-    <View style={styles.footer}>
-      <Text style={styles.total}>{formatCurrency(order.total)}</Text>
-      <View style={styles.actions}>
-        {order.status !== 'Delivered' && order.status !== 'Cancelled' && (
-          <TouchableOpacity style={styles.trackBtn} onPress={onTrack}>
-            <Text style={styles.trackBtnText}>Track</Text>
+      <Text style={styles.items} numberOfLines={1}>
+        {order.items?.map(i => i.name).filter(Boolean).join(', ') || 'Items not available'}
+      </Text>
+      <View style={styles.footer}>
+        <Text style={styles.total}>{formatCurrency(order.total)}</Text>
+        <View style={styles.actions}>
+          {order.status !== 'Delivered' && order.status !== 'Cancelled' && (
+            <TouchableOpacity style={styles.trackBtn} onPress={onTrack}>
+              <Text style={styles.trackBtnText}>Track</Text>
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity style={styles.reorderBtn} onPress={onReorder}>
+            <Text style={styles.reorderBtnText}>Reorder</Text>
           </TouchableOpacity>
-        )}
-        <TouchableOpacity style={styles.reorderBtn} onPress={onReorder}>
-          <Text style={styles.reorderBtnText}>Reorder</Text>
-        </TouchableOpacity>
+        </View>
       </View>
     </View>
-  </View>
-);
+  );
+};
 
-const styles = StyleSheet.create({
+const createStyles = (C) => StyleSheet.create({
   card: {
-    backgroundColor: Colors.white,
+    backgroundColor: C.surface,
     borderRadius: 16,
     padding: 16,
     marginBottom: 12,
@@ -55,7 +59,7 @@ const styles = StyleSheet.create({
   restaurantName: {
     fontSize: 16,
     fontWeight: '700',
-    color: Colors.textPrimary,
+    color: C.textPrimary,
     flex: 1,
   },
   statusBadge: {
@@ -64,13 +68,13 @@ const styles = StyleSheet.create({
     borderRadius: 99,
   },
   statusText: {
-    color: Colors.white,
+    color: C.white,
     fontSize: 11,
     fontWeight: '600',
   },
   items: {
     fontSize: 13,
-    color: Colors.textSecondary,
+    color: C.textSecondary,
     marginBottom: 12,
   },
   footer: {
@@ -81,14 +85,14 @@ const styles = StyleSheet.create({
   total: {
     fontSize: 16,
     fontWeight: '700',
-    color: Colors.textPrimary,
+    color: C.textPrimary,
   },
   actions: {
     flexDirection: 'row',
     gap: 10,
   },
   trackBtn: {
-    backgroundColor: Colors.primaryLight,
+    backgroundColor: C.primaryLight,
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 8,
@@ -96,10 +100,10 @@ const styles = StyleSheet.create({
   trackBtnText: {
     fontSize: 13,
     fontWeight: '600',
-    color: Colors.primary,
+    color: C.primary,
   },
   reorderBtn: {
-    backgroundColor: Colors.primary,
+    backgroundColor: C.primary,
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 8,
@@ -107,6 +111,6 @@ const styles = StyleSheet.create({
   reorderBtnText: {
     fontSize: 13,
     fontWeight: '600',
-    color: Colors.white,
+    color: C.white,
   },
 });

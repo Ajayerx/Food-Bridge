@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -13,7 +13,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import { Colors } from '../../constants/colors';
+import { useTheme } from '../../hooks/useTheme';
+import { useUserStore } from '../../store/userStore';
 import { Button } from '../../components/common/Button';
 import { CartItemCard } from '../../components/cards/CartItemCard';
 import { Divider } from '../../components/common/Divider';
@@ -23,78 +24,6 @@ import { useCart } from '../../hooks/useCart';
 import { useAutoCoupon } from '../../hooks/useAutoCoupon';
 import { APP_CONFIG } from '../../constants/config';
 import api from '../../services/api/base';
-
-// ─── Bill Row ─────────────────────────────────────────────
-const BillRow = ({ label, value, highlight, strike, green, icon }) => (
-  <View style={styles.billRow}>
-    <View style={styles.billLabelRow}>
-      {icon && <Icon name={icon} size={14} color={Colors.textLight} style={{ marginRight: 5 }} />}
-      <Text style={[styles.billLabel, highlight && styles.billLabelBold]}>
-        {label}
-      </Text>
-    </View>
-    <Text style={[
-      styles.billValue,
-      highlight && styles.billValueBold,
-      green && styles.billValueGreen,
-      strike && styles.billValueStrike,
-    ]}>
-      {value}
-    </Text>
-  </View>
-);
-
-// ─── Auto Coupon Banner ───────────────────────────────────
-const AutoCouponBanner = ({ message, visible }) => {
-  const slideAnim = useRef(new Animated.Value(-60)).current;
-  const opacityAnim = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    if (visible) {
-      Animated.parallel([
-        Animated.spring(slideAnim, {
-          toValue: 0,
-          useNativeDriver: true,
-          tension: 80,
-          friction: 10,
-        }),
-        Animated.timing(opacityAnim, {
-          toValue: 1,
-          duration: 250,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    } else {
-      Animated.parallel([
-        Animated.timing(slideAnim, {
-          toValue: -60,
-          duration: 200,
-          useNativeDriver: true,
-        }),
-        Animated.timing(opacityAnim, {
-          toValue: 0,
-          duration: 200,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    }
-  }, [visible]);
-
-  return (
-    <Animated.View
-      style={[
-        styles.autoBanner,
-        { transform: [{ translateY: slideAnim }], opacity: opacityAnim },
-      ]}
-      pointerEvents="none"
-    >
-      <Icon name="auto-awesome" size={14} color={Colors.white} />
-      <Text style={styles.autoBannerText} numberOfLines={1}>
-        {message}
-      </Text>
-    </Animated.View>
-  );
-};
 
 // ─── Main Screen ──────────────────────────────────────────
 export const CartScreen = ({ navigation }) => {
@@ -259,11 +188,85 @@ export const CartScreen = ({ navigation }) => {
     });
   };
 
+  const Colors = useTheme();
+  const darkMode = useUserStore(s => s.darkMode);
+  const styles = useMemo(() => createStyles(Colors), [Colors]);
+
+  const BillRow = ({ label, value, highlight, strike, green, icon }) => (
+    <View style={styles.billRow}>
+      <View style={styles.billLabelRow}>
+        {icon && <Icon name={icon} size={14} color={Colors.textLight} style={{ marginRight: 5 }} />}
+        <Text style={[styles.billLabel, highlight && styles.billLabelBold]}>
+          {label}
+        </Text>
+      </View>
+      <Text style={[
+        styles.billValue,
+        highlight && styles.billValueBold,
+        green && styles.billValueGreen,
+        strike && styles.billValueStrike,
+      ]}>
+        {value}
+      </Text>
+    </View>
+  );
+
+  const AutoCouponBanner = ({ message, visible }) => {
+    const slideAnim = useRef(new Animated.Value(-60)).current;
+    const opacityAnim = useRef(new Animated.Value(0)).current;
+
+    useEffect(() => {
+      if (visible) {
+        Animated.parallel([
+          Animated.spring(slideAnim, {
+            toValue: 0,
+            useNativeDriver: true,
+            tension: 80,
+            friction: 10,
+          }),
+          Animated.timing(opacityAnim, {
+            toValue: 1,
+            duration: 250,
+            useNativeDriver: true,
+          }),
+        ]).start();
+      } else {
+        Animated.parallel([
+          Animated.timing(slideAnim, {
+            toValue: -60,
+            duration: 200,
+            useNativeDriver: true,
+          }),
+          Animated.timing(opacityAnim, {
+            toValue: 0,
+            duration: 200,
+            useNativeDriver: true,
+          }),
+        ]).start();
+      }
+    }, [visible]);
+
+    return (
+      <Animated.View
+        style={[
+          styles.autoBanner,
+          { transform: [{ translateY: slideAnim }], opacity: opacityAnim },
+        ]}
+        pointerEvents="none"
+      >
+        <Icon name="auto-awesome" size={14} color={Colors.white} />
+        <Text style={styles.autoBannerText} numberOfLines={1}>
+          {message}
+        </Text>
+      </Animated.View>
+    );
+  };
+
   // ── Empty State ───────────────────────────────────────────────────────────
   if (items.length === 0) {
     return (
       <SafeAreaView style={styles.container}>
-        <StatusBar backgroundColor={Colors.white} barStyle="dark-content" />
+        <StatusBar backgroundColor={Colors.surface} barStyle={darkMode ? 'light-content' : 'dark-content'} />
         <EmptyState
           emoji="🛒"
           title="Your cart is empty"
@@ -277,7 +280,7 @@ export const CartScreen = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <StatusBar backgroundColor={Colors.white} barStyle="dark-content" />
+      <StatusBar backgroundColor={Colors.surface} barStyle={darkMode ? 'light-content' : 'dark-content'} />
 
       {/* ── Auto-apply banner (overlays header briefly) ── */}
       <AutoCouponBanner message={autoMessage} visible={showBanner} />
@@ -584,8 +587,8 @@ export const CartScreen = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
+const createStyles = (C) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: C.background },
 
   // ── Auto banner ──
   autoBanner: {
@@ -597,13 +600,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: Colors.success,
+    backgroundColor: C.success,
     paddingHorizontal: 16,
     paddingVertical: 10,
     elevation: 999,
   },
   autoBannerText: {
-    color: Colors.white,
+    color: C.white,
     fontSize: 13,
     fontWeight: '700',
     flex: 1,
@@ -614,20 +617,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: Colors.white,
+    backgroundColor: C.surface,
     paddingHorizontal: 16,
     paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    borderBottomColor: C.border,
     elevation: 2,
   },
   backBtn: { padding: 4 },
-  headerTitle: { fontSize: 18, fontWeight: '800', color: Colors.textPrimary },
+  headerTitle: { fontSize: 18, fontWeight: '800', color: C.textPrimary },
   scrollContent: { paddingBottom: 24 },
 
   // ── Section ──
   section: {
-    backgroundColor: Colors.white,
+    backgroundColor: C.surface,
     padding: 16,
     marginBottom: 8,
   },
@@ -640,21 +643,21 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: Colors.textPrimary,
+    color: C.textPrimary,
     marginBottom: 14,
   },
-  restName: { fontSize: 17, fontWeight: '800', color: Colors.textPrimary },
-  itemCountText: { fontSize: 12, color: Colors.textSecondary, marginTop: 2 },
+  restName: { fontSize: 17, fontWeight: '800', color: C.textPrimary },
+  itemCountText: { fontSize: 12, color: C.textSecondary, marginTop: 2 },
   clearCartBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: '#FFF0F0',
+    backgroundColor: C.errorBg,
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 8,
   },
-  clearCartText: { fontSize: 12, color: Colors.error, fontWeight: '600' },
+  clearCartText: { fontSize: 12, color: C.error, fontWeight: '600' },
   itemsDivider: { marginBottom: 8 },
 
   // ── Delivery progress ──
@@ -664,13 +667,13 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  deliveryProgressText: { fontSize: 13, color: Colors.textSecondary, flex: 1 },
-  deliveryHighlight: { color: Colors.primary, fontWeight: '700' },
-  deliveryFreeText: { fontSize: 13, color: Colors.success, flex: 1 },
-  deliveryThreshold: { fontSize: 12, color: Colors.textLight, fontWeight: '600' },
+  deliveryProgressText: { fontSize: 13, color: C.textSecondary, flex: 1 },
+  deliveryHighlight: { color: C.primary, fontWeight: '700' },
+  deliveryFreeText: { fontSize: 13, color: C.success, flex: 1 },
+  deliveryThreshold: { fontSize: 12, color: C.textLight, fontWeight: '600' },
   progressTrack: {
     height: 6,
-    backgroundColor: Colors.border,
+    backgroundColor: C.border,
     borderRadius: 3,
     overflow: 'hidden',
   },
@@ -680,7 +683,7 @@ const styles = StyleSheet.create({
   savingsCornerTitle: {
     fontSize: 11,
     fontWeight: '700',
-    color: Colors.textSecondary,
+    color: C.textSecondary,
     letterSpacing: 1,
     marginBottom: 12,
     textTransform: 'uppercase',
@@ -703,12 +706,12 @@ const styles = StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 10,
-    backgroundColor: Colors.primary,
+    backgroundColor: C.primary,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  couponRowText: { fontSize: 15, fontWeight: '600', color: Colors.textPrimary },
-  couponRowSub: { fontSize: 11, color: Colors.textSecondary, marginTop: 1 },
+  couponRowText: { fontSize: 15, fontWeight: '600', color: C.textPrimary },
+  couponRowSub: { fontSize: 11, color: C.textSecondary, marginTop: 1 },
 
   // ── Searching state ──
   couponSearching: {
@@ -719,7 +722,7 @@ const styles = StyleSheet.create({
   },
   couponSearchingText: {
     fontSize: 13,
-    color: Colors.textSecondary,
+    color: C.textSecondary,
     fontStyle: 'italic',
   },
 
@@ -728,11 +731,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#F0FFF4',
+    backgroundColor: C.successBg,
     padding: 12,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#C3E6C3',
+    borderColor: C.successBorder,
   },
   couponAppliedLeft: {
     flexDirection: 'row',
@@ -744,7 +747,7 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: Colors.success,
+    backgroundColor: C.success,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -757,23 +760,23 @@ const styles = StyleSheet.create({
   couponAppliedCode: {
     fontSize: 14,
     fontWeight: '700',
-    color: Colors.success,
+    color: C.success,
   },
   autoBadge: {
-    backgroundColor: Colors.success,
+    backgroundColor: C.success,
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4,
   },
   autoBadgeText: {
-    color: Colors.white,
+    color: C.white,
     fontSize: 9,
     fontWeight: '900',
     letterSpacing: 0.5,
   },
   couponAppliedLabel: {
     fontSize: 12,
-    color: Colors.textSecondary,
+    color: C.textSecondary,
     marginTop: 2,
   },
 
@@ -786,7 +789,7 @@ const styles = StyleSheet.create({
   },
   changeCouponText: {
     fontSize: 12,
-    color: Colors.primary,
+    color: C.primary,
     fontWeight: '600',
   },
 
@@ -800,7 +803,7 @@ const styles = StyleSheet.create({
   },
   loadingBillText: {
     fontSize: 13,
-    color: Colors.textSecondary,
+    color: C.textSecondary,
     fontStyle: 'italic',
   },
 
@@ -812,12 +815,12 @@ const styles = StyleSheet.create({
     paddingVertical: 9,
   },
   billLabelRow: { flexDirection: 'row', alignItems: 'center' },
-  billLabel: { fontSize: 14, color: Colors.textSecondary },
-  billLabelBold: { fontSize: 16, fontWeight: '800', color: Colors.textPrimary },
-  billValue: { fontSize: 14, color: Colors.textPrimary, fontWeight: '500' },
+  billLabel: { fontSize: 14, color: C.textSecondary },
+  billLabelBold: { fontSize: 16, fontWeight: '800', color: C.textPrimary },
+  billValue: { fontSize: 14, color: C.textPrimary, fontWeight: '500' },
   billValueBold: { fontSize: 16, fontWeight: '800' },
-  billValueGreen: { color: Colors.success, fontWeight: '700' },
-  billValueStrike: { textDecorationLine: 'line-through', color: Colors.textLight },
+  billValueGreen: { color: C.success, fontWeight: '700' },
+  billValueStrike: { textDecorationLine: 'line-through', color: C.textLight },
   billDivider: { marginVertical: 8 },
 
   // ── Savings bar ──
@@ -825,13 +828,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: '#F0FFF4',
+    backgroundColor: C.successBg,
     marginBottom: 8,
     padding: 14,
     borderWidth: 1,
-    borderColor: '#C3E6C3',
+    borderColor: C.successBorder,
   },
-  savingsText: { fontSize: 13, color: Colors.success, flex: 1 },
+  savingsText: { fontSize: 13, color: C.success, flex: 1 },
   savingsBold: { fontWeight: '800' },
 
   // ── Policy ──
@@ -839,21 +842,21 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 8,
-    backgroundColor: Colors.white,
+    backgroundColor: C.surface,
     padding: 16,
     marginBottom: 8,
   },
-  policyText: { fontSize: 12, color: Colors.textLight, lineHeight: 18, flex: 1 },
+  policyText: { fontSize: 12, color: C.textLight, lineHeight: 18, flex: 1 },
 
   // ── Footer ──
   footer: {
-    backgroundColor: Colors.white,
+    backgroundColor: C.surface,
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderTopWidth: 1,
-    borderTopColor: Colors.border,
+    borderTopColor: C.border,
     elevation: 8,
-    shadowColor: '#000',
+    shadowColor: C.black,
     shadowOffset: { width: 0, height: -3 },
     shadowOpacity: 0.08,
     shadowRadius: 8,
@@ -864,7 +867,7 @@ const styles = StyleSheet.create({
     alignItems: 'baseline',
     gap: 6,
   },
-  footerTotal: { fontSize: 22, fontWeight: '900', color: Colors.textPrimary },
-  footerTotalSub: { fontSize: 12, color: Colors.textSecondary },
+  footerTotal: { fontSize: 22, fontWeight: '900', color: C.textPrimary },
+  footerTotalSub: { fontSize: 12, color: C.textSecondary },
   checkoutBtn: { marginBottom: 0 },
 });

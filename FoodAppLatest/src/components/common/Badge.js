@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {View, Text, StyleSheet} from 'react-native';
-import {Colors} from '../../constants/colors';
+import { useTheme } from '../../hooks/useTheme';
 
 export const Badge = ({count, style}) => {
+  const Colors = useTheme();
+  const styles = useMemo(() => createStyles(Colors), [Colors]);
   if (!count || count === 0) return null;
   return (
     <View style={[styles.badge, style]}>
@@ -11,12 +13,12 @@ export const Badge = ({count, style}) => {
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (C) => StyleSheet.create({
   badge: {
     position: 'absolute',
     top: -6,
     right: -6,
-    backgroundColor: Colors.error,
+    backgroundColor: C.error,
     borderRadius: 999,
     minWidth: 18,
     height: 18,
@@ -25,7 +27,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   text: {
-    color: Colors.white,
+    color: C.white,
     fontSize: 10,
     fontWeight: '700',
   },

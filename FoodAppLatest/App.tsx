@@ -72,7 +72,8 @@ function AppContent() {
     <>
       <StatusBar
         barStyle={darkMode ? 'light-content' : 'dark-content'}
-        backgroundColor={C.white}
+        backgroundColor={darkMode ? C.background : C.white}
+        translucent={false}
       />
       <NavigationContainer theme={theme}>
         <RootNavigator />

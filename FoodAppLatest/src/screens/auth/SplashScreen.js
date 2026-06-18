@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -7,12 +7,14 @@ import {
   Dimensions,
   StatusBar,
 } from 'react-native';
-import { Colors } from '../../constants/colors';
+import { useTheme } from '../../hooks/useTheme';
 import { useUserStore } from '../../store/userStore';
 
 const { width, height } = Dimensions.get('window');
 
 export const SplashScreen = ({ navigation }) => {
+  const Colors = useTheme();
+  const styles = useMemo(() => createStyles(Colors), [Colors]);
   const { isLoading, isLoggedIn, initUser } = useUserStore();
 
   // Animation values
@@ -177,10 +179,10 @@ export const SplashScreen = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (C) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.primary,
+    backgroundColor: C.primary,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -221,7 +223,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 42,
     fontWeight: '900',
-    color: Colors.white,
+    color: C.white,
     letterSpacing: 1,
     marginBottom: 8,
   },

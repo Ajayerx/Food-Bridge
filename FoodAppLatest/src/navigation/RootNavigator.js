@@ -23,7 +23,7 @@ import { CouponScreen } from '../screens/cart/CouponScreen';
 import { OrderTrackingScreen } from '../screens/orders/OrderTrackingScreen';
 import { SearchScreen } from '../screens/search/SearchScreen';
 import { EditProfileScreen } from '../screens/profile/EditProfileScreen';
-import { Colors } from '../constants/colors';
+import { useTheme } from '../hooks/useTheme';
 import { OrderDetailScreen } from '../screens/orders/OrderDetailScreen';
 import { AddressesScreen } from '../screens/address/AddressesScreen';
 import { AddAddressScreen } from "../screens/address/AddAddressScreen";
@@ -56,10 +56,10 @@ const ToastWithNavigation = React.memo(() => {
   return <NotificationToast onPress={handleToastPress} />;
 });
 
-// REPLACE AuthenticatedNavigator — memoize it too:
-const AuthenticatedNavigator = React.memo(() => {
+const AuthenticatedNavigator = () => {
   useSocket();
   useOrders();
+  const Colors = useTheme();
 
   return (
     <View style={{ flex: 1 }}>
@@ -92,7 +92,7 @@ const AuthenticatedNavigator = React.memo(() => {
       <ToastWithNavigation />
     </View>
   );
-});
+};
 
 const RootNavigator = () => {
   const isLoading = useUserStore(s => s.isLoading);

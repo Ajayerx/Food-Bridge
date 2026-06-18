@@ -110,9 +110,9 @@ export const useUserStore = create((set, get) => ({
     });
   },
 
-  toggleDarkMode: async () => {
-    const next = !get().darkMode;
-    await AsyncStorage.setItem(DARK_MODE_KEY, String(next));
-    set({ darkMode: next });
+  toggleDarkMode: (next) => {
+    const value = typeof next === 'boolean' ? next : !get().darkMode;
+    set({ darkMode: value });
+    AsyncStorage.setItem(DARK_MODE_KEY, String(value)).catch(() => {});
   },
 }));

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
     View,
     Text,
@@ -13,11 +13,14 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import { Colors } from '../../constants/colors';
+import { useTheme } from '../../hooks/useTheme';
 import { useUserStore } from '../../store/userStore';
 import api from '../../services/api/base';
 
 export const EditProfileScreen = ({ navigation }) => {
+    const Colors = useTheme();
+    const darkMode = useUserStore(s => s.darkMode);
+    const styles = useMemo(() => createStyles(Colors), [Colors]);
     const user = useUserStore(s => s.user);
     const setUser = useUserStore(s => s.setUser);
 
@@ -83,7 +86,7 @@ export const EditProfileScreen = ({ navigation }) => {
 
     return (
         <SafeAreaView style={styles.container}>
-            <StatusBar backgroundColor={Colors.white} barStyle="dark-content" />
+            <StatusBar backgroundColor={Colors.surface} barStyle={darkMode ? 'light-content' : 'dark-content'} />
 
             <ScrollView contentContainerStyle={styles.scrollContent}>
 
@@ -162,37 +165,37 @@ export const EditProfileScreen = ({ navigation }) => {
     );
 };
 
-const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: Colors.background },
+const createStyles = (C) => StyleSheet.create({
+    container: { flex: 1, backgroundColor: C.background },
     scrollContent: { padding: 20 },
     avatarSection: { alignItems: 'center', marginBottom: 30 },
     avatar: { width: 100, height: 100, borderRadius: 50 },
     avatarFallback: {
         width: 100, height: 100, borderRadius: 50,
-        backgroundColor: Colors.primary,
+        backgroundColor: C.primary,
         justifyContent: 'center', alignItems: 'center',
     },
-    avatarText: { fontSize: 32, color: Colors.white, fontWeight: 'bold' },
+    avatarText: { fontSize: 32, color: C.white, fontWeight: 'bold' },
     changePhotoBtn: {
         position: 'absolute', bottom: 0, right: 130,
-        backgroundColor: Colors.primary, padding: 8, borderRadius: 20,
+        backgroundColor: C.primary, padding: 8, borderRadius: 20,
     },
     formGroup: { marginBottom: 18 },
-    label: { fontSize: 14, fontWeight: '600', color: Colors.textSecondary, marginBottom: 6 },
+    label: { fontSize: 14, fontWeight: '600', color: C.textSecondary, marginBottom: 6 },
     input: {
-        backgroundColor: Colors.white, borderWidth: 1, borderColor: Colors.border,
+        backgroundColor: C.surface, borderWidth: 1, borderColor: C.border,
         borderRadius: 10, paddingHorizontal: 14, paddingVertical: 12,
-        fontSize: 14, color: Colors.textPrimary,
+        fontSize: 14, color: C.textPrimary,
     },
     inputDisabled: {
         flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-        backgroundColor: Colors.background,
+        backgroundColor: C.background,
     },
-    inputDisabledText: { fontSize: 14, color: Colors.textSecondary },
-    hint: { fontSize: 12, color: Colors.textLight, marginTop: 4 },
+    inputDisabledText: { fontSize: 14, color: C.textSecondary },
+    hint: { fontSize: 12, color: C.textLight, marginTop: 4 },
     saveBtn: {
-        marginTop: 20, backgroundColor: Colors.primary,
+        marginTop: 20, backgroundColor: C.primary,
         paddingVertical: 15, borderRadius: 12, alignItems: 'center',
     },
-    saveText: { color: Colors.white, fontSize: 16, fontWeight: '700' },
+    saveText: { color: C.white, fontSize: 16, fontWeight: '700' },
 });

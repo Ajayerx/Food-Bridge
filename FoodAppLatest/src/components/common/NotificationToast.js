@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useMemo } from "react";
 import {
     Animated,
     TouchableOpacity,
@@ -8,8 +8,13 @@ import {
     Platform,
 } from "react-native";
 import { useNotificationStore } from "../../store/notificationStore";
+import { useTheme } from "../../hooks/useTheme";
 
 function Toast({ notification, onDismiss, onPress }) {
+
+    const Colors = useTheme();
+    const styles = useMemo(() => createStyles(Colors), [Colors]);
+
     const translateY = useRef(new Animated.Value(-100)).current;
     const opacity = useRef(new Animated.Value(0)).current;
 
@@ -96,17 +101,17 @@ export function NotificationToast({ onPress }) {
     );
 }
 
-const styles = StyleSheet.create({
+const createStyles = C => StyleSheet.create({
     toast: {
         position: "absolute",
         top: Platform.OS === "ios" ? 54 : 16,
         left: 16,
         right: 16,
         zIndex: 9999,
-        elevation: 9999,            // ✅ Android needs high elevation to render above Stack.Navigator
+        elevation: 9999,
         borderRadius: 14,
-        backgroundColor: "#1C1C1E",
-        shadowColor: "#000",
+        backgroundColor: C.cardBg,
+        shadowColor: C.black,
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.3,
         shadowRadius: 8,
@@ -121,20 +126,20 @@ const styles = StyleSheet.create({
         width: 36,
         height: 36,
         borderRadius: 10,
-        backgroundColor: "#2C2C2E",
+        backgroundColor: C.inputBg,
         alignItems: "center",
         justifyContent: "center",
     },
     icon: { fontSize: 18 },
     textContainer: { flex: 1 },
     title: {
-        color: "#FFFFFF",
+        color: C.textPrimary,
         fontSize: 14,
         fontWeight: "600",
         marginBottom: 2,
     },
     body: {
-        color: "#ABABAB",
+        color: C.textSecondary,
         fontSize: 13,
         lineHeight: 18,
     },

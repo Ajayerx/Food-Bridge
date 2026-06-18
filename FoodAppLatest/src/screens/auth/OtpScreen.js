@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -11,7 +11,7 @@ import {
   Keyboard,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Colors } from '../../constants/colors';
+import { useTheme } from '../../hooks/useTheme';
 import { Button } from '../../components/common/Button';
 import { verifyOTP } from '../../services/auth/authService';
 import { useUserStore } from '../../store/userStore';
@@ -20,6 +20,9 @@ const OTP_LENGTH = 6;
 const RESEND_TIMER = 30;
 
 export const OtpScreen = ({ route, navigation }) => {
+  const Colors = useTheme();
+  const darkMode = useUserStore(s => s.darkMode);
+  const styles = useMemo(() => createStyles(Colors), [Colors]);
   const { mobile_number } = route.params;
   const phone = mobile_number;
   const [otp, setOtp] = useState(Array(OTP_LENGTH).fill(''));
@@ -156,7 +159,7 @@ export const OtpScreen = ({ route, navigation }) => {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <StatusBar backgroundColor={Colors.white} barStyle="dark-content" />
+      <StatusBar backgroundColor={Colors.surface} barStyle={darkMode ? 'light-content' : 'dark-content'} />
 
       <Animated.View style={[styles.container, { opacity: fadeAnim }]}>
         <View style={styles.iconBox}>
@@ -231,24 +234,24 @@ export const OtpScreen = ({ route, navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: Colors.white },
+const createStyles = (C) => StyleSheet.create({
+  safe: { flex: 1, backgroundColor: C.surface },
   container: { flex: 1, paddingHorizontal: 24, paddingTop: 24 },
 
   iconBox: {
     width: 72,
     height: 72,
     borderRadius: 20,
-    backgroundColor: Colors.primaryLight,
+    backgroundColor: C.primaryLight,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 20,
   },
   iconEmoji: { fontSize: 36 },
-  title: { fontSize: 24, fontWeight: '800', color: Colors.textPrimary, marginBottom: 8 },
-  subtitle: { fontSize: 14, color: Colors.textSecondary, lineHeight: 22, marginBottom: 16 },
-  phone: { fontWeight: '700', color: Colors.textPrimary },
-  changeText: { fontSize: 13, color: Colors.primary, fontWeight: '600', textDecorationLine: 'underline' },
+  title: { fontSize: 24, fontWeight: '800', color: C.textPrimary, marginBottom: 8 },
+  subtitle: { fontSize: 14, color: C.textSecondary, lineHeight: 22, marginBottom: 16 },
+  phone: { fontWeight: '700', color: C.textPrimary },
+  changeText: { fontSize: 13, color: C.primary, fontWeight: '600', textDecorationLine: 'underline' },
 
   otpRow: {
     flexDirection: 'row',
@@ -259,47 +262,47 @@ const styles = StyleSheet.create({
     width: 48,
     height: 58,
     borderWidth: 2,
-    borderColor: Colors.border,
+    borderColor: C.border,
     borderRadius: 14,
     fontSize: 24,
     fontWeight: '800',
-    color: Colors.textPrimary,
-    backgroundColor: Colors.background,
+    color: C.textPrimary,
+    backgroundColor: C.background,
   },
   otpBoxFilled: {
-    borderColor: Colors.primary,
-    backgroundColor: Colors.primaryLight,
+    borderColor: C.primary,
+    backgroundColor: C.primaryLight,
   },
   otpBoxActive: {
-    borderColor: Colors.primaryDark,
-    backgroundColor: Colors.primaryLight,
+    borderColor: C.primaryDark,
+    backgroundColor: C.primaryLight,
   },
   otpBoxError: {
-    borderColor: Colors.error,
-    backgroundColor: '#FFF0F0',
+    borderColor: C.error,
+    backgroundColor: C.errorBg,
   },
   errorText: {
     fontSize: 13,
-    color: Colors.error,
+    color: C.error,
     fontWeight: '500',
     marginBottom: 8,
   },
 
   progressBar: {
     height: 4,
-    backgroundColor: Colors.border,
+    backgroundColor: C.border,
     borderRadius: 2,
     marginBottom: 6,
     overflow: 'hidden',
   },
   progressFill: {
     height: '100%',
-    backgroundColor: Colors.primary,
+    backgroundColor: C.primary,
     borderRadius: 2,
   },
   progressText: {
     fontSize: 12,
-    color: Colors.textLight,
+    color: C.textLight,
     marginBottom: 24,
   },
 
@@ -310,8 +313,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  resendLabel: { fontSize: 14, color: Colors.textSecondary },
-  resendLink: { fontSize: 14, color: Colors.primary, fontWeight: '700' },
-  timerText: { fontSize: 14, color: Colors.textSecondary },
-  timerBold: { color: Colors.primary, fontWeight: '700' },
+  resendLabel: { fontSize: 14, color: C.textSecondary },
+  resendLink: { fontSize: 14, color: C.primary, fontWeight: '700' },
+  timerText: { fontSize: 14, color: C.textSecondary },
+  timerBold: { color: C.primary, fontWeight: '700' },
 });

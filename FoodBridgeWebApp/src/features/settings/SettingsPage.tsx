@@ -25,7 +25,13 @@ export const SettingsPage: React.FC = () => {
   });
 
   const save = useMutation({
-    mutationFn: (v: any) => adminService.updateSettings(v),
+    mutationFn: async (v: Record<string, any>) => {
+      await Promise.all(
+        Object.entries(v).map(([key, value]) =>
+          adminService.updateSetting(key, value)
+        )
+      );
+    },
     onSuccess: () => message.success("Settings saved"),
     onError: () => message.error("Failed to save settings"),
   });

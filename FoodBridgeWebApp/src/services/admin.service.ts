@@ -54,9 +54,9 @@ export const adminService = {
             "/admin/settings"
         ),
 
-    // Backend: PUT /admin/settings  body: { [key]: value }
-    updateSettings: (data: Record<string, any>) =>
-        api.put<ApiResponse<{ message: string }>>("/admin/settings", data),
+    // Backend: PUT /api/admin/settings/{key}
+    updateSetting: (key: string, value: any) =>
+        api.put<ApiResponse<{ message: string }>>(`/admin/settings/${key}`, { value }),
 
     // ── Banners ──────────────────────────────────────────────────────────────────
     // Backend: GET /api/admin/banners

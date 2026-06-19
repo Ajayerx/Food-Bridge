@@ -232,6 +232,33 @@ export interface Order {
     cancelledAt?: string | null;
 }
 
+// ── Menu Modifiers ─────────────────────────────────────────────────────────────
+export interface ModifierGroup {
+    id: string;
+    name: string;
+    isRequired: boolean;
+    maxSelections: number;
+    options: ModifierOption[];
+}
+
+export interface ModifierOption {
+    id: string;
+    name: string;
+    additionalPrice: number;
+    isAvailable: boolean;
+}
+
+export interface CreateModifierGroupRequest {
+    name: string;
+    isRequired?: boolean;
+    maxSelections?: number;
+}
+
+export interface CreateModifierOptionRequest {
+    name: string;
+    additionalPrice?: number;
+}
+
 // ── Coupons ───────────────────────────────────────────────────────────────────
 export type DiscountType = "percentage" | "flat";
 

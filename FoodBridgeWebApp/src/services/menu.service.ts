@@ -1,5 +1,5 @@
 import api from "../lib/apiClient";
-import type { MenuCategory, MenuItem, ItemVariant, ApiResponse } from "types";
+import type { MenuCategory, MenuItem, ItemVariant, ModifierGroup, ModifierOption, CreateModifierGroupRequest, CreateModifierOptionRequest, ApiResponse } from "types";
 
 // ── Normalisers ───────────────────────────────────────────────────────────────
 // Philosophy: pass DB values through as-is. No case transforms, no remapping.
@@ -212,5 +212,44 @@ export const menuService = {
     ) =>
         api.delete<ApiResponse<void>>(
             `/restaurants/${restaurantId}/menu/items/${itemId}/variants/${variantId}`
+        ),
+
+    // ─── Modifier Groups ───────────────────────────────────────────────────────
+
+    createModifierGroup: (
+        restaurantId: string,
+        itemId: string,
+        data: CreateModifierGroupRequest
+    ) =>
+        api.post<ApiResponse<ModifierGroup>>(
+            `/restaurants/${restaurantId}/menu/items/${itemId}/modifier-groups`,
+            {
+                name: data.name,
+                isRequired: data.isRequired ?? false,
+                maxSelections: data.maxSelections ?? 1,
+            }
+        ),
+
+    deleteModifierGroup: (
+        restaurantId: string,
+        itemId: string,
+        groupId: string
+    ) =>
+        api.delete<ApiResponse<void>>(
+            `/restaurants/${restaurantId}/menu/items/${itemId}/modifier-groups/${groupId}`
+        ),
+
+    createModifierOption: (
+        restaurantId: string,
+        itemId: string,
+        groupId: string,
+        data: CreateModifierOptionRequest
+    ) =>
+        api.post<ApiResponse<ModifierOption>>(
+            `/restaurants/${restaurantId}/menu/items/${itemId}/modifier-groups/${groupId}/options`,
+            {
+                name: data.name,
+                additionalPrice: data.additionalPrice ?? 0,
+            }
         ),
 };

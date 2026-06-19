@@ -3,4 +3,5 @@
   <Project Path="FoodBridge.Application/FoodBridge.Application.csproj" />
   <Project Path="FoodBridge.Domain/FoodBridge.Domain.csproj" />
   <Project Path="FoodBridge.Infrastructure/FoodBridge.Infrastructure.csproj" />
+  <Project Path="FoodBridge.Tests/FoodBridge.Tests.csproj" />
 </Solution>

@@ -4,7 +4,7 @@ export const getOrderHistory = () =>
   Promise.resolve({data: ordersData.orders});
 
 export const getOrderById = (id) => {
-  const order = ordersData.orders.find(o => o.id === id);
+  const order = ordersData.orders.find(o => String(o.id) === String(id));
   return order
     ? Promise.resolve({data: order})
     : Promise.reject(new Error('Order not found'));

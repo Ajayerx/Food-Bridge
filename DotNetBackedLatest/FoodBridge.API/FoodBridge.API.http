@@ -1,6 +1,91 @@
-@FoodBridge.API_HostAddress = http://localhost:5196
+@host = http://localhost:5196/v1
+@token = <your-jwt-token-here>
+@addressId = <id-from-create-response>
 
-GET {{FoodBridge.API_HostAddress}}/weatherforecast/
+### ── 1. GET all addresses ──────────────────────────────────────────────────────
+GET {{host}}/me/addresses
+Authorization: Bearer {{token}}
 Accept: application/json
 
-###
+### ── 2. POST create address (valid) ────────────────────────────────────────────
+POST {{host}}/me/addresses
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "label": "Home",
+  "address_line1": "123 Main Street, Block A",
+  "address_line2": "Near City Hospital",
+  "city": "Indore",
+  "state": "Madhya Pradesh",
+  "pin_code": "452010",
+  "latitude": 22.7196,
+  "longitude": 75.8577,
+  "is_default": true
+}
+
+### ── 3. POST create address (invalid PinCode — expect 422) ─────────────────────
+POST {{host}}/me/addresses
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "label": "Work",
+  "address_line1": "456 Office Tower",
+  "address_line2": null,
+  "city": "Mumbai",
+  "state": "Maharashtra",
+  "pin_code": "012345",
+  "latitude": 19.0760,
+  "longitude": 72.8777,
+  "is_default": false
+}
+
+### ── 4. POST create address (missing Latitude — expect 422) ────────────────────
+POST {{host}}/me/addresses
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "label": "Other",
+  "address_line1": "789 Lake View",
+  "address_line2": null,
+  "city": "Pune",
+  "state": "Maharashtra",
+  "pin_code": "411001",
+  "latitude": 0,
+  "longitude": 73.8567,
+  "is_default": false
+}
+
+### ── 5. PUT update address ─────────────────────────────────────────────────────
+PUT {{host}}/me/addresses/{{addressId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "label": "Home Updated",
+  "address_line1": "123 Main Street, Block B",
+  "address_line2": "Near City Mall",
+  "city": "Indore",
+  "state": "Madhya Pradesh",
+  "pin_code": "452010",
+  "latitude": 22.7196,
+  "longitude": 75.8577,
+  "is_default": true
+}
+
+### ── 6. PUT set default address ────────────────────────────────────────────────
+PUT {{host}}/me/addresses/{{addressId}}/default
+Authorization: Bearer {{token}}
+Accept: application/json
+
+### ── 7. DELETE address ─────────────────────────────────────────────────────────
+DELETE {{host}}/me/addresses/{{addressId}}
+Authorization: Bearer {{token}}
+Accept: application/json
+
+### ── 8. GET address list (after changes) ───────────────────────────────────────
+GET {{host}}/me/addresses
+Authorization: Bearer {{token}}
+Accept: application/json

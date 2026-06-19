@@ -1,19 +1,15 @@
 import api from "../lib/apiClient";
 import type { ApiLoginResponse, ApiResponse } from 'types';
 
-// Schema: OtpRequestDto          { mobile_number }
-// Schema: OtpVerifyDto           { mobile_number, otp, device_info? }
-// Schema: RefreshRequestDto      { refresh_token }
-
 export const authService = {
-    // POST /v1/auth/request-otp  →  OtpRequestDto
-    requestOtp: (mobileNumber: string) =>
-        api.post("/auth/request-otp", { mobileNumber: mobileNumber }),
+    // POST /v1/auth/otp/request  →  { phoneNumber }
+    requestOtp: (phoneNumber: string) =>
+        api.post("/auth/otp/request", { phoneNumber }),
 
-    // POST /v1/auth/verify-otp  →  OtpVerifyDto
-    verifyOtp: (mobileNumber: string, otp: string, deviceInfo?: string) =>
-        api.post("/auth/verify-otp", {
-            mobilenumber: mobileNumber,
+    // POST /v1/auth/otp/verify  →  { phoneNumber, otp, device_info? }
+    verifyOtp: (phoneNumber: string, otp: string, deviceInfo?: string) =>
+        api.post("/auth/otp/verify", {
+            phoneNumber,
             otp,
             device_info: deviceInfo ?? null,
         }),

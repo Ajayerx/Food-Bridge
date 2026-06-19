@@ -163,7 +163,7 @@ export const VendorRegisterPage: React.FC = () => {
       } as RegistrationPayload;
 
       setLoading(true);
-      await api.post("/vendor/register", finalData);
+      await api.post("/vendor-registration", finalData);
       setSubmitted(true);
     } catch (e: any) {
       if (e?.response?.data?.error?.message) {

@@ -394,6 +394,83 @@ export interface PlatformSettings {
     maintenanceMode: boolean;
 }
 
+// ── Banners (Admin) ────────────────────────────────────────────────────────────
+export interface Banner {
+    id: string;
+    title: string;
+    subTitle?: string | null;
+    imageUrl: string;
+    linkUrl?: string | null;
+    linkType?: string | null;
+    isActive: boolean;
+    displayOrder: number;
+    startsAt?: string | null;
+    endsAt?: string | null;
+    createdAt: string;
+}
+
+export interface CreateBannerRequest {
+    title: string;
+    subTitle?: string | null;
+    imageUrl: string;
+    linkUrl?: string | null;
+    linkType?: string | null;
+    isActive?: boolean;
+    displayOrder?: number;
+    startsAt?: string | null;
+    endsAt?: string | null;
+}
+
+export interface UpdateBannerRequest {
+    title?: string;
+    subTitle?: string | null;
+    imageUrl?: string;
+    linkUrl?: string | null;
+    linkType?: string | null;
+    isActive?: boolean;
+    displayOrder?: number;
+    startsAt?: string | null;
+    endsAt?: string | null;
+}
+
+// ── Commissions (Admin) ────────────────────────────────────────────────────────
+export interface Commission {
+    id: string;
+    orderId: string;
+    restaurantId: string;
+    restaurantName: string;
+    amount: number;
+    rate: number;
+    type: string;
+    notes?: string | null;
+    vendorPayoutId?: string | null;
+    createdAt: string;
+}
+
+export interface UpdateCommissionRequest {
+    rate: number;
+    type: string;
+    notes?: string | null;
+}
+
+// ── Payouts (Admin) ────────────────────────────────────────────────────────────
+export interface Payout {
+    id: string;
+    vendorId: string;
+    vendorName: string;
+    amount: number;
+    currency: string;
+    status: string;
+    transactionId?: string | null;
+    bankAccountNumber?: string | null;
+    bankIfscCode?: string | null;
+    notes?: string | null;
+    periodFrom: string;
+    periodTo: string;
+    processedAt?: string | null;
+    createdAt: string;
+}
+
 // ── Payments ──────────────────────────────────────────────────────────────────
 export interface Payment {
     id: string;

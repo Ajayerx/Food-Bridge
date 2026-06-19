@@ -1,5 +1,5 @@
 import api from "../lib/apiClient";
-import type { ApiResponse } from "types";
+import type { ApiResponse, Banner, CreateBannerRequest, UpdateBannerRequest, Commission, UpdateCommissionRequest, Payout } from "types";
 
 // ── Normalise a raw DB user row (snake_case) → frontend User shape ────────────
 export function normalizeUser(u: any) {
@@ -53,6 +53,41 @@ export const adminService = {
     // Backend: PUT /admin/settings  body: { [key]: value }
     updateSettings: (data: Record<string, any>) =>
         api.put<ApiResponse<{ message: string }>>("/admin/settings", data),
+
+    // ── Banners ──────────────────────────────────────────────────────────────────
+    // Backend: GET /api/admin/banners
+    getBanners: () =>
+        api.get<ApiResponse<Banner[]>>("/admin/banners"),
+
+    // Backend: POST /api/admin/banners
+    createBanner: (data: CreateBannerRequest) =>
+        api.post<ApiResponse<Banner>>("/admin/banners", data),
+
+    // Backend: PUT /api/admin/banners/{id}
+    updateBanner: (id: string, data: UpdateBannerRequest) =>
+        api.put<ApiResponse<Banner>>(`/admin/banners/${id}`, data),
+
+    // Backend: DELETE /api/admin/banners/{id}
+    deleteBanner: (id: string) =>
+        api.delete<ApiResponse<{ message: string }>>(`/admin/banners/${id}`),
+
+    // ── Commissions ──────────────────────────────────────────────────────────────
+    // Backend: GET /api/admin/commissions
+    getCommissions: (params?: { page?: number; limit?: number }) =>
+        api.get<ApiResponse<Commission[]>>("/admin/commissions", { params }),
+
+    // Backend: PUT /api/admin/commissions/{id}
+    updateCommission: (id: string, data: UpdateCommissionRequest) =>
+        api.put<ApiResponse<Commission>>(`/admin/commissions/${id}`, data),
+
+    // ── Payouts ──────────────────────────────────────────────────────────────────
+    // Backend: GET /api/admin/payouts
+    getPayouts: (params?: { page?: number; limit?: number; status?: string }) =>
+        api.get<ApiResponse<Payout[]>>("/admin/payouts", { params }),
+
+    // Backend: PUT /api/admin/payouts/{id}/processed
+    markPayoutProcessed: (id: string) =>
+        api.put<ApiResponse<{ message: string }>>(`/admin/payouts/${id}/processed`),
 
     // ── Dashboard ─────────────────────────────────────────────────────────────────
     // Backend: GET /admin/dashboard

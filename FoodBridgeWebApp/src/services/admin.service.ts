@@ -38,13 +38,13 @@ export const adminService = {
     banUser: (userId: string) =>
         api.post<ApiResponse<{ message: string }>>(`/admin/users/${userId}/ban`),
 
-    // Backend: PATCH /admin/users/:id/suspend  OR  PATCH /admin/users/:id/reactivate
-    updateUserStatus: (userId: string, isActive: boolean) => {
-        const action = isActive ? "reactivate" : "suspend";
-        return api.patch<ApiResponse<{ message: string }>>(
-            `/admin/users/${userId}/${action}`
-        );
-    },
+    // Backend: POST /admin/users/{id}/suspend
+    suspendUser: (userId: string) =>
+        api.post<ApiResponse<{ message: string }>>(`/admin/users/${userId}/suspend`),
+
+    // Backend: POST /admin/users/{id}/reactivate
+    reactivateUser: (userId: string) =>
+        api.post<ApiResponse<{ message: string }>>(`/admin/users/${userId}/reactivate`),
 
     // ── Settings ─────────────────────────────────────────────────────────────────
     // Backend: GET /admin/settings

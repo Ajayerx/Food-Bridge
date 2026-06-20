@@ -154,59 +154,79 @@ export const restaurantService = {
     // GET /v1/admin/restaurants
     getAllRestaurants: async (params?: {
         page?: number;
-        limit?: number;
+        pageSize?: number;
         status?: string;
+        search?: string;
     }) => {
         const res = await api.get<ApiResponse<any>>(
             "/admin/restaurants",
-            { params }
+            {
+                params: {
+                    page: params?.page ?? 1,
+                    pageSize: params?.pageSize ?? 500,
+                    status: params?.status,
+                    search: params?.search,
+                },
+            }
         );
 
         const payload = res.data;
+        const body: any = payload.data;
 
-        // ✅ FIX for TS error
-        const data: any = payload.data;
-
-        const raw: any[] = Array.isArray(data)
-            ? data
-            : data?.items ?? [];
+        const raw: any[] = Array.isArray(body)
+            ? body
+            : body?.items ?? [];
+        const totalCount: number = body?.total_count ?? 0;
 
         return {
             ...res,
             data: {
                 ...payload,
-                data: raw.map((r: any) => ({
-                    id: r.id,
-                    name: r.name,
-                    description: r.description ?? null,
+                data: {
+                    items: raw.map((r: any) => ({
+                        id: r.id,
+                        name: r.name,
+                        description: r.description ?? null,
 
-                    address: r.address_line,
-                    city: r.city,
-                    state: r.state,
-                    pinCode: r.pin_code,
+                        address: r.address_line,
+                        city: r.city,
+                        state: r.state,
+                        pinCode: r.pin_code,
 
-                    phone: r.phone_number ?? null,
-                    email: r.email ?? null,
-                    fssaiLicense: r.fssai_license ?? null,
+                        phone: r.phone_number ?? null,
+                        email: r.email ?? null,
+                        fssaiLicense: r.fssai_license ?? null,
 
-                    logoUrl: r.logo_url ?? null,
+                        logoUrl: r.logo_url ?? null,
 
-                    deliveryFee: r.delivery_fee,
-                    minOrderAmount: r.min_order_amount,
-                    avgDeliveryMinutes: r.avg_delivery_minutes,
+                        deliveryFee: r.delivery_fee,
+                        minOrderAmount: r.min_order_amount,
+                        avgDeliveryMinutes: r.avg_delivery_minutes,
 
-                    status: r.status,
-                    isOpen: r.is_open,
+                        status: r.status,
+                        isOpen: r.is_open,
 
-                    avgRating: r.avg_rating ?? null,
-                    totalRatings: r.total_ratings,
+                        avgRating: r.avg_rating ?? null,
+                        totalRatings: r.total_ratings,
 
-                    vendorName: r.vendor_name ?? null,
-                    vendorMobile: r.vendor_mobile ?? null,
-                    vendorEmail: r.vendor_email ?? null,
+                        vendorId: r.vendor_id,
+                        vendorName: r.vendor_name ?? null,
+                        vendorMobile: r.vendor_mobile ?? null,
+                        vendorEmail: r.vendor_email ?? null,
+                        isPureVeg: r.is_pure_veg ?? false,
+                        cuisines: r.cuisines ?? [],
+                        operatingHours: (r.operating_hours ?? []).map((h: any) => ({
+                            day: h.day,
+                            open: h.open,
+                            close: h.close,
+                            closed: h.closed,
+                        })),
+                        rejectionReason: r.rejection_reason ?? null,
 
-                    createdAt: r.created_at,
-                })),
+                        createdAt: r.created_at,
+                    })),
+                    totalCount,
+                },
             },
         };
     },
@@ -234,6 +254,20 @@ export const restaurantService = {
         api.patch<ApiResponse<{ message: string }>>(
             `/admin/restaurants/${id}/unsuspend`
         ),
+
+    // ─── Vendor: restaurant management ────────────────────────────────────────────
+
+    // POST /v1/restaurants
+    createRestaurant: (data: Partial<Restaurant>) =>
+        api.post<ApiResponse<Restaurant>>("/restaurants", data),
+
+    // POST /v1/restaurants/{id}/submit
+    submitForApproval: (id: string) =>
+        api.post<ApiResponse<{ message: string }>>(`/restaurants/${id}/submit`),
+
+    // POST /v1/restaurants/{id}/toggle-status
+    toggleRestaurantStatus: (id: string) =>
+        api.post<ApiResponse<{ message: string }>>(`/restaurants/${id}/toggle-status`),
 
     // ─── Delivery Agents ─────────────────────────────────────────────────────────
 

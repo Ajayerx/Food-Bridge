@@ -86,13 +86,76 @@ export const reportService = {
                 const normalised = {
                     totalRevenue: Number(raw.gmv ?? 0),
                     totalOrders: Number(raw.total_orders ?? 0),
-                    totalRestaurants: 0,
-                    totalUsers: 0,
-                    newUsersToday: 0,
-                    revenueByDay: [] as { date: string; revenue: number }[],
-                    revenueByRestaurant: [] as any[],
-                    payoutSummary: [] as any[],
+                    totalRestaurants: Number(raw.total_restaurants ?? 0),
+                    totalUsers: Number(raw.total_users ?? 0),
+                    newUsersToday: Number(raw.new_users_today ?? 0),
+                    revenueByDay: (raw.revenue_by_day ?? []).map((d: any) => ({
+                        date: d.date ?? "",
+                        revenue: Number(d.revenue ?? 0),
+                    })),
+                    revenueByRestaurant: (raw.revenue_by_restaurant ?? []).map((r: any) => ({
+                        restaurantId: r.restaurant_id ?? "",
+                        name: r.name ?? "",
+                        revenue: Number(r.revenue ?? 0),
+                    })),
+                    payoutSummary: (raw.payout_summary ?? []).map((p: any) => ({
+                        restaurantId: p.restaurant_id ?? "",
+                        name: p.name ?? "",
+                        grossRevenue: Number(p.gross_revenue ?? 0),
+                        platformFee: Number(p.platform_fee ?? 0),
+                        netPayout: Number(p.net_payout ?? 0),
+                    })),
                 };
                 return { data: { success: true, data: normalised } } as any;
             }),
+
+    // ── Generic reports ─────────────────────────────────────────────────────────
+    // Backend: GET /reports/sales?restaurantId=&from=&to=&groupBy=
+    getSalesReport: (params: {
+        restaurantId?: string;
+        from?: string;
+        to?: string;
+        groupBy?: string;
+    }) =>
+        api.get<ApiResponse<any>>("/reports/sales", { params }),
+
+    // Backend: GET /reports/orders?restaurantId=&from=&to=&status=
+    getOrderReport: (params: {
+        restaurantId?: string;
+        from?: string;
+        to?: string;
+        status?: string;
+    }) =>
+        api.get<ApiResponse<any>>("/reports/orders", { params }),
+
+    // Backend: GET /reports/revenue?restaurantId=&from=&to=&groupBy=
+    getRevenueReport: (params: {
+        restaurantId?: string;
+        from?: string;
+        to?: string;
+        groupBy?: string;
+    }) =>
+        api.get<ApiResponse<any>>("/reports/revenue", { params }),
+
+    // ── Vendor-scoped reports ───────────────────────────────────────────────────
+    // Backend: GET /reports/vendor/orders?restaurantId=&from=&to=
+    getVendorOrderReport: (restaurantId: string, params: { from: string; to: string }) =>
+        api.get<ApiResponse<any>>("/reports/vendor/orders", {
+            params: { restaurantId, ...params },
+        }),
+
+    // Backend: GET /reports/vendor/delivery?restaurantId=&from=&to=
+    getVendorDeliveryReport: (restaurantId: string, params: { from: string; to: string }) =>
+        api.get<ApiResponse<any>>("/reports/vendor/delivery", {
+            params: { restaurantId, ...params },
+        }),
+
+    // ── Admin-scoped reports ────────────────────────────────────────────────────
+    // Backend: GET /reports/admin/vendors?from=&to=&limit=
+    getAdminVendorsReport: (params: { from?: string; to?: string; limit?: number }) =>
+        api.get<ApiResponse<any>>("/reports/admin/vendors", { params }),
+
+    // Backend: GET /reports/admin/financials?from=&to=&groupBy=
+    getAdminFinancialsReport: (params: { from?: string; to?: string; groupBy?: string }) =>
+        api.get<ApiResponse<any>>("/reports/admin/financials", { params }),
 };

@@ -1,3 +1,4 @@
+using System.Text.Json;
 using FoodBridge.Application.DTOs.VendorRegistration;
 using MediatR;
 namespace FoodBridge.Application.Features.VendorRegistration.Commands.RegisterVendor;
@@ -11,5 +12,24 @@ public record RegisterVendorCommand(
     string? PanNumber,
     string? BankAccountNumber,
     string? BankIfscCode,
-    string? BankHolderName)
+    string? BankHolderName,
+    string RestaurantName,
+    string? Description,
+    List<string>? Cuisines,
+    string Address,
+    string City,
+    string State,
+    string PinCode,
+    decimal? Latitude,
+    decimal? Longitude,
+    bool IsPureVeg,
+    string? FssaiLicense,
+    string? PhoneNumber,
+    decimal DeliveryFee,
+    decimal MinOrderAmount,
+    int AvgPrepMinutes,
+    bool IsDineInEnabled,
+    bool IsTakeawayEnabled,
+    bool IsDeliveryEnabled,
+    JsonElement? OperatingHours)
     : IRequest<VendorRegisterResponseDto>;

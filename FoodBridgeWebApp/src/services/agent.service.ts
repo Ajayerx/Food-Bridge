@@ -69,6 +69,10 @@ export const agentService = {
             ...(data.licenseNumber ? { license_number: data.licenseNumber } : {}),
         }),
 
+    /** GET v1/agents/{id} */
+    getAgentById: (agentId: string) =>
+        api.get<ApiResponse<AgentApiRow>>(`/agents/${agentId}`),
+
     /** DELETE v1/agents/{id} */
     deleteAgent: (agentId: string) =>
         api.delete<ApiResponse<void>>(`/agents/${agentId}`),

@@ -68,6 +68,27 @@ public class VerifyOtpCommandHandler
             throw new ForbiddenException(
                 "Your account has been banned. Contact support.");
         }
+        else if (user.Role == UserRole.Vendor)
+        {
+            var vendor = await _db.Vendors
+                .FirstOrDefaultAsync(v => v.UserId == user.Id, ct);
+
+            if (vendor is not null && vendor.Status != VendorStatus.Approved)
+            {
+                var statusMsg = vendor.Status switch
+                {
+                    VendorStatus.Pending =>
+                        "Your vendor account is pending approval. Please check back later.",
+                    VendorStatus.Rejected =>
+                        "Your vendor account has been rejected. Contact support for more information.",
+                    VendorStatus.Suspended =>
+                        "Your vendor account has been suspended. Contact support for more information.",
+                    _ =>
+                        "Your vendor account is not yet approved."
+                };
+                throw new ForbiddenException(statusMsg);
+            }
+        }
 
         // 3. Update last login
         user.LastLoginAt = DateTime.UtcNow;

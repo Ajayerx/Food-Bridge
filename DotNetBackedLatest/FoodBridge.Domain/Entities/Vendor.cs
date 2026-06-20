@@ -12,6 +12,7 @@ public class Vendor : BaseEntity
     public string? PanNumber { get; set; }
     public string? BankAccountNumber { get; set; }
     public string? BankIfscCode { get; set; }
+    public string? BankHolderName { get; set; }
     public VendorStatus Status { get; set; } = VendorStatus.Pending;
     public DateTime? ApprovedAt { get; set; }
 

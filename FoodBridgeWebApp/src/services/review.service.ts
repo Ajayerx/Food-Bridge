@@ -22,7 +22,7 @@ export const reviewService = {
     deleteReview: (reviewId: string) =>
         api.delete<ApiResponse<void>>(`/reviews/${reviewId}`),
 
-    // PATCH /v1/admin/reviews/{id}/hide
+    // POST /v1/reviews/{id}/hide
     hideReview: (reviewId: string) =>
-        api.patch<ApiResponse<void>>(`/admin/reviews/${reviewId}/hide`),
+        api.post<ApiResponse<void>>(`/reviews/${reviewId}/hide`),
 };

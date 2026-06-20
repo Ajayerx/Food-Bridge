@@ -57,4 +57,8 @@ export const couponService = {
     // DELETE /v1/coupons/{id}
     deleteCoupon: (couponId: string) =>
         api.delete<ApiResponse<any>>(`/coupons/${couponId}`),
+
+    // POST /v1/coupons/validate
+    validateCoupon: (data: { code: string; restaurant_id: string; order_amount: number }) =>
+        api.post<ApiResponse<any>>("/coupons/validate", data),
 };

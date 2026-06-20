@@ -7,14 +7,14 @@ using Microsoft.EntityFrameworkCore;
 namespace FoodBridge.Application.Features.Admin.Queries.GetAllUsers;
 
 public class GetAllUsersQueryHandler
-    : IRequestHandler<GetAllUsersQuery, List<AdminUserDto>>
+    : IRequestHandler<GetAllUsersQuery, UserListResult>
 {
     private readonly IAppDbContext _db;
 
     public GetAllUsersQueryHandler(IAppDbContext db)
         => _db = db;
 
-    public async Task<List<AdminUserDto>> Handle(
+    public async Task<UserListResult> Handle(
         GetAllUsersQuery request,
         CancellationToken ct)
     {
@@ -41,23 +41,29 @@ public class GetAllUsersQueryHandler
              || (u.Email != null &&
                  u.Email.Contains(request.Search)));
 
+        var totalCount = await query.CountAsync(ct);
+
         var users = await query
             .OrderByDescending(u => u.CreatedAt)
             .Skip((request.Page - 1) * request.PageSize)
             .Take(request.PageSize)
             .ToListAsync(ct);
 
-        return users.Select(u => new AdminUserDto
+        return new UserListResult
         {
-            Id = u.Id,
-            FullName = u.FullName ?? string.Empty,
-            MobileNumber = u.MobileNumber,
-            Email = u.Email,
-            AvatarUrl = u.AvatarUrl,
-            Role = u.Role.ToString(),
-            Status = u.Status.ToString(),
-            CreatedAt = u.CreatedAt,
-            LastLoginAt = u.LastLoginAt
-        }).ToList();
+            TotalCount = totalCount,
+            Items = users.Select(u => new AdminUserDto
+            {
+                Id = u.Id,
+                FullName = u.FullName ?? string.Empty,
+                MobileNumber = u.MobileNumber,
+                Email = u.Email,
+                AvatarUrl = u.AvatarUrl,
+                Role = u.Role.ToString(),
+                Status = u.Status.ToString(),
+                CreatedAt = u.CreatedAt,
+                LastLoginAt = u.LastLoginAt
+            }).ToList(),
+        };
     }
 }

@@ -59,6 +59,13 @@ type BackendStatus =
 // Canonical frontend status — what the UI cares about
 type UIStatus = "pending" | "approved" | "rejected" | "suspended" | "inactive";
 
+interface OperatingHoursEntry {
+  day: string;
+  open: string;
+  close: string;
+  closed: boolean;
+}
+
 interface NormalizedRestaurant {
   id: string;
   name: string;
@@ -77,9 +84,13 @@ interface NormalizedRestaurant {
   isOpen: boolean;
   avgRating: number | null;
   totalRatings: number;
+  vendorId: string;
   vendorName: string | null;
   vendorMobile: string | null;
   vendorEmail: string | null;
+  isPureVeg: boolean;
+  cuisines: string[];
+  operatingHours: OperatingHoursEntry[];
   createdAt: string;
   description: string | null;
   rejectionReason: string | null;
@@ -169,33 +180,45 @@ export const AdminRestaurantsPage: React.FC = () => {
 
   // ── Query ──────────────────────────────────────────────────────────────────
   const {
-    data: allData = [],
+    data: result,
     isLoading,
     isError,
     refetch,
   } = useQuery({
-    queryKey: ["admin-restaurants"],
+    queryKey: ["admin-restaurants", search],
     queryFn: async () => {
-      const res = await restaurantService.getAllRestaurants({ limit: 500 });
-      // res.data.data is already camelCase-mapped by the service
-      const raw: any[] = res.data.data ?? [];
-      return raw.map((r: any) => ({
-        ...r,
-        status: normalizeStatus(r.status), // only fix status
-      }));
+      const res = await restaurantService.getAllRestaurants({
+        pageSize: 500,
+        search: search || undefined,
+      });
+      // res.data.data is { items, totalCount } with camelCase-mapped items
+      const body = res.data.data as {
+        items: any[];
+        totalCount: number;
+      };
+      return {
+        items: (body.items ?? []).map((r: any) => ({
+          ...r,
+          status: normalizeStatus(r.status),
+        })),
+        totalCount: body.totalCount ?? 0,
+      };
     },
     staleTime: 30_000,
   });
 
+  const allData = result?.items ?? [];
+  const totalCount = result?.totalCount ?? 0;
+
   // ── Stats ──────────────────────────────────────────────────────────────────
   const stats = {
-    total: allData.length,
+    total: totalCount,
     approved: allData.filter((r) => r.status === "approved").length,
     pending: allData.filter((r) => r.status === "pending").length,
     suspended: allData.filter((r) => r.status === "suspended").length,
   };
 
-  // ── Client-side filter ─────────────────────────────────────────────────────
+  // ── Client-side filter (within fetched batch) ──────────────────────────────
   const filtered = allData.filter((r) => {
     const matchStatus = statusFilter === "all" || r.status === statusFilter;
     const q = search.toLowerCase();
@@ -219,55 +242,55 @@ export const AdminRestaurantsPage: React.FC = () => {
       invalidate();
       message.success("Restaurant approved");
     },
-    onError: (e: any) =>
-      message.error(e?.response?.data?.message ?? "Approval failed"),
-  });
+        onError: (e: any) =>
+            message.error(e?.response?.data?.error?.message ?? "Approval failed"),
+    });
 
-  const reject = useMutation({
-    mutationFn: ({ id, reason }: { id: string; reason: string }) =>
-      restaurantService.rejectRestaurant(id, reason),
-    onSuccess: () => {
-      invalidate();
-      setReasonModal(null);
-      form.resetFields();
-      message.success("Restaurant rejected");
-    },
-    onError: (e: any) =>
-      message.error(e?.response?.data?.message ?? "Rejection failed"),
-  });
+    const reject = useMutation({
+        mutationFn: ({ id, reason }: { id: string; reason: string }) =>
+            restaurantService.rejectRestaurant(id, reason),
+        onSuccess: () => {
+            invalidate();
+            setReasonModal(null);
+            form.resetFields();
+            message.success("Restaurant rejected");
+        },
+        onError: (e: any) =>
+            message.error(e?.response?.data?.error?.message ?? "Rejection failed"),
+    });
 
-  const suspend = useMutation({
-    mutationFn: ({ id, reason }: { id: string; reason: string }) =>
-      restaurantService.suspendRestaurant(id, reason),
-    onSuccess: () => {
-      invalidate();
-      setReasonModal(null);
-      form.resetFields();
-      message.success("Restaurant suspended");
-    },
-    onError: (e: any) =>
-      message.error(e?.response?.data?.message ?? "Suspension failed"),
-  });
+    const suspend = useMutation({
+        mutationFn: ({ id, reason }: { id: string; reason: string }) =>
+            restaurantService.suspendRestaurant(id, reason),
+        onSuccess: () => {
+            invalidate();
+            setReasonModal(null);
+            form.resetFields();
+            message.success("Restaurant suspended");
+        },
+        onError: (e: any) =>
+            message.error(e?.response?.data?.error?.message ?? "Suspension failed"),
+    });
 
-  // Re-approve a suspended/rejected restaurant (calls the same approve endpoint)
-  const unsuspend = useMutation({
-    mutationFn: (id: string) => restaurantService.unsuspendRestaurant(id),
-    onSuccess: () => {
-      invalidate();
-      message.success("Restaurant unsuspended");
-    },
-    onError: (e: any) =>
-      message.error(e?.response?.data?.message ?? "Unsuspend failed"),
-  });
+    // Re-approve a suspended/rejected restaurant (calls the same approve endpoint)
+    const unsuspend = useMutation({
+        mutationFn: (id: string) => restaurantService.unsuspendRestaurant(id),
+        onSuccess: () => {
+            invalidate();
+            message.success("Restaurant unsuspended");
+        },
+        onError: (e: any) =>
+            message.error(e?.response?.data?.error?.message ?? "Unsuspend failed"),
+    });
 
-  const reapprove = useMutation({
-    mutationFn: (id: string) => restaurantService.approveRestaurant(id),
-    onSuccess: () => {
-      invalidate();
-      message.success("Restaurant re-approved");
-    },
-    onError: (e: any) =>
-      message.error(e?.response?.data?.message ?? "Re-approval failed"),
+    const reapprove = useMutation({
+        mutationFn: (id: string) => restaurantService.approveRestaurant(id),
+        onSuccess: () => {
+            invalidate();
+            message.success("Restaurant re-approved");
+        },
+        onError: (e: any) =>
+            message.error(e?.response?.data?.error?.message ?? "Re-approval failed"),
   });
 
   const openReasonModal = useCallback(
@@ -731,12 +754,37 @@ export const AdminRestaurantsPage: React.FC = () => {
                   Open Now
                 </Tag>
               )}
+              {detailDrawer.isPureVeg && (
+                <Tag
+                  color="green"
+                  style={{ fontSize: 13, padding: "2px 10px", marginLeft: 6 }}
+                >
+                  Pure Veg
+                </Tag>
+              )}
+              {detailDrawer.cuisines?.length > 0 && (
+                <div style={{ marginTop: 10 }}>
+                  <Text style={{ fontSize: 13, fontWeight: 500, display: "block", marginBottom: 4 }}>
+                    Cuisines
+                  </Text>
+                  {detailDrawer.cuisines.map((c) => (
+                    <Tag key={c} style={{ fontSize: 12, marginBottom: 4 }}>
+                      {c}
+                    </Tag>
+                  ))}
+                </div>
+              )}
             </div>
 
             {detailDrawer.description && (
-              <Text type="secondary" style={{ fontSize: 13 }}>
-                {detailDrawer.description}
-              </Text>
+              <>
+                <Text style={{ fontSize: 13, fontWeight: 500 }}>
+                  Description
+                </Text>
+                <Text type="secondary" style={{ fontSize: 13 }}>
+                  {detailDrawer.description}
+                </Text>
+              </>
             )}
 
             <Card size="small" style={{ borderRadius: 8 }}>
@@ -755,7 +803,6 @@ export const AdminRestaurantsPage: React.FC = () => {
                       ["Pin Code", detailDrawer.pinCode || "—"],
                       ["Address", detailDrawer.address],
                       ["Phone", detailDrawer.phone],
-                      ["Email", detailDrawer.email ?? "—"],
                       ["FSSAI", detailDrawer.fssaiLicense ?? "—"],
                       [
                         "Delivery Fee",
@@ -820,7 +867,50 @@ export const AdminRestaurantsPage: React.FC = () => {
               </table>
             </Card>
 
-            {detailDrawer.rejectionReason && (
+            {detailDrawer.operatingHours?.length > 0 && (
+              <Card
+                title="Operating Hours"
+                size="small"
+                style={{ borderRadius: 8 }}
+              >
+                <table
+                  style={{
+                    width: "100%",
+                    fontSize: 13,
+                    borderCollapse: "collapse",
+                  }}
+                >
+                  <tbody>
+                    {detailDrawer.operatingHours.map((h) => (
+                      <tr
+                        key={h.day}
+                        style={{ borderBottom: "1px solid #f0f0f0" }}
+                      >
+                        <td
+                          style={{
+                            padding: "8px 0",
+                            color: "#888",
+                            width: 130,
+                            verticalAlign: "top",
+                          }}
+                        >
+                          {h.day.charAt(0).toUpperCase() + h.day.slice(1)}
+                        </td>
+                        <td style={{ padding: "8px 0", fontWeight: 500 }}>
+                          {h.closed ? (
+                            <Tag color="red">Closed</Tag>
+                          ) : (
+                            `${h.open} - ${h.close}`
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </Card>
+            )}
+
+            {(detailDrawer.status === "suspended" || detailDrawer.status === "rejected") && detailDrawer.rejectionReason && (
               <Alert
                 type={detailDrawer.status === "suspended" ? "warning" : "error"}
                 showIcon

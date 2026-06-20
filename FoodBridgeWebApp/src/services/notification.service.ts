@@ -38,4 +38,12 @@ export const notificationService = {
     // Backend: PATCH /notifications/mark-all-read
     markAllRead: () =>
         api.patch<ApiResponse<void>>("/notifications/mark-all-read"),
+
+    // Backend: GET /notifications/unread-count
+    getUnreadCount: () =>
+        api.get<ApiResponse<{ count: number }>>("/notifications/unread-count"),
+
+    // Backend: DELETE /notifications/{id}
+    deleteNotification: (notificationId: string) =>
+        api.delete<ApiResponse<void>>(`/notifications/${notificationId}`),
 };

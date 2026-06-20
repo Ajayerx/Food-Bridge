@@ -69,6 +69,11 @@ export const menuService = {
             `/restaurants/${restaurantId}/menu/items`
         ),
 
+    getMenuItemById: (restaurantId: string, itemId: string) =>
+        api.get<ApiResponse<any>>(
+            `/restaurants/${restaurantId}/menu/items/${itemId}`
+        ),
+
     // ─── Categories ───────────────────────────────────────────────────────────
 
     createCategory: (

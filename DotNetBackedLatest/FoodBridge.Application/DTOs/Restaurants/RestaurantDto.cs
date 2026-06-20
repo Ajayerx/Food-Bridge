@@ -1,4 +1,5 @@
-// RestaurantDto.cs
+using FoodBridge.Application.DTOs.Admin;
+
 namespace FoodBridge.Application.DTOs.Restaurants;
 
 public class RestaurantDto
@@ -17,6 +18,7 @@ public class RestaurantDto
     public string? PhoneNumber { get; set; }
     public string? Email { get; set; }       
     public string? FssaiLicense { get; set; }
+    public string? RejectionReason { get; set; }
     public string Status { get; set; } = string.Empty;
     public bool IsOpen { get; set; }
     public decimal DeliveryFee { get; set; }
@@ -25,8 +27,11 @@ public class RestaurantDto
     public decimal? AvgRating { get; set; }
     public int TotalRatings { get; set; }
     public bool IsPureVeg { get; set; }
+    public List<string>? Cuisines { get; set; }
+    public List<OperatingHoursDto>? OperatingHours { get; set; }
     public DateTime CreatedAt { get; set; }
 
+    public Guid VendorId { get; set; }
     public string? VendorName { get; set; }
     public string? VendorMobile { get; set; }
     public string? VendorEmail { get; set; }

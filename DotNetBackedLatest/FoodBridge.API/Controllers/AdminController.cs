@@ -13,6 +13,9 @@ using FoodBridge.Application.Features.Admin.Commands.CreateBanner;
 using FoodBridge.Application.Features.Admin.Commands.UpdateBanner;
 using FoodBridge.Application.Features.Admin.Commands.DeleteBanner;
 using FoodBridge.Application.Features.Admin.Commands.SuspendUser;
+using FoodBridge.Application.Features.Admin.Commands.ApproveVendor;
+using FoodBridge.Application.Features.Admin.Commands.RejectVendor;
+using FoodBridge.Application.Features.Admin.Queries.GetAllVendors;
 using FoodBridge.Application.Common.Interfaces;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -175,6 +178,41 @@ public class AdminController : ControllerBase
         return Ok(new { success = true, message = "Payout marked as processed" });
     }
 
+    // ── Vendor Listing ──────────────────────────────────────────────────────────
+    /// <summary>GET v1/admin/vendors</summary>
+    [HttpGet("vendors")]
+    public async Task<IActionResult> GetAllVendors(
+        [FromQuery] string? status,
+        [FromQuery] string? search,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20,
+        CancellationToken ct = default)
+    {
+        var result = await _mediator.Send(
+            new GetAllVendorsQuery(status, search, page, pageSize), ct);
+        return Ok(new { success = true, data = result });
+    }
+
+    // ── Vendor Management ───────────────────────────────────────────────────────
+    /// <summary>POST v1/admin/vendors/{id}/approve</summary>
+    [HttpPost("vendors/{id:guid}/approve")]
+    public async Task<IActionResult> ApproveVendor(Guid id, CancellationToken ct)
+    {
+        await _mediator.Send(new ApproveVendorCommand(id, _currentUser.UserId!.Value), ct);
+        return Ok(new { success = true, message = "Vendor approved successfully" });
+    }
+
+    /// <summary>POST v1/admin/vendors/{id}/reject</summary>
+    [HttpPost("vendors/{id:guid}/reject")]
+    public async Task<IActionResult> RejectVendor(
+        Guid id,
+        [FromBody] RejectVendorRequestDto dto,
+        CancellationToken ct)
+    {
+        await _mediator.Send(new RejectVendorCommand(id, _currentUser.UserId!.Value, dto.Reason), ct);
+        return Ok(new { success = true, message = "Vendor rejected" });
+    }
+
     // ── Banners ────────────────────────────────────────────────────────────────
     /// <summary>GET v1/admin/banners — Public (no auth guard)</summary>
     [HttpGet("banners")]
@@ -226,4 +264,10 @@ public class MarkPayoutProcessedRequestDto
 {
     public string? TransactionId { get; set; }
     public string? Notes { get; set; }
+}
+
+// DTO for vendor rejection body
+public class RejectVendorRequestDto
+{
+    public string? Reason { get; set; }
 }

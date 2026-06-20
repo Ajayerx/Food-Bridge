@@ -7,6 +7,7 @@ import {
   CustomerServiceOutlined,
   SettingOutlined,
   TeamOutlined,
+  BankOutlined,
   LogoutOutlined,
   UserOutlined,
 } from "@ant-design/icons";
@@ -32,6 +33,11 @@ export const AdminLayout: React.FC = () => {
       key: "/admin/restaurants",
       icon: <ShopOutlined />,
       label: <Link to="/admin/restaurants">Restaurants</Link>,
+    },
+    {
+      key: "/admin/vendors",
+      icon: <BankOutlined />,
+      label: <Link to="/admin/vendors">Vendors</Link>,
     },
     {
       key: "/admin/users",

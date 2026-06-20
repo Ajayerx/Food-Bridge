@@ -46,8 +46,18 @@ export const tableService = {
     deleteTable: (restaurantId: string, tableId: string) =>
         api.delete<ApiResponse<void>>(`/restaurants/${restaurantId}/tables/${tableId}`),
 
+    getTableById: (restaurantId: string, tableId: string) =>
+        api.get<ApiResponse<TableApiRow>>(
+            `/restaurants/${restaurantId}/tables/${tableId}`
+        ),
+
     reserveTable: (restaurantId: string, tableId: string) =>
-        api.patch<ApiResponse<void>>(
+        api.post<ApiResponse<void>>(
             `/restaurants/${restaurantId}/tables/${tableId}/reserve`
+        ),
+
+    toggleTableAvailability: (restaurantId: string, tableId: string) =>
+        api.post<ApiResponse<void>>(
+            `/restaurants/${restaurantId}/tables/${tableId}/toggle`
         ),
 };

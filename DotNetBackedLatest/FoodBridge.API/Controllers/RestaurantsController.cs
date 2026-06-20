@@ -138,6 +138,7 @@ public class RestaurantsController : ControllerBase
 
     /// <summary>PATCH v1/restaurants/{id}/toggle-active</summary>
     [HttpPatch("{id:guid}/toggle-active")]
+    [Authorize(Roles = "Vendor,Staff")]
     public async Task<IActionResult> ToggleActive(Guid id, CancellationToken ct)
     {
         var isOpen = await _mediator.Send(

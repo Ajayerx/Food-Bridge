@@ -1,6 +1,6 @@
 import React, { useState } from "react";
-import { Button, Card, Form, Input, message, Typography } from "antd";
-import { MobileOutlined, LockOutlined } from "@ant-design/icons";
+import { Button, Card, Form, Input, message, Modal, Typography } from "antd";
+import { MobileOutlined, LockOutlined, WarningOutlined } from "@ant-design/icons";
 import { useAppDispatch } from "../../hooks/useAppDispatch";
 import {
   authStart,
@@ -94,7 +94,18 @@ export const AuthPage: React.FC = () => {
       }
     } catch (e: any) {
       dispatch(authFailure());
-      message.error(e?.response?.data?.message || "Invalid OTP");
+      const errMsg = e?.response?.data?.error?.message || e?.response?.data?.message || "Invalid OTP";
+      const errCode = e?.response?.data?.error?.code;
+      if (errCode === "FORBIDDEN") {
+        Modal.warning({
+          title: "Account Restricted",
+          icon: <WarningOutlined />,
+          content: errMsg,
+          okText: "Got It",
+        });
+      } else {
+        message.error(errMsg);
+      }
     } finally {
       setLoading(false);
     }

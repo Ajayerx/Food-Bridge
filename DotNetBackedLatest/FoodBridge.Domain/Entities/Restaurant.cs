@@ -9,6 +9,8 @@ public class Restaurant : SoftDeleteEntity
     public Vendor Vendor { get; set; } = null!;
     public string Name { get; set; } = string.Empty;
     public string? Description { get; set; }
+    public string? Cuisines { get; set; }        // JSON array stored as string
+    public string? OperatingHours { get; set; }  // JSON object stored as string
     public string? LogoUrl { get; set; }
     public string? CoverImageUrl { get; set; }
     public string AddressLine { get; set; } = string.Empty;
@@ -20,12 +22,17 @@ public class Restaurant : SoftDeleteEntity
     public string? PhoneNumber { get; set; }
     public string? FssaiLicense { get; set; }
     public RestaurantStatus Status { get; set; } = RestaurantStatus.Pending;
+    public string? RejectionReason { get; set; }
     public bool IsOpen { get; set; } = false;
     public decimal DeliveryFee { get; set; } = 0;
     public decimal MinOrderAmount { get; set; } = 0;
     public int AvgDeliveryMinutes { get; set; } = 30;
+    public int AvgPrepMinutes { get; set; }
     public decimal? AvgRating { get; set; }
     public int TotalRatings { get; set; } = 0;
+    public bool IsDineInEnabled { get; set; }
+    public bool IsTakeawayEnabled { get; set; }
+    public bool IsDeliveryEnabled { get; set; }
     public bool IsPureVeg { get; set; } = false;
 
     public ICollection<RestaurantTable> Tables { get; set; } = new List<RestaurantTable>();

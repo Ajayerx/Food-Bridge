@@ -1,3 +1,17 @@
 node_modules/
 .expo/
 .gradle/
+
+# .NET
+**/bin/
+**/obj/
+
+# Logs
+DotNetBackedLatest/FoodBridge.API/logs/
+
+# Frontend build
+FoodBridgeWebApp/dist/
+
+# Optional temp files
+*.txt
+*.zip

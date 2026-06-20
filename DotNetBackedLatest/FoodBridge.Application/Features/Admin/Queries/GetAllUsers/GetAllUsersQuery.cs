@@ -9,4 +9,4 @@ public record GetAllUsersQuery(
     string? Search,
     int Page,
     int PageSize)
-    : IRequest<List<AdminUserDto>>;
+    : IRequest<UserListResult>;

@@ -123,8 +123,8 @@ export const orderService = {
             agent_id: agentId,
         }),
 
-    // GET /v1/cart/calculate
-    calculateCart: (params: {
+    // POST /v1/orders/calculate-cart
+    calculateCart: (data: {
         restaurant_id: string;
         items: {
             menu_item_id: string;
@@ -136,16 +136,14 @@ export const orderService = {
         delivery_address_id?: string;
         order_type?: string;
     }) =>
-        api.get<ApiResponse<any>>(`/cart/calculate`, {
-            params: {
-                restaurant_id: params.restaurant_id,
-                items: JSON.stringify(params.items),
-                coupon_code: params.coupon_code ?? undefined,
-                delivery_address_id: params.delivery_address_id ?? undefined,
-                order_type: params.order_type
-                    ? ORDER_TYPE_TO_BE[params.order_type] ?? params.order_type
-                    : undefined,
-            },
+        api.post<ApiResponse<any>>(`/orders/calculate-cart`, {
+            restaurant_id: data.restaurant_id,
+            items: data.items,
+            coupon_code: data.coupon_code ?? undefined,
+            delivery_address_id: data.delivery_address_id ?? undefined,
+            order_type: data.order_type
+                ? ORDER_TYPE_TO_BE[data.order_type] ?? data.order_type
+                : undefined,
         }),
 
     // POST /v1/orders
@@ -186,6 +184,20 @@ export const orderService = {
     ) =>
         api.post<ApiResponse<any>>(`/orders/${orderId}/items`, payload),
     
+    // GET /v1/orders/history
+    getOrderHistory: (params?: {
+        page?: number;
+        limit?: number;
+        status?: OrderStatus;
+    }) =>
+        api.get<ApiResponse<any>>(`/orders/history`, {
+            params: {
+                page: params?.page ?? 1,
+                limit: params?.limit ?? 50,
+                ...(params?.status ? { status: toBackendStatus(params.status) } : {}),
+            },
+        }),
+
     // POST /v1/orders/{id}/settle-bill
     settleBill: (orderId: string, paymentMethod: string) =>
         api.post<ApiResponse<any>>(

@@ -14,6 +14,9 @@ import {
   Row,
   Col,
   Tag,
+  Upload,
+  Checkbox,
+  Descriptions,
 } from "antd";
 import {
   ShopOutlined,
@@ -26,40 +29,55 @@ import {
   ArrowRightOutlined,
   ArrowLeftOutlined,
   BankOutlined,
+  UploadOutlined,
+  SafetyCertificateOutlined,
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
-import api from "../../lib/apiClient";
+import { vendorService } from "../../services/vendor.service";
+import type { UploadFile } from "antd";
 
 const { Title, Text, Paragraph } = Typography;
 const { TextArea } = Input;
 const { Option } = Select;
 
 // ── Types ─────────────────────────────────────────────────────────────────────
+interface OperatingHours {
+  open: string;
+  close: string;
+  closed: boolean;
+}
+type OperatingHoursMap = Record<string, OperatingHours>;
+
 interface RegistrationPayload {
-  // Step 1: Account
   mobile_number: string;
   name: string;
   email?: string;
-  // Step 2: Business
-  company_name?: string;
+  company_name: string;
   gstin?: string;
-  // Step 3: Restaurant
+  pan_number?: string;
+  bank_account_number?: string;
+  bank_ifsc_code?: string;
+  bank_holder_name?: string;
   restaurant_name: string;
   description?: string;
   cuisines: string[];
   address: string;
+  city: string;
+  state: string;
+  pin_code: string;
+  latitude?: number;
+  longitude?: number;
+  is_pure_veg: boolean;
+  fssai_license?: string;
   contact_phone: string;
   delivery_fee: number;
   min_order_value: number;
   avg_prep_time_minutes: number;
-  // Step 4: Services & Hours
   is_dine_in_enabled: boolean;
   is_takeaway_enabled: boolean;
   is_delivery_enabled: boolean;
-  operating_hours: Record<
-    string,
-    { open: string; close: string; closed: boolean }
-  >;
+  operating_hours: OperatingHoursMap;
+  terms_accepted: boolean;
 }
 
 const DAYS = [
@@ -99,18 +117,71 @@ const CUISINE_OPTIONS = [
   "Bakery",
 ];
 
-const defaultHours = () =>
+const INDIAN_STATES = [
+  "Andhra Pradesh",
+  "Arunachal Pradesh",
+  "Assam",
+  "Bihar",
+  "Chhattisgarh",
+  "Goa",
+  "Gujarat",
+  "Haryana",
+  "Himachal Pradesh",
+  "Jharkhand",
+  "Karnataka",
+  "Kerala",
+  "Madhya Pradesh",
+  "Maharashtra",
+  "Manipur",
+  "Meghalaya",
+  "Mizoram",
+  "Nagaland",
+  "Odisha",
+  "Punjab",
+  "Rajasthan",
+  "Sikkim",
+  "Tamil Nadu",
+  "Telangana",
+  "Tripura",
+  "Uttar Pradesh",
+  "Uttarakhand",
+  "West Bengal",
+  "Andaman and Nicobar Islands",
+  "Chandigarh",
+  "Dadra and Nagar Haveli and Daman and Diu",
+  "Delhi",
+  "Jammu and Kashmir",
+  "Ladakh",
+  "Lakshadweep",
+  "Puducherry",
+];
+
+const defaultHours = (): OperatingHoursMap =>
   Object.fromEntries(
     DAYS.map((d) => [d, { open: "09:00", close: "22:00", closed: false }]),
   );
 
-// ── Step indicators ───────────────────────────────────────────────────────────
 const STEPS = [
   { title: "Account", icon: <UserOutlined /> },
   { title: "Business", icon: <BankOutlined /> },
   { title: "Restaurant", icon: <ShopOutlined /> },
   { title: "Services", icon: <ClockCircleOutlined /> },
+  { title: "Review", icon: <CheckCircleOutlined /> },
 ];
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+const validateHours = (hours: OperatingHoursMap): string | null => {
+  for (const day of DAYS) {
+    const h = hours[day];
+    if (!h) return `${day}: missing schedule`;
+    if (h.closed) continue;
+    if (!h.open || !h.close)
+      return `${DAY_LABELS[day]}: set open and close times`;
+    if (h.open >= h.close)
+      return `${DAY_LABELS[day]}: open time must be before close time`;
+  }
+  return null;
+};
 
 // ── Main Component ────────────────────────────────────────────────────────────
 export const VendorRegisterPage: React.FC = () => {
@@ -124,12 +195,9 @@ export const VendorRegisterPage: React.FC = () => {
   const [form3] = Form.useForm();
   const [form4] = Form.useForm();
 
-  const [hours, setHours] =
-    useState<Record<string, { open: string; close: string; closed: boolean }>>(
-      defaultHours(),
-    );
+  const [hours, setHours] = useState<OperatingHoursMap>(defaultHours());
+  const [logoFile, setLogoFile] = useState<UploadFile | null>(null);
 
-  // Collect all form data across steps
   const [stepData, setStepData] = useState<Partial<RegistrationPayload>>({
     delivery_fee: 30,
     min_order_value: 100,
@@ -137,6 +205,8 @@ export const VendorRegisterPage: React.FC = () => {
     is_dine_in_enabled: true,
     is_takeaway_enabled: true,
     is_delivery_enabled: true,
+    is_pure_veg: false,
+    terms_accepted: false,
   });
 
   const forms = [form1, form2, form3, form4];
@@ -144,6 +214,14 @@ export const VendorRegisterPage: React.FC = () => {
   const next = async () => {
     try {
       const values = await forms[currentStep].validateFields();
+      // Validate operating hours when leaving step 3 (Services)
+      if (currentStep === 3) {
+        const hoursErr = validateHours(hours);
+        if (hoursErr) {
+          message.warning(hoursErr);
+          return;
+        }
+      }
       setStepData((prev) => ({ ...prev, ...values }));
       setCurrentStep((s) => s + 1);
     } catch {
@@ -155,19 +233,36 @@ export const VendorRegisterPage: React.FC = () => {
 
   const handleSubmit = async () => {
     try {
-      const values = await form4.validateFields();
-      const finalData: RegistrationPayload = {
+      // Final validation of all collected data
+      const allData = {
         ...stepData,
-        ...values,
+        ...form4.getFieldsValue(),
         operating_hours: hours,
-      } as RegistrationPayload;
+      };
+      const hoursErr = validateHours(hours);
+      if (hoursErr) {
+        message.warning(hoursErr);
+        setCurrentStep(3);
+        return;
+      }
+      if (!allData.terms_accepted) {
+        message.warning("Please accept the Terms & Conditions to proceed.");
+        setCurrentStep(3);
+        return;
+      }
+
+      const finalData: RegistrationPayload = allData as RegistrationPayload;
 
       setLoading(true);
-      await api.post("/vendor-registration", finalData);
+      await vendorService.registerVendor(finalData);
       setSubmitted(true);
     } catch (e: any) {
       if (e?.response?.data?.error?.message) {
         message.error(e.response.data.error.message);
+      } else if (e?.response?.data?.errors) {
+        // field-level validation errors
+        const msgs = Object.values(e.response.data.errors).join("; ");
+        message.error(msgs);
       } else if (e?.errorFields) {
         // form validation error — already shown inline
       } else {
@@ -185,6 +280,13 @@ export const VendorRegisterPage: React.FC = () => {
   ) => {
     setHours((prev) => ({ ...prev, [day]: { ...prev[day], [field]: value } }));
   };
+
+  // ── Review data ─────────────────────────────────────────────────────────────
+  const allFormData = {
+    ...stepData,
+    ...form4.getFieldsValue(),
+    operating_hours: hours,
+  } as RegistrationPayload;
 
   // ── Success screen ───────────────────────────────────────────────────────
   if (submitted) {
@@ -372,12 +474,6 @@ export const VendorRegisterPage: React.FC = () => {
                   size="large"
                 />
               </Form.Item>
-              <div style={infoBox}>
-                <Text style={{ color: "#1e40af", fontSize: 13 }}>
-                  📱 You'll receive an OTP on this mobile number to verify your
-                  account after approval.
-                </Text>
-              </div>
             </Form>
           </div>
 
@@ -385,7 +481,7 @@ export const VendorRegisterPage: React.FC = () => {
           <div style={{ display: currentStep === 1 ? "block" : "none" }}>
             <SectionHeader
               title="Business Information"
-              subtitle="Legal details for your vendor account (vendors table)"
+              subtitle="Legal details for your vendor account"
             />
             <Form
               form={form2}
@@ -395,7 +491,14 @@ export const VendorRegisterPage: React.FC = () => {
             >
               <Form.Item
                 name="company_name"
-                label="Company / Brand Name (optional)"
+                label="Company / Brand Name"
+                rules={[
+                  {
+                    required: true,
+                    message: "Company / Brand name is required",
+                  },
+                  { max: 200, message: "Must not exceed 200 characters" },
+                ]}
               >
                 <Input
                   prefix={<BankOutlined style={{ color: "#9ca3af" }} />}
@@ -403,32 +506,135 @@ export const VendorRegisterPage: React.FC = () => {
                   size="large"
                 />
               </Form.Item>
-              <Form.Item
-                name="gstin"
-                label="GSTIN (optional)"
-                rules={[
-                  {
-                    pattern:
-                      /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/,
-                    message: "Enter a valid 15-character GSTIN",
-                  },
-                ]}
-              >
-                <Input
-                  placeholder="e.g. 29AABCU9603R1ZX"
-                  size="large"
-                  style={{ textTransform: "uppercase" }}
-                  onChange={(e) =>
-                    form2.setFieldValue("gstin", e.target.value.toUpperCase())
-                  }
-                />
-              </Form.Item>
-              <div style={infoBox}>
-                <Text style={{ color: "#1e40af", fontSize: 13 }}>
-                  💼 GSTIN is optional but required for tax invoicing. You can
-                  add it later from your profile settings.
-                </Text>
-              </div>
+              <Row gutter={16}>
+                <Col span={12}>
+                  <Form.Item
+                    name="gstin"
+                    label="GSTIN (optional)"
+                    rules={[
+                      {
+                        pattern:
+                          /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/,
+                        message: "Enter a valid 15-character GSTIN",
+                      },
+                    ]}
+                  >
+                    <Input
+                      placeholder="e.g. 29AABCU9603R1ZX"
+                      size="large"
+                      style={{ textTransform: "uppercase" }}
+                      onChange={(e) =>
+                        form2.setFieldValue(
+                          "gstin",
+                          e.target.value.toUpperCase(),
+                        )
+                      }
+                    />
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item
+                    name="pan_number"
+                    label="PAN Number (optional)"
+                    rules={[
+                      {
+                        pattern: /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/,
+                        message: "Enter a valid 10-character PAN",
+                      },
+                    ]}
+                  >
+                    <Input
+                      placeholder="e.g. ABCDE1234F"
+                      size="large"
+                      style={{ textTransform: "uppercase" }}
+                      maxLength={10}
+                      onChange={(e) =>
+                        form2.setFieldValue(
+                          "pan_number",
+                          e.target.value.toUpperCase(),
+                        )
+                      }
+                    />
+                  </Form.Item>
+                </Col>
+              </Row>
+              <Divider plain style={{ fontSize: 12, color: "#9ca3af" }}>
+                Bank Details (optional — required for payouts)
+              </Divider>
+              <Row gutter={16}>
+                <Col span={12}>
+                  <Form.Item
+                    name="bank_holder_name"
+                    label="Account Holder Name"
+                  >
+                    <Input
+                      placeholder="Name as on bank account"
+                      size="large"
+                      maxLength={200}
+                    />
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item
+                    name="bank_account_number"
+                    label="Account Number"
+                    dependencies={["bank_ifsc_code", "bank_holder_name"]}
+                    rules={[
+                      {
+                        pattern: /^\d{9,18}$/,
+                        message: "Enter a valid account number (9–18 digits)",
+                      },
+                      ({ getFieldValue }) => ({
+                        validator(_, value) {
+                          const ifsc = getFieldValue("bank_ifsc_code");
+                          const holder = getFieldValue("bank_holder_name");
+                          if ((ifsc || holder) && !value) {
+                            return Promise.reject(
+                              new Error(
+                                "Account number required when IFSC or holder name is provided",
+                              ),
+                            );
+                          }
+                          return Promise.resolve();
+                        },
+                      }),
+                    ]}
+                  >
+                    <Input
+                      placeholder="Bank account number"
+                      size="large"
+                      maxLength={18}
+                    />
+                  </Form.Item>
+                </Col>
+              </Row>
+              <Row gutter={16}>
+                <Col span={12}>
+                  <Form.Item
+                    name="bank_ifsc_code"
+                    label="IFSC Code"
+                    rules={[
+                      {
+                        pattern: /^[A-Z]{4}0[A-Z0-9]{6}$/,
+                        message: "Enter a valid IFSC code (e.g. SBIN0001234)",
+                      },
+                    ]}
+                  >
+                    <Input
+                      placeholder="e.g. SBIN0001234"
+                      size="large"
+                      style={{ textTransform: "uppercase" }}
+                      maxLength={11}
+                      onChange={(e) =>
+                        form2.setFieldValue(
+                          "bank_ifsc_code",
+                          e.target.value.toUpperCase(),
+                        )
+                      }
+                    />
+                  </Form.Item>
+                </Col>
+              </Row>
             </Form>
           </div>
 
@@ -463,36 +669,160 @@ export const VendorRegisterPage: React.FC = () => {
                   placeholder="Tell customers what makes your restaurant special..."
                 />
               </Form.Item>
-              <Form.Item
-                name="cuisines"
-                label="Cuisines"
-                rules={[
-                  { required: true, message: "Select at least one cuisine" },
-                ]}
-              >
-                <Select
-                  mode="multiple"
-                  size="large"
-                  placeholder="Select cuisines you serve"
-                  optionFilterProp="children"
-                  maxTagCount={4}
-                >
-                  {CUISINE_OPTIONS.map((c) => (
-                    <Option key={c} value={c}>
-                      {c}
-                    </Option>
-                  ))}
-                </Select>
-              </Form.Item>
+              <Row gutter={16}>
+                <Col span={12}>
+                  <Form.Item
+                    name="cuisines"
+                    label="Cuisines"
+                    rules={[
+                      {
+                        required: true,
+                        message: "Select at least one cuisine",
+                      },
+                    ]}
+                  >
+                    <Select
+                      mode="multiple"
+                      size="large"
+                      placeholder="Select cuisines you serve"
+                      optionFilterProp="children"
+                      maxTagCount={4}
+                    >
+                      {CUISINE_OPTIONS.map((c) => (
+                        <Option key={c} value={c}>
+                          {c}
+                        </Option>
+                      ))}
+                    </Select>
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item
+                    name="is_pure_veg"
+                    label="Pure Vegetarian"
+                    valuePropName="checked"
+                  >
+                    <Switch checkedChildren="Veg" unCheckedChildren="All" />
+                  </Form.Item>
+                  <Form.Item
+                    name="fssai_license"
+                    label="FSSAI License (optional)"
+                  >
+                    <Input
+                      placeholder="e.g. 12345678901234"
+                      size="large"
+                      maxLength={20}
+                    />
+                  </Form.Item>
+                </Col>
+              </Row>
+              <Divider plain style={{ fontSize: 12, color: "#9ca3af" }}>
+                Address
+              </Divider>
               <Form.Item
                 name="address"
-                label="Full Address"
+                label="Street / Building / Area"
                 rules={[{ required: true, message: "Address is required" }]}
               >
                 <TextArea
                   rows={2}
-                  placeholder="Shop no, building, street, area, city, pincode"
+                  placeholder="Shop no, building, street, area"
                 />
+              </Form.Item>
+              <Row gutter={16}>
+                <Col span={8}>
+                  <Form.Item
+                    name="city"
+                    label="City"
+                    rules={[{ required: true, message: "City is required" }]}
+                  >
+                    <Input placeholder="City" size="large" />
+                  </Form.Item>
+                </Col>
+                <Col span={8}>
+                  <Form.Item
+                    name="state"
+                    label="State"
+                    rules={[{ required: true, message: "State is required" }]}
+                  >
+                    <Select
+                      size="large"
+                      placeholder="Select state"
+                      showSearch
+                      optionFilterProp="children"
+                    >
+                      {INDIAN_STATES.map((s) => (
+                        <Option key={s} value={s}>
+                          {s}
+                        </Option>
+                      ))}
+                    </Select>
+                  </Form.Item>
+                </Col>
+                <Col span={8}>
+                  <Form.Item
+                    name="pin_code"
+                    label="PIN Code"
+                    rules={[
+                      { required: true, message: "PIN code is required" },
+                      {
+                        pattern: /^[1-9][0-9]{5}$/,
+                        message: "Enter a valid 6-digit PIN code",
+                      },
+                    ]}
+                  >
+                    <Input
+                      placeholder="6-digit PIN"
+                      size="large"
+                      maxLength={6}
+                    />
+                  </Form.Item>
+                </Col>
+              </Row>
+              <Form.Item label="Location coordinates (optional)">
+                <Row gutter={8} align="middle">
+                  <Col span={10}>
+                    <Form.Item name="latitude" noStyle>
+                      <InputNumber
+                        placeholder="Latitude"
+                        style={{ width: "100%" }}
+                        step={0.000001}
+                      />
+                    </Form.Item>
+                  </Col>
+                  <Col span={10}>
+                    <Form.Item name="longitude" noStyle>
+                      <InputNumber
+                        placeholder="Longitude"
+                        style={{ width: "100%" }}
+                        step={0.000001}
+                      />
+                    </Form.Item>
+                  </Col>
+                  <Col span={4}>
+                    <Button
+                      icon={<EnvironmentOutlined />}
+                      onClick={() => {
+                        navigator.geolocation.getCurrentPosition(
+                          (pos) => {
+                            form3.setFieldsValue({
+                              latitude: parseFloat(
+                                pos.coords.latitude.toFixed(6),
+                              ),
+                              longitude: parseFloat(
+                                pos.coords.longitude.toFixed(6),
+                              ),
+                            });
+                            message.success("Location detected");
+                          },
+                          () => message.error("Could not get location"),
+                        );
+                      }}
+                    >
+                      Detect
+                    </Button>
+                  </Col>
+                </Row>
               </Form.Item>
               <Form.Item
                 name="contact_phone"
@@ -512,7 +842,6 @@ export const VendorRegisterPage: React.FC = () => {
                   maxLength={10}
                 />
               </Form.Item>
-              <Divider style={{ margin: "16px 0" }} />
               <Row gutter={16}>
                 <Col span={8}>
                   <Form.Item
@@ -525,7 +854,6 @@ export const VendorRegisterPage: React.FC = () => {
                       max={500}
                       size="large"
                       style={{ width: "100%" }}
-                      prefix="₹"
                     />
                   </Form.Item>
                 </Col>
@@ -540,7 +868,6 @@ export const VendorRegisterPage: React.FC = () => {
                       max={5000}
                       size="large"
                       style={{ width: "100%" }}
-                      prefix="₹"
                     />
                   </Form.Item>
                 </Col>
@@ -638,9 +965,11 @@ export const VendorRegisterPage: React.FC = () => {
                     <div style={{ width: 36, flexShrink: 0 }}>
                       <Tag
                         style={{
-                          background: hours[day].closed ? "#f3f4f6" : "#eff6ff",
+                          background: hours[day]?.closed
+                            ? "#f3f4f6"
+                            : "#eff6ff",
                           border: "none",
-                          color: hours[day].closed ? "#9ca3af" : "#1d4ed8",
+                          color: hours[day]?.closed ? "#9ca3af" : "#1d4ed8",
                           fontWeight: 600,
                           fontSize: 11,
                           borderRadius: 4,
@@ -650,11 +979,11 @@ export const VendorRegisterPage: React.FC = () => {
                       </Tag>
                     </div>
                     <Switch
-                      checked={!hours[day].closed}
+                      checked={!hours[day]?.closed}
                       onChange={(v) => updateHour(day, "closed", !v)}
                       size="small"
                     />
-                    {hours[day].closed ? (
+                    {hours[day]?.closed ? (
                       <Text style={{ color: "#9ca3af", fontSize: 13, flex: 1 }}>
                         Closed
                       </Text>
@@ -669,7 +998,7 @@ export const VendorRegisterPage: React.FC = () => {
                       >
                         <Input
                           type="time"
-                          value={hours[day].open}
+                          value={hours[day]?.open}
                           onChange={(e) =>
                             updateHour(day, "open", e.target.value)
                           }
@@ -678,7 +1007,7 @@ export const VendorRegisterPage: React.FC = () => {
                         <Text style={{ color: "#9ca3af" }}>to</Text>
                         <Input
                           type="time"
-                          value={hours[day].close}
+                          value={hours[day]?.close}
                           onChange={(e) =>
                             updateHour(day, "close", e.target.value)
                           }
@@ -689,7 +1018,139 @@ export const VendorRegisterPage: React.FC = () => {
                   </div>
                 ))}
               </div>
+
+              <Divider />
+              <Form.Item
+                name="terms_accepted"
+                valuePropName="checked"
+                rules={[
+                  {
+                    validator: (_, value) =>
+                      value
+                        ? Promise.resolve()
+                        : Promise.reject(
+                            new Error("You must accept the Terms & Conditions"),
+                          ),
+                  },
+                ]}
+              >
+                <Checkbox>
+                  I accept the{" "}
+                  <Button type="link" style={{ padding: 0, fontSize: 14 }}>
+                    Terms & Conditions
+                  </Button>{" "}
+                  and{" "}
+                  <Button type="link" style={{ padding: 0, fontSize: 14 }}>
+                    Privacy Policy
+                  </Button>
+                </Checkbox>
+              </Form.Item>
             </Form>
+          </div>
+
+          {/* ── Step 4: Review & Confirm ──────────────────────────────────── */}
+          <div style={{ display: currentStep === 4 ? "block" : "none" }}>
+            <SectionHeader
+              title="Review Your Information"
+              subtitle="Please verify all details before submitting"
+            />
+            <div style={{ maxHeight: 400, overflowY: "auto" }}>
+              <Descriptions
+                title="Account"
+                column={2}
+                size="small"
+                bordered
+                style={{ marginBottom: 16 }}
+              >
+                <Descriptions.Item label="Mobile">
+                  {allFormData.mobile_number}
+                </Descriptions.Item>
+                <Descriptions.Item label="Name">
+                  {allFormData.name}
+                </Descriptions.Item>
+                <Descriptions.Item label="Email">
+                  {allFormData.email || "—"}
+                </Descriptions.Item>
+              </Descriptions>
+              <Descriptions
+                title="Business"
+                column={2}
+                size="small"
+                bordered
+                style={{ marginBottom: 16 }}
+              >
+                <Descriptions.Item label="Company">
+                  {allFormData.company_name}
+                </Descriptions.Item>
+                <Descriptions.Item label="GSTIN">
+                  {allFormData.gstin || "—"}
+                </Descriptions.Item>
+                <Descriptions.Item label="PAN">
+                  {allFormData.pan_number || "—"}
+                </Descriptions.Item>
+                <Descriptions.Item label="Bank Account">
+                  {allFormData.bank_account_number
+                    ? `****${allFormData.bank_account_number.slice(-4)}`
+                    : "—"}
+                </Descriptions.Item>
+                <Descriptions.Item label="IFSC">
+                  {allFormData.bank_ifsc_code || "—"}
+                </Descriptions.Item>
+                <Descriptions.Item label="Account Holder">
+                  {allFormData.bank_holder_name || "—"}
+                </Descriptions.Item>
+              </Descriptions>
+              <Descriptions
+                title="Restaurant"
+                column={2}
+                size="small"
+                bordered
+                style={{ marginBottom: 16 }}
+              >
+                <Descriptions.Item label="Name" span={2}>
+                  {allFormData.restaurant_name}
+                </Descriptions.Item>
+                <Descriptions.Item label="Description" span={2}>
+                  {allFormData.description || "—"}
+                </Descriptions.Item>
+                <Descriptions.Item label="Cuisines" span={2}>
+                  {allFormData.cuisines?.join(", ")}
+                </Descriptions.Item>
+                <Descriptions.Item label="Pure Veg">
+                  {allFormData.is_pure_veg ? "Yes" : "No"}
+                </Descriptions.Item>
+                <Descriptions.Item label="FSSAI">
+                  {allFormData.fssai_license || "—"}
+                </Descriptions.Item>
+                <Descriptions.Item label="Address" span={2}>
+                  {allFormData.address}, {allFormData.city}, {allFormData.state}{" "}
+                  — {allFormData.pin_code}
+                </Descriptions.Item>
+                <Descriptions.Item label="Contact Phone">
+                  {allFormData.contact_phone}
+                </Descriptions.Item>
+                <Descriptions.Item label="Delivery Fee">
+                  ₹{allFormData.delivery_fee}
+                </Descriptions.Item>
+                <Descriptions.Item label="Min Order">
+                  ₹{allFormData.min_order_value}
+                </Descriptions.Item>
+                <Descriptions.Item label="Prep Time">
+                  {allFormData.avg_prep_time_minutes} min
+                </Descriptions.Item>
+              </Descriptions>
+              <Descriptions title="Services" column={3} size="small" bordered>
+                <Descriptions.Item label="Delivery">
+                  {allFormData.is_delivery_enabled ? "✅" : "❌"}
+                </Descriptions.Item>
+                <Descriptions.Item label="Takeaway">
+                  {allFormData.is_takeaway_enabled ? "✅" : "❌"}
+                </Descriptions.Item>
+                <Descriptions.Item label="Dine-in">
+                  {allFormData.is_dine_in_enabled ? "✅" : "❌"}
+                </Descriptions.Item>
+              </Descriptions>
+            </div>
           </div>
 
           {/* ── Navigation ───────────────────────────────────────────────── */}
@@ -824,7 +1285,7 @@ const pageStyle: React.CSSProperties = {
 };
 
 const containerStyle: React.CSSProperties = {
-  maxWidth: 680,
+  maxWidth: 720,
   margin: "0 auto",
 };
 
@@ -832,14 +1293,6 @@ const cardStyle: React.CSSProperties = {
   borderRadius: 16,
   border: "none",
   boxShadow: "0 25px 50px rgba(0,0,0,0.25)",
-};
-
-const infoBox: React.CSSProperties = {
-  background: "#eff6ff",
-  border: "1px solid #bfdbfe",
-  borderRadius: 8,
-  padding: "12px 16px",
-  marginTop: 4,
 };
 
 export default VendorRegisterPage;

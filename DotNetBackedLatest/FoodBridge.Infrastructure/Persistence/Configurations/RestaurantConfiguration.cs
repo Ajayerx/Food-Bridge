@@ -19,6 +19,12 @@ public class RestaurantConfiguration
         builder.Property(r => r.Description)
             .HasMaxLength(1000);
 
+        builder.Property(r => r.Cuisines)
+            .HasMaxLength(2000);
+
+        builder.Property(r => r.OperatingHours)
+            .HasMaxLength(2000);
+
         builder.Property(r => r.LogoUrl)
             .HasMaxLength(500);
 

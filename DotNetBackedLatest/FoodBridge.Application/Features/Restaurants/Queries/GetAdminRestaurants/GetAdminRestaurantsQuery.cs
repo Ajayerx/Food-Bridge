@@ -8,4 +8,4 @@ public record GetAdminRestaurantsQuery(
     string? Search,
     int Page,
     int PageSize)
-    : IRequest<List<RestaurantDto>>;
+    : IRequest<RestaurantListResult>;

@@ -4,7 +4,7 @@ import type { ApiResponse, ApiUser, RoleType } from "../types";
 // ── Request params ────────────────────────────────────────────────────────────
 export interface GetUsersParams {
     page?: number;
-    limit?: number;
+    pageSize?: number;
     role?: RoleType;
     status?: string;
     search?: string;
@@ -14,14 +14,34 @@ export interface GetUsersParams {
 export const userService = {
     /**
      * GET /admin/users
-     * Response: { success: true, data: ApiUser[] }  ← flat array, no meta
+     * Response: { success: true, data: { items: ApiUser[], total_count: number } }
      */
-    getUsers: (params?: GetUsersParams) =>
-        api.get<ApiResponse<ApiUser[]>>("/admin/users", { params }),
+    getUsers: async (params?: GetUsersParams) => {
+        const res = await api.get<ApiResponse<any>>("/admin/users", {
+            params: {
+                page: params?.page ?? 1,
+                pageSize: params?.pageSize ?? 20,
+                role: params?.role,
+                status: params?.status,
+                search: params?.search,
+            },
+        });
+        const body = res.data.data ?? { items: [], total_count: 0 };
+        return {
+            ...res,
+            data: {
+                ...res.data,
+                data: {
+                    items: body.items ?? [],
+                    totalCount: body.total_count ?? 0,
+                },
+            },
+        };
+    },
 
     /**
-     * PATCH /admin/users/:id/suspend
-     * PATCH /admin/users/:id/reactivate
+     * PATCH /admin/users/{id}/suspend
+     * PATCH /admin/users/{id}/reactivate
      */
     setUserStatus: (userId: string, makeActive: boolean) => {
         const action = makeActive ? "reactivate" : "suspend";

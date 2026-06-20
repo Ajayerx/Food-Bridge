@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { message } from "antd";
 import { userService } from "../services/user.service";
@@ -17,18 +17,28 @@ export function useUsers() {
 
     const queryParams: GetUsersParams = {
         page,
-        limit: PAGE_SIZE,
+        pageSize: PAGE_SIZE,
         role: roleFilter !== "all" ? roleFilter : undefined,
         search: search || undefined,
     };
 
+    const handleSearch = useCallback((value: string) => {
+        setSearch(value);
+        setPage(1);
+    }, []);
+
+    const handleRoleFilter = useCallback((value: RoleType | "all") => {
+        setRoleFilter(value);
+        setPage(1);
+    }, []);
+
     // ── Query ─────────────────────────────────────────────────────────────────
-    const { data: rows = [], isLoading, isError, isFetching } = useQuery({
+    const { data: result = { items: [], totalCount: 0 }, isLoading, isError, isFetching } = useQuery({
         queryKey: ["admin-users", queryParams],
         queryFn: async () => {
             const res = await userService.getUsers(queryParams);
-            // Backend returns: { success: true, data: ApiUser[] }
-            return res.data.data ?? [];
+            const mapped = res.data.data as { items: ApiUser[]; totalCount: number };
+            return { items: mapped.items ?? [], totalCount: mapped.totalCount ?? 0 };
         },
         placeholderData: (prev) => prev,
         staleTime: 30_000,
@@ -50,16 +60,16 @@ export function useUsers() {
     });
 
     return {
-        rows,           // ApiUser[] directly
+        rows: result.items,
+        total: result.totalCount,
         isLoading,
         isError,
         isFetching,
 
-        search, setSearch,
-        roleFilter, setRoleFilter,
+        search, setSearch: handleSearch,
+        roleFilter, setRoleFilter: handleRoleFilter,
         page, setPage,
         pageSize: PAGE_SIZE,
-        total: rows.length, // no meta from backend, use array length
 
         toggleStatus,
     };

@@ -17,6 +17,7 @@ public class SuspendRestaurantCommandHandler : IRequestHandler<SuspendRestaurant
             ?? throw new NotFoundException("Restaurant not found.");
 
         restaurant.Status = RestaurantStatus.Suspended;
+        restaurant.RejectionReason = request.Reason;
         await _db.SaveChangesAsync(ct);
         return Unit.Value;
     }

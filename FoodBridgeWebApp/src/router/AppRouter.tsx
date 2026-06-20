@@ -13,6 +13,7 @@ import { KitchenLayout } from "../components/layout/KitchenLayout";
 import { WaiterLayout } from "../components/layout/WaiterLayout";
 import { AdminDashboardPage } from "../features/restaurants/AdminDashboard";
 import { AdminRestaurantsPage } from "../features/restaurants/AdminRestaurantsPage";
+import { AdminVendorsPage } from "../features/vendors/AdminVendorsPage";
 import { AdminUsersPage } from "../features/users/AdminUsersPage";
 import { AdminReportsPage } from "../features/reports/AdminReportsPage";
 import { VendorDashboard } from "../features/restaurants/VendorDashboard";
@@ -158,6 +159,10 @@ export const AppRouter: React.FC = () => {
               path="/admin/restaurants"
               element={<AdminRestaurantsPage />}
             />
+            <Route
+              path="/admin/vendors"
+              element={<AdminVendorsPage />}
+            />
             <Route path="/admin/users" element={<AdminUsersPage />} />
             <Route path="/admin/reports" element={<AdminReportsPage />} />
             <Route path="/admin/support" element={<SupportTicketsPage />} />
@@ -217,11 +222,6 @@ export const AppRouter: React.FC = () => {
             <Route element={<WaiterLayout />}>
               <Route path="/waiter/orders" element={<VendorOrdersBoard />} />
               <Route path="/waiter/tables" element={<WaiterTablesPage />} />
-              <Route
-                path="/waiter/tables"
-                element={<VendorTablesPage />}
-              />{" "}
-              {/* ✅ tables only, no staff */}
             </Route>
           </Route>
         </Route>

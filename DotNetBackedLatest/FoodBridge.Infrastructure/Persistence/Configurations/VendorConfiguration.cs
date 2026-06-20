@@ -28,6 +28,9 @@ public class VendorConfiguration
         builder.Property(v => v.BankIfscCode)
             .HasMaxLength(15);
 
+        builder.Property(v => v.BankHolderName)
+            .HasMaxLength(200);
+
         builder.Property(v => v.Status)
             .IsRequired()
             .HasConversion<string>()

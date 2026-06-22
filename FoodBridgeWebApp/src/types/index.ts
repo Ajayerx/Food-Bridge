@@ -79,6 +79,7 @@ export interface DashboardStats {
     todayRevenue: number;
     monthRevenue: number;
     platformCommission: number;
+    averageOrderValue: number;
     // Users
     totalUsers: number;
     totalCustomers: number;
@@ -97,6 +98,8 @@ export interface DashboardStats {
     // Reviews
     totalReviews: number;
     avgPlatformRating: number;
+    // Fulfillment
+    fulfillmentRate: number;
     // Charts
     ordersChart: DashboardChartPoint[];
     revenueChart: DashboardChartPoint[];

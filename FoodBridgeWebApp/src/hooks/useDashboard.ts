@@ -14,6 +14,7 @@ const mapDashboard = (d: any): DashboardStats => ({
     todayRevenue: d.today_revenue,
     monthRevenue: d.month_revenue,
     platformCommission: d.platform_commission,
+    averageOrderValue: d.average_order_value,
     // Users
     totalUsers: d.total_users,
     totalCustomers: d.total_customers,
@@ -32,6 +33,8 @@ const mapDashboard = (d: any): DashboardStats => ({
     // Reviews
     totalReviews: d.total_reviews,
     avgPlatformRating: d.avg_platform_rating,
+    // Fulfillment
+    fulfillmentRate: d.fulfillment_rate,
     // Charts
     ordersChart: d.orders_chart ?? [],
     revenueChart: d.revenue_chart ?? [],
@@ -45,12 +48,12 @@ const mapDashboard = (d: any): DashboardStats => ({
     })),
 });
 
-export function useDashboard() {
+export function useDashboard(from?: string, to?: string) {
     const { data, isLoading, isError, refetch } = useQuery({
-        queryKey: ["admin-dashboard"],
+        queryKey: ["admin-dashboard", from, to],
         queryFn: async () => {
-            const res = await dashboardService.getStats();
-            return mapDashboard(res.data.data); // ✅ maps snake_case → camelCase
+            const res = await dashboardService.getStats(from, to);
+            return mapDashboard(res.data.data);
         },
         staleTime: 60_000,
         retry: 1,

@@ -3,10 +3,11 @@ import type { ApiResponse, DashboardStats } from "../types";
 
 export const dashboardService = {
     /**
-     * GET /admin/dashboard
+     * GET /admin/dashboard?from=...&to=...
      * Response: { success: true, data: DashboardStats }
-     * C# serialises PascalCase → camelCase via JSON options
      */
-    getStats: () =>
-        api.get<ApiResponse<DashboardStats>>("/admin/dashboard"),
+    getStats: (from?: string, to?: string) =>
+        api.get<ApiResponse<DashboardStats>>("/admin/dashboard", {
+            params: { from, to },
+        }),
 };

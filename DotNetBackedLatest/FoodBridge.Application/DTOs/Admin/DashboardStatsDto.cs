@@ -15,6 +15,7 @@ public class DashboardStatsDto
     public decimal TodayRevenue { get; set; }
     public decimal MonthRevenue { get; set; }
     public decimal PlatformCommission { get; set; }
+    public decimal AverageOrderValue { get; set; }
 
     // ── Users ─────────────────────────────────────────────
     public int TotalUsers { get; set; }
@@ -37,6 +38,9 @@ public class DashboardStatsDto
     // ── Reviews ───────────────────────────────────────────
     public int TotalReviews { get; set; }
     public decimal AvgPlatformRating { get; set; }
+
+    // ── Fulfillment ───────────────────────────────────────
+    public double FulfillmentRate { get; set; }
 
     // ── Charts ────────────────────────────────────────────
     public List<DashboardChartPointDto> OrdersChart { get; set; } = new();

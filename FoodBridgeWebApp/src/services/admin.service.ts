@@ -92,18 +92,4 @@ export const adminService = {
     // Backend: PUT /api/admin/payouts/{id}/processed
     markPayoutProcessed: (id: string) =>
         api.put<ApiResponse<{ message: string }>>(`/admin/payouts/${id}/processed`),
-
-    // ── Dashboard ─────────────────────────────────────────────────────────────────
-    // Backend: GET /admin/dashboard
-    getDashboardStats: () =>
-        api.get<
-            ApiResponse<{
-                totalRestaurants: number;
-                activeRestaurants: number;
-                totalOrders: number;
-                totalUsers: number;
-                todayRevenue: number;
-                pendingApprovals: number;
-            }>
-        >("/admin/dashboard"),
 };

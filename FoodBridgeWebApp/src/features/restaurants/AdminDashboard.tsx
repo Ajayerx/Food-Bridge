@@ -1,14 +1,13 @@
-import React from "react";
+import React, { useState, useMemo } from "react";
 import {
   Alert,
   Avatar,
   Button,
   Card,
   Col,
-  Rate,
+  DatePicker,
   Row,
   Skeleton,
-  Statistic,
   Table,
   Tag,
   Tooltip,
@@ -27,6 +26,8 @@ import {
   CheckCircleOutlined,
   CloseCircleOutlined,
   UserOutlined,
+  RiseOutlined,
+  PercentageOutlined,
 } from "@ant-design/icons";
 import {
   AreaChart,
@@ -38,12 +39,14 @@ import {
   CartesianGrid,
   Tooltip as ReTooltip,
   ResponsiveContainer,
-  Legend,
 } from "recharts";
 import { useDashboard } from "../../hooks/useDashboard";
 import type { TopRestaurant, DashboardChartPoint } from "../../types";
+import dayjs from "dayjs";
+import type { Dayjs } from "dayjs";
 
 const { Title, Text } = Typography;
+const { RangePicker } = DatePicker;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const fmt = (n: number) =>
@@ -54,6 +57,16 @@ const fmt = (n: number) =>
   }).format(n);
 
 const num = (n: number) => new Intl.NumberFormat("en-IN").format(n);
+
+const pct = (n: number) => `${n.toFixed(1)}%`;
+
+// ── Date presets ──────────────────────────────────────────────────────────────
+const presets: { label: string; value: [Dayjs, Dayjs] }[] = [
+  { label: "Today", value: [dayjs(), dayjs()] },
+  { label: "Last 7 Days", value: [dayjs().subtract(6, "day"), dayjs()] },
+  { label: "Last 30 Days", value: [dayjs().subtract(29, "day"), dayjs()] },
+  { label: "Last 90 Days", value: [dayjs().subtract(89, "day"), dayjs()] },
+];
 
 // ── Stat card ─────────────────────────────────────────────────────────────────
 interface StatCardProps {
@@ -191,7 +204,22 @@ const topRestaurantCols = [
 
 // ─────────────────────────────────────────────────────────────────────────────
 export const AdminDashboardPage: React.FC = () => {
-  const { stats: s, isLoading, isError, refetch } = useDashboard();
+  const [dates, setDates] = useState<[Dayjs | null, Dayjs | null]>([
+    dayjs().subtract(29, "day"),
+    dayjs(),
+  ]);
+
+  const from = dates[0]?.toISOString();
+  const to = dates[1]?.toISOString();
+
+  const { stats: s, isLoading, isError, refetch } = useDashboard(from, to);
+
+  const isDefaultRange = useMemo(() => {
+    if (!dates[0] || !dates[1]) return true;
+    return dates[1].diff(dates[0], "day") === 29;
+  }, [dates]);
+
+  const periodLabel = isDefaultRange ? "This period" : "Selected period";
 
   if (isError) {
     return (
@@ -219,23 +247,36 @@ export const AdminDashboardPage: React.FC = () => {
           justifyContent: "space-between",
           alignItems: "center",
           marginBottom: 24,
+          flexWrap: "wrap",
+          gap: 12,
         }}
       >
         <Title level={4} style={{ margin: 0 }}>
           Platform Dashboard
         </Title>
-        <Tooltip title="Refresh">
-          <Button
-            icon={<ReloadOutlined />}
-            onClick={() => refetch()}
-            loading={isLoading}
-          >
-            Refresh
-          </Button>
-        </Tooltip>
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <RangePicker
+            value={dates as [Dayjs, Dayjs]}
+            onChange={(v) => {
+              if (v?.[0] && v?.[1]) setDates([v[0], v[1]]);
+            }}
+            presets={presets}
+            allowClear={false}
+            style={{ width: 260 }}
+          />
+          <Tooltip title="Refresh">
+            <Button
+              icon={<ReloadOutlined />}
+              onClick={() => refetch()}
+              loading={isLoading}
+            >
+              Refresh
+            </Button>
+          </Tooltip>
+        </div>
       </div>
 
-      {/* ── Revenue KPIs ── */}
+      {/* ── Revenue & Orders KPIs ── */}
       <Row gutter={[16, 16]}>
         <Col xs={24} sm={12} lg={6}>
           <StatCard
@@ -243,7 +284,27 @@ export const AdminDashboardPage: React.FC = () => {
             value={fmt(s?.totalRevenue ?? 0)}
             color="#52c41a"
             icon={<DollarOutlined />}
-            sub={`Platform commission: ${fmt(s?.platformCommission ?? 0)}`}
+            sub={`Commission: ${fmt(s?.platformCommission ?? 0)}`}
+            loading={isLoading}
+          />
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <StatCard
+            title="Period Revenue"
+            value={fmt(s?.monthRevenue ?? 0)}
+            color="#1677ff"
+            icon={<RiseOutlined />}
+            sub={periodLabel}
+            loading={isLoading}
+          />
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <StatCard
+            title="Avg Order Value"
+            value={fmt(s?.averageOrderValue ?? 0)}
+            color="#722ed1"
+            icon={<ShoppingOutlined />}
+            sub={periodLabel}
             loading={isLoading}
           />
         </Col>
@@ -251,13 +312,16 @@ export const AdminDashboardPage: React.FC = () => {
           <StatCard
             title="Today's Revenue"
             value={fmt(s?.todayRevenue ?? 0)}
-            color="#1677ff"
+            color="#13c2c2"
             icon={<ArrowUpOutlined />}
-            sub={`This month: ${fmt(s?.monthRevenue ?? 0)}`}
             loading={isLoading}
           />
         </Col>
-        <Col xs={24} sm={12} lg={6}>
+      </Row>
+
+      {/* ── Order status KPIs ── */}
+      <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
+        <Col xs={12} sm={8} lg={4}>
           <StatCard
             title="Total Orders"
             value={num(s?.totalOrders ?? 0)}
@@ -267,21 +331,6 @@ export const AdminDashboardPage: React.FC = () => {
             loading={isLoading}
           />
         </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <StatCard
-            title="Avg. Platform Rating"
-            value={(s?.avgPlatformRating ?? 0).toFixed(1)}
-            suffix="/ 5"
-            color="#faad14"
-            icon={<StarOutlined />}
-            sub={`From ${num(s?.totalReviews ?? 0)} reviews`}
-            loading={isLoading}
-          />
-        </Col>
-      </Row>
-
-      {/* ── Order status KPIs ── */}
-      <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
         <Col xs={12} sm={8} lg={4}>
           <StatCard
             title="Pending Orders"
@@ -302,29 +351,20 @@ export const AdminDashboardPage: React.FC = () => {
         </Col>
         <Col xs={12} sm={8} lg={4}>
           <StatCard
+            title="Fulfillment Rate"
+            value={pct(s?.fulfillmentRate ?? 0)}
+            color="#52c41a"
+            icon={<PercentageOutlined />}
+            sub={periodLabel}
+            loading={isLoading}
+          />
+        </Col>
+        <Col xs={12} sm={8} lg={4}>
+          <StatCard
             title="Cancelled Orders"
             value={num(s?.cancelledOrders ?? 0)}
             color="#ff4d4f"
             icon={<CloseCircleOutlined />}
-            loading={isLoading}
-          />
-        </Col>
-        <Col xs={12} sm={8} lg={4}>
-          <StatCard
-            title="Total Deliveries"
-            value={num(s?.totalDeliveries ?? 0)}
-            color="#13c2c2"
-            icon={<CheckCircleOutlined />}
-            loading={isLoading}
-          />
-        </Col>
-        <Col xs={12} sm={8} lg={4}>
-          <StatCard
-            title="Active Agents"
-            value={num(s?.activeAgents ?? 0)}
-            color="#52c41a"
-            icon={<CarOutlined />}
-            sub={`Available: ${num(s?.availableAgents ?? 0)}`}
             loading={isLoading}
           />
         </Col>
@@ -390,10 +430,11 @@ export const AdminDashboardPage: React.FC = () => {
         </Col>
         <Col xs={12} sm={8} lg={4}>
           <StatCard
-            title="New Users (Month)"
+            title="New Users (Period)"
             value={num(s?.newUsersThisMonth ?? 0)}
             color="#eb2f96"
             icon={<ArrowUpOutlined />}
+            sub={periodLabel}
             loading={isLoading}
           />
         </Col>
@@ -404,7 +445,7 @@ export const AdminDashboardPage: React.FC = () => {
         {/* Revenue Chart */}
         <Col xs={24} lg={12}>
           <Card
-            title="Revenue Trend (Last 7 Days)"
+            title="Revenue Trend"
             size="small"
             style={{ borderRadius: 12 }}
           >
@@ -447,7 +488,7 @@ export const AdminDashboardPage: React.FC = () => {
         {/* Orders Chart */}
         <Col xs={24} lg={12}>
           <Card
-            title="Orders Trend (Last 7 Days)"
+            title="Orders Trend"
             size="small"
             style={{ borderRadius: 12 }}
           >
@@ -457,7 +498,7 @@ export const AdminDashboardPage: React.FC = () => {
                   <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                   <XAxis dataKey="label" tick={{ fontSize: 12 }} />
                   <YAxis tick={{ fontSize: 12 }} allowDecimals={false} />
-                  <ReTooltip />
+                  <ReTooltip formatter={(v: number) => num(v)} />
                   <Bar
                     dataKey="count"
                     name="Orders"
@@ -468,6 +509,67 @@ export const AdminDashboardPage: React.FC = () => {
               </ResponsiveContainer>
             </Skeleton>
           </Card>
+        </Col>
+      </Row>
+
+      {/* ── Delivery & Rating KPIs ── */}
+      <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
+        <Col xs={12} sm={8} lg={4}>
+          <StatCard
+            title="Total Deliveries"
+            value={num(s?.totalDeliveries ?? 0)}
+            color="#13c2c2"
+            icon={<CheckCircleOutlined />}
+            loading={isLoading}
+          />
+        </Col>
+        <Col xs={12} sm={8} lg={4}>
+          <StatCard
+            title="Active Agents"
+            value={num(s?.activeAgents ?? 0)}
+            color="#52c41a"
+            icon={<CarOutlined />}
+            sub={`Available: ${num(s?.availableAgents ?? 0)}`}
+            loading={isLoading}
+          />
+        </Col>
+        <Col xs={12} sm={8} lg={4}>
+          <StatCard
+            title="Avg. Platform Rating"
+            value={(s?.avgPlatformRating ?? 0).toFixed(1)}
+            suffix="/ 5"
+            color="#faad14"
+            icon={<StarOutlined />}
+            sub={`From ${num(s?.totalReviews ?? 0)} reviews`}
+            loading={isLoading}
+          />
+        </Col>
+        <Col xs={12} sm={8} lg={4}>
+          <StatCard
+            title="Today's Orders"
+            value={num(s?.todayOrders ?? 0)}
+            color="#1677ff"
+            icon={<ShoppingOutlined />}
+            loading={isLoading}
+          />
+        </Col>
+        <Col xs={12} sm={8} lg={4}>
+          <StatCard
+            title="Active Restaurants"
+            value={num(s?.activeRestaurants ?? 0)}
+            color="#52c41a"
+            icon={<ShopOutlined />}
+            loading={isLoading}
+          />
+        </Col>
+        <Col xs={12} sm={8} lg={4}>
+          <StatCard
+            title="Delivery Agents"
+            value={num(s?.totalAgents ?? 0)}
+            color="#fa8c16"
+            icon={<CarOutlined />}
+            loading={isLoading}
+          />
         </Col>
       </Row>
 

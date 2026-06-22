@@ -33,35 +33,48 @@ public class GetAdminFinancialsReportQueryHandler : IRequestHandler<GetAdminFina
         var totalPayouts = payouts.Sum(p => p.Amount);
         var totalRefunds = refunds.Sum(r => r.Amount);
 
-        Func<DateTime, string> getLabel = request.GroupBy.ToLower() switch
+        Func<DateTime, DateTime> getPeriodStart = request.GroupBy.ToLower() switch
         {
-            "month" => d => d.ToString("MMM yyyy"),
-            "week"  => d => $"W{System.Globalization.CultureInfo.InvariantCulture.Calendar.GetWeekOfYear(d, System.Globalization.CalendarWeekRule.FirstFourDayWeek, DayOfWeek.Monday)}-{d.Year}",
-            _       => d => d.ToString("dd MMM yyyy")
+            "month" => d => new DateTime(d.Year, d.Month, 1),
+            "week" => d =>
+            {
+                var diff = (7 + (d.DayOfWeek - DayOfWeek.Monday)) % 7;
+                return d.Date.AddDays(-(int)diff);
+            },
+            _ => d => d.Date
         };
 
-        var data = orders
-            .GroupBy(o => getLabel(o.CreatedAt))
-            .Select(g =>
+        Func<DateTime, string> getLabel = d => request.GroupBy.ToLower() switch
+        {
+            "month" => d.ToString("MMM yyyy"),
+            "week" => $"W{System.Globalization.CultureInfo.InvariantCulture.Calendar.GetWeekOfYear(d, System.Globalization.CalendarWeekRule.FirstFourDayWeek, DayOfWeek.Monday)}-{d.Year}",
+            _ => d.ToString("dd MMM yyyy")
+        };
+
+        var allPeriods = orders.Select(o => getPeriodStart(o.CreatedAt))
+            .Union(commissions.Select(c => getPeriodStart(c.CreatedAt)))
+            .Union(payouts.Select(p => getPeriodStart(p.CreatedAt)))
+            .Union(refunds.Select(r => getPeriodStart(r.CreatedAt)))
+            .Distinct()
+            .OrderBy(d => d)
+            .ToList();
+
+        var data = allPeriods.Select(period =>
+        {
+            var periodOrders = orders.Where(o => getPeriodStart(o.CreatedAt) == period).ToList();
+            var periodCommissions = commissions.Where(c => getPeriodStart(c.CreatedAt) == period).ToList();
+            var periodPayouts = payouts.Where(p => getPeriodStart(p.CreatedAt) == period).ToList();
+            var periodRefunds = refunds.Where(r => getPeriodStart(r.CreatedAt) == period).ToList();
+
+            return new FinancialDataPointDto
             {
-                var gCommission = commissions
-                    .Where(c => getLabel(c.CreatedAt) == g.Key)
-                    .Sum(c => c.Amount);
-                var gPayouts = payouts
-                    .Where(p => getLabel(p.CreatedAt) == g.Key)
-                    .Sum(p => p.Amount);
-                var gRefunds = refunds
-                    .Where(r => getLabel(r.CreatedAt) == g.Key)
-                    .Sum(r => r.Amount);
-                return new FinancialDataPointDto
-                {
-                    Label = g.Key,
-                    Gmv = g.Sum(o => o.TotalAmount),
-                    Commission = gCommission,
-                    Payouts = gPayouts,
-                    Refunds = gRefunds
-                };
-            }).ToList();
+                Label = getLabel(period),
+                Gmv = periodOrders.Sum(o => o.TotalAmount),
+                Commission = periodCommissions.Sum(c => c.Amount),
+                Payouts = periodPayouts.Sum(p => p.Amount),
+                Refunds = periodRefunds.Sum(r => r.Amount)
+            };
+        }).ToList();
 
         return new AdminFinancialsReportDto
         {
@@ -70,7 +83,7 @@ public class GetAdminFinancialsReportQueryHandler : IRequestHandler<GetAdminFina
             TotalGmv = gmv,
             TotalCommission = totalCommission,
             TotalPayouts = totalPayouts,
-            NetRevenue = totalCommission - totalPayouts,
+            NetRevenue = totalCommission - totalPayouts - totalRefunds,
             TotalRefunds = totalRefunds,
             Data = data
         };

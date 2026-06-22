@@ -1,10 +1,8 @@
-import api from "../lib/apiClient";
+﻿import api from "../lib/apiClient";
 import type { ApiResponse } from "types";
 
 export const reportService = {
     // ── Vendor report ──────────────────────────────────────────────────────────
-    // Merges: GET /reports/vendor/sales  +  GET /reports/vendor/items
-    // Optional: GET /reports/vendor/daily (if your backend adds it later)
     getVendorReport: (
         restaurantId: string,
         params: { from: string; to: string }
@@ -12,9 +10,9 @@ export const reportService = {
         api
             .get<ApiResponse<any>>("/reports/vendor/sales", {
                 params: {
-                    restaurantId: restaurantId,  // ✅ was restaurant_id
-                    from: params.from,           // ✅ was from_date
-                    to: params.to,               // ✅ was to_date
+                    restaurantId: restaurantId,
+                    from: params.from,
+                    to: params.to,
                 },
             })
             .then(async (salesRes) => {
@@ -26,9 +24,9 @@ export const reportService = {
                         "/reports/vendor/items",
                         {
                             params: {
-                                restaurantId: restaurantId,  // ✅ was restaurant_id
-                                from: params.from,           // ✅ was from_date
-                                to: params.to,               // ✅ was to_date
+                                restaurantId: restaurantId,
+                                from: params.from,
+                                to: params.to,
                                 limit: 5,
                             },
                         }
@@ -49,9 +47,9 @@ export const reportService = {
                         "/reports/vendor/daily",
                         {
                             params: {
-                                restaurantId: restaurantId,  // ✅ was restaurant_id
-                                from: params.from,           // ✅ was from_date
-                                to: params.to,               // ✅ was to_date
+                                restaurantId: restaurantId,
+                                from: params.from,
+                                to: params.to,
                             },
                         }
                     );
@@ -75,32 +73,32 @@ export const reportService = {
             }),
 
     // ── Admin / platform report ────────────────────────────────────────────────
-    // Backend: GET /reports/admin/platform?from_date=&to_date=
     getPlatformReport: (params: { from: string; to: string }) =>
         api
             .get<ApiResponse<any>>("/reports/admin/platform", {
-                params: { from_date: params.from, to_date: params.to },
+                params: { from: params.from, to: params.to },
             })
             .then((res) => {
                 const raw = res.data.data ?? {};
                 const normalised = {
-                    totalRevenue: Number(raw.gmv ?? 0),
+                    totalRevenue: Number(raw.total_gmv ?? 0),
                     totalOrders: Number(raw.total_orders ?? 0),
                     totalRestaurants: Number(raw.total_restaurants ?? 0),
                     totalUsers: Number(raw.total_users ?? 0),
-                    newUsersToday: Number(raw.new_users_today ?? 0),
-                    revenueByDay: (raw.revenue_by_day ?? []).map((d: any) => ({
-                        date: d.date ?? "",
+                    newUsersToday: Number(raw.new_users ?? 0),
+                    avgOrderValue: Number(raw.average_order_value ?? 0),
+                    revenueByDay: (raw.gmv_chart ?? []).map((d: any) => ({
+                        date: d.label ?? "",
                         revenue: Number(d.revenue ?? 0),
                     })),
                     revenueByRestaurant: (raw.revenue_by_restaurant ?? []).map((r: any) => ({
-                        restaurantId: r.restaurant_id ?? "",
-                        name: r.name ?? "",
+                        restaurantId: "",
+                        name: r.label ?? "",
                         revenue: Number(r.revenue ?? 0),
                     })),
                     payoutSummary: (raw.payout_summary ?? []).map((p: any) => ({
                         restaurantId: p.restaurant_id ?? "",
-                        name: p.name ?? "",
+                        name: p.restaurant_name ?? "",
                         grossRevenue: Number(p.gross_revenue ?? 0),
                         platformFee: Number(p.platform_fee ?? 0),
                         netPayout: Number(p.net_payout ?? 0),
@@ -110,7 +108,6 @@ export const reportService = {
             }),
 
     // ── Generic reports ─────────────────────────────────────────────────────────
-    // Backend: GET /reports/sales?restaurantId=&from=&to=&groupBy=
     getSalesReport: (params: {
         restaurantId?: string;
         from?: string;
@@ -119,7 +116,6 @@ export const reportService = {
     }) =>
         api.get<ApiResponse<any>>("/reports/sales", { params }),
 
-    // Backend: GET /reports/orders?restaurantId=&from=&to=&status=
     getOrderReport: (params: {
         restaurantId?: string;
         from?: string;
@@ -128,7 +124,6 @@ export const reportService = {
     }) =>
         api.get<ApiResponse<any>>("/reports/orders", { params }),
 
-    // Backend: GET /reports/revenue?restaurantId=&from=&to=&groupBy=
     getRevenueReport: (params: {
         restaurantId?: string;
         from?: string;
@@ -138,24 +133,68 @@ export const reportService = {
         api.get<ApiResponse<any>>("/reports/revenue", { params }),
 
     // ── Vendor-scoped reports ───────────────────────────────────────────────────
-    // Backend: GET /reports/vendor/orders?restaurantId=&from=&to=
     getVendorOrderReport: (restaurantId: string, params: { from: string; to: string }) =>
         api.get<ApiResponse<any>>("/reports/vendor/orders", {
             params: { restaurantId, ...params },
         }),
 
-    // Backend: GET /reports/vendor/delivery?restaurantId=&from=&to=
     getVendorDeliveryReport: (restaurantId: string, params: { from: string; to: string }) =>
         api.get<ApiResponse<any>>("/reports/vendor/delivery", {
             params: { restaurantId, ...params },
         }),
 
     // ── Admin-scoped reports ────────────────────────────────────────────────────
-    // Backend: GET /reports/admin/vendors?from=&to=&limit=
-    getAdminVendorsReport: (params: { from?: string; to?: string; limit?: number }) =>
-        api.get<ApiResponse<any>>("/reports/admin/vendors", { params }),
+    getAdminVendorsReport: (params: {
+        from?: string;
+        to?: string;
+        limit?: number;
+    }) =>
+        api
+            .get<ApiResponse<any>>("/reports/admin/vendors", { params })
+            .then((res) => {
+                const raw = res.data.data ?? {};
+                const normalised = {
+                    fromDate: raw.from_date ?? "",
+                    toDate: raw.to_date ?? "",
+                    totalCount: Number(raw.total_count ?? 0),
+                    vendors: (raw.vendors ?? []).map((v: any) => ({
+                        vendorId: v.vendor_id ?? "",
+                        vendorName: v.vendor_name ?? "",
+                        totalOrders: Number(v.total_orders ?? 0),
+                        totalRevenue: Number(v.total_revenue ?? 0),
+                        commission: Number(v.commission ?? 0),
+                        activeRestaurants: Number(v.active_restaurants ?? 0),
+                        avgRating: Number(v.avg_rating ?? 0),
+                    })),
+                };
+                return { data: { success: true, data: normalised } } as any;
+            }),
 
-    // Backend: GET /reports/admin/financials?from=&to=&groupBy=
-    getAdminFinancialsReport: (params: { from?: string; to?: string; groupBy?: string }) =>
-        api.get<ApiResponse<any>>("/reports/admin/financials", { params }),
+    getAdminFinancialsReport: (params: {
+        from?: string;
+        to?: string;
+        groupBy?: string;
+    }) =>
+        api
+            .get<ApiResponse<any>>("/reports/admin/financials", { params })
+            .then((res) => {
+                const raw = res.data.data ?? {};
+                const normalised = {
+                    fromDate: raw.from_date ?? "",
+                    toDate: raw.to_date ?? "",
+                    totalGmv: Number(raw.total_gmv ?? 0),
+                    totalCommission: Number(raw.total_commission ?? 0),
+                    totalPayouts: Number(raw.total_payouts ?? 0),
+                    netRevenue: Number(raw.net_revenue ?? 0),
+                    totalRefunds: Number(raw.total_refunds ?? 0),
+                    data: (raw.data ?? []).map((d: any) => ({
+                        label: d.label ?? "",
+                        gmv: Number(d.gmv ?? 0),
+                        commission: Number(d.commission ?? 0),
+                        payouts: Number(d.payouts ?? 0),
+                        refunds: Number(d.refunds ?? 0),
+                    })),
+                };
+                return { data: { success: true, data: normalised } } as any;
+            }),
 };

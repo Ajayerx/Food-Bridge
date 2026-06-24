@@ -116,8 +116,9 @@ public class GetDashboardStatsQueryHandler
         var topRestaurants = await _db.Restaurants
             .AsNoTracking()
             .Where(r => r.DeletedAt == null)
-            .OrderByDescending(r => r.TotalRatings)
-            .ThenByDescending(r => r.AvgRating)
+            .OrderByDescending(r => r.Orders
+                .Where(o => o.PaymentStatus == OrderPaymentStatus.Paid)
+                .Sum(o => o.TotalAmount))
             .Take(5)
             .Select(r => new TopRestaurantDto
             {
@@ -210,7 +211,8 @@ public class GetDashboardStatsQueryHandler
                      || o.OrderStatus == OrderStatus.OutForDelivery)
             .CountAsync(ct);
         var cancelledOrders = await _db.Orders
-            .Where(o => o.OrderStatus == OrderStatus.Cancelled)
+            .Where(o => o.OrderStatus == OrderStatus.Cancelled
+                     || o.OrderStatus == OrderStatus.Refunded)
             .CountAsync(ct);
 
         var periodOrderCount = await _db.Orders
@@ -226,7 +228,8 @@ public class GetDashboardStatsQueryHandler
             .CountAsync(ct);
         var periodCancelled = await _db.Orders
             .Where(o => o.CreatedAt >= periodStart && o.CreatedAt < periodEndParam
-                     && o.OrderStatus == OrderStatus.Cancelled)
+                     && (o.OrderStatus == OrderStatus.Cancelled
+                      || o.OrderStatus == OrderStatus.Refunded))
             .CountAsync(ct);
         var periodPaid = await _db.Orders
             .Where(o => o.CreatedAt >= periodStart && o.CreatedAt < periodEndParam
@@ -243,7 +246,8 @@ public class GetDashboardStatsQueryHandler
         var totalUsers = await _db.Users
             .Where(u => u.DeletedAt == null)
             .CountAsync(ct);
-        var totalCustomers = await _db.Customers.CountAsync(ct);
+        var totalCustomers = await _db.Customers
+            .CountAsync(c => c.User.Role == UserRole.Customer, ct);
         var totalVendors = await _db.Vendors.CountAsync(ct);
         var totalAgents = await _db.DeliveryAgents.CountAsync(ct);
         var newUsersToday = await _db.Users
@@ -254,13 +258,13 @@ public class GetDashboardStatsQueryHandler
             .CountAsync(ct);
 
         var totalRestaurants = await _db.Restaurants
-            .Where(r => r.DeletedAt == null)
+            .Where(r => r.DeletedAt == null && r.Vendor.Status == VendorStatus.Approved)
             .CountAsync(ct);
         var activeRestaurants = await _db.Restaurants
-            .Where(r => r.Status == RestaurantStatus.Active && r.DeletedAt == null)
+            .Where(r => r.Status == RestaurantStatus.Active && r.DeletedAt == null && r.Vendor.Status == VendorStatus.Approved)
             .CountAsync(ct);
         var pendingRestaurants = await _db.Restaurants
-            .Where(r => r.Status == RestaurantStatus.Pending && r.DeletedAt == null)
+            .Where(r => r.Status == RestaurantStatus.Pending && r.DeletedAt == null && r.Vendor.Status == VendorStatus.Approved)
             .CountAsync(ct);
 
         var totalDeliveries = await _db.DeliveryTasks
@@ -273,9 +277,12 @@ public class GetDashboardStatsQueryHandler
             .Where(a => a.Status == AgentStatus.Active && a.IsAvailable)
             .CountAsync(ct);
 
-        var totalReviews = await _db.Reviews.CountAsync(ct);
-        var avgRating = await _db.Reviews
-            .AverageAsync(r => (double?)r.Rating, ct) ?? 0;
+        var totalReviews = await _db.Restaurants
+            .Where(r => r.DeletedAt == null)
+            .SumAsync(r => r.TotalRatings, ct);
+        var avgRating = await _db.Restaurants
+            .Where(r => r.DeletedAt == null && r.TotalRatings > 0)
+            .AverageAsync(r => (double?)r.AvgRating, ct) ?? 0;
 
         return new DashboardAggregateRow
         {

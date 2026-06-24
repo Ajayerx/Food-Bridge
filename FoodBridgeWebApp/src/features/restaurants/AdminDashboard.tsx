@@ -583,15 +583,6 @@ export const AdminDashboardPage: React.FC = () => {
             loading={isLoading}
           />
         </Col>
-        <Col xs={12} sm={8} lg={4}>
-          <StatCard
-            title="Delivery Agents"
-            value={num(s?.totalAgents ?? 0)}
-            color="#fa8c16"
-            icon={<CarOutlined />}
-            loading={isLoading}
-          />
-        </Col>
       </Row>
 
       {/* ── Top Restaurants ── */}

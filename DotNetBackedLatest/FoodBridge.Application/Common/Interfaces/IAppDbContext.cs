@@ -1,5 +1,6 @@
 using FoodBridge.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 
 namespace FoodBridge.Application.Common.Interfaces;
 
@@ -63,6 +64,8 @@ public interface IAppDbContext
 
     // ── Banners ───────────────────────────────────────────
     DbSet<Banner> Banners { get; }
+
+    DatabaseFacade Database { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

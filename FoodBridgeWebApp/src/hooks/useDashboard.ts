@@ -1,8 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { dashboardService } from "../services/dashboard.service";
-import type { DashboardStats } from "../types";
+import type { DashboardStats, RawDashboardStats } from "../types";
 
-const mapDashboard = (d: any): DashboardStats => ({
+const mapDashboard = (d: RawDashboardStats): DashboardStats => ({
     // Orders
     totalOrders: d.total_orders,
     todayOrders: d.today_orders,
@@ -12,7 +12,7 @@ const mapDashboard = (d: any): DashboardStats => ({
     // Revenue
     totalRevenue: d.total_revenue,
     todayRevenue: d.today_revenue,
-    monthRevenue: d.month_revenue,
+    periodRevenue: d.period_revenue,
     platformCommission: d.platform_commission,
     averageOrderValue: d.average_order_value,
     // Users

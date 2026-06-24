@@ -3,6 +3,7 @@ using FoodBridge.Domain.Entities;
 using FoodBridge.Domain.Enums;
 using FoodBridge.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Xunit;
 
 namespace FoodBridge.Tests.Application.Addresses;
@@ -182,6 +183,8 @@ internal class TestAppDbContext : FoodBridge.Application.Common.Interfaces.IAppD
     public DbSet<PlatformSetting> PlatformSettings => _inner.PlatformSettings;
     public DbSet<AuditLog> AuditLogs => _inner.AuditLogs;
     public DbSet<Banner> Banners => _inner.Banners;
+
+    public DatabaseFacade Database => _inner.Database;
 
     public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         => _inner.SaveChangesAsync(cancellationToken);

@@ -10,10 +10,12 @@ public class UpdatePlatformSettingCommandHandler
     : IRequestHandler<UpdatePlatformSettingCommand, Unit>
 {
     private readonly IAppDbContext _db;
+    private readonly ICacheService _cache;
 
-    public UpdatePlatformSettingCommandHandler(IAppDbContext db)
+    public UpdatePlatformSettingCommandHandler(IAppDbContext db, ICacheService cache)
     {
         _db = db;
+        _cache = cache;
     }
 
     public async Task<Unit> Handle(
@@ -66,6 +68,12 @@ public class UpdatePlatformSettingCommandHandler
 
         // 4. Save changes
         await _db.SaveChangesAsync(ct);
+
+        // 5. Invalidate dashboard cache when commission rate changes
+        if (request.Key == "platform_commission_rate")
+        {
+            await _cache.RemoveByPatternAsync("admin-dashboard", ct);
+        }
 
         return Unit.Value;
     }

@@ -67,6 +67,39 @@ export interface TopRestaurant {
     avgRating: number;
 }
 
+/** Raw snake_case shape from the backend API.
+ *  NOTE: FIX-07 renamed month_revenue to period_revenue on both sides. */
+export interface RawDashboardStats {
+    total_orders: number;
+    today_orders: number;
+    pending_orders: number;
+    active_orders: number;
+    cancelled_orders: number;
+    total_revenue: number;
+    today_revenue: number;
+    period_revenue: number;
+    platform_commission: number;
+    average_order_value: number;
+    total_users: number;
+    total_customers: number;
+    total_vendors: number;
+    total_agents: number;
+    new_users_today: number;
+    new_users_this_month: number;
+    total_restaurants: number;
+    active_restaurants: number;
+    pending_restaurants: number;
+    total_deliveries: number;
+    active_agents: number;
+    available_agents: number;
+    total_reviews: number;
+    avg_platform_rating: number;
+    fulfillment_rate: number;
+    orders_chart: DashboardChartPoint[];
+    revenue_chart: DashboardChartPoint[];
+    top_restaurants: TopRestaurant[];
+}
+
 export interface DashboardStats {
     // Orders
     totalOrders: number;
@@ -77,7 +110,7 @@ export interface DashboardStats {
     // Revenue
     totalRevenue: number;
     todayRevenue: number;
-    monthRevenue: number;
+    periodRevenue: number;
     platformCommission: number;
     averageOrderValue: number;
     // Users

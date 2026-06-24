@@ -1,5 +1,6 @@
 ﻿using FoodBridge.Application.Common.Interfaces;
 using Microsoft.Extensions.Caching.Memory;
+using System.Collections.Concurrent;
 using System.Text.Json;
 
 namespace FoodBridge.Infrastructure.Services;
@@ -7,6 +8,7 @@ namespace FoodBridge.Infrastructure.Services;
 public class CacheService : ICacheService
 {
     private readonly IMemoryCache _cache;
+    private readonly ConcurrentDictionary<string, byte> _keys = new(StringComparer.Ordinal);
 
     private static readonly JsonSerializerOptions _jsonOptions = new()
     {
@@ -24,7 +26,7 @@ public class CacheService : ICacheService
         CancellationToken ct = default)
     {
 
-        if (!_cache.TryGetValue(key, out string json))
+        if (!_cache.TryGetValue(key, out string? json) || json is null)
             return Task.FromResult(default(T));
 
         return Task.FromResult(
@@ -44,6 +46,8 @@ public class CacheService : ICacheService
             json,
             expiry ?? TimeSpan.FromMinutes(5));
 
+        _keys.TryAdd(key, 0);
+
         return Task.CompletedTask;
     }
 
@@ -52,6 +56,7 @@ public class CacheService : ICacheService
         CancellationToken ct = default)
     {
         _cache.Remove(key);
+        _keys.TryRemove(key, out _);
         return Task.CompletedTask;
     }
 
@@ -59,6 +64,16 @@ public class CacheService : ICacheService
         string pattern,
         CancellationToken ct = default)
     {
+        var matching = _keys.Keys
+            .Where(k => k.StartsWith(pattern, StringComparison.Ordinal))
+            .ToList();
+
+        foreach (var key in matching)
+        {
+            _cache.Remove(key);
+            _keys.TryRemove(key, out _);
+        }
+
         return Task.CompletedTask;
     }
 

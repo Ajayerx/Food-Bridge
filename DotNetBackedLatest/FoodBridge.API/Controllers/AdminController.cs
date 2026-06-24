@@ -30,11 +30,13 @@ public class AdminController : ControllerBase
 {
     private readonly IMediator _mediator;
     private readonly ICurrentUserService _currentUser;
+    private readonly ILogger<AdminController> _logger;
 
-    public AdminController(IMediator mediator, ICurrentUserService currentUser)
+    public AdminController(IMediator mediator, ICurrentUserService currentUser, ILogger<AdminController> logger)
     {
         _mediator = mediator;
         _currentUser = currentUser;
+        _logger = logger;
     }
 
     // ── Dashboard ──────────────────────────────────────────────────────────────
@@ -45,10 +47,19 @@ public class AdminController : ControllerBase
         [FromQuery] DateTime? to,
         CancellationToken ct = default)
     {
+        var utcFrom = from.HasValue
+            ? DateTime.SpecifyKind(from.Value, DateTimeKind.Utc)
+            : DateTime.UtcNow.AddDays(-30);
+        var utcTo = to.HasValue
+            ? DateTime.SpecifyKind(to.Value, DateTimeKind.Utc)
+            : DateTime.UtcNow;
+
+        _logger.LogInformation(
+            "Admin {AdminUserId} viewed dashboard. Range: {From} to {To}",
+            _currentUser.UserId, utcFrom, utcTo);
+
         var result = await _mediator.Send(
-            new GetDashboardStatsQuery(
-                from ?? DateTime.UtcNow.AddDays(-30),
-                to ?? DateTime.UtcNow), ct);
+            new GetDashboardStatsQuery(utcFrom, utcTo), ct);
         return Ok(new { success = true, data = result });
     }
 

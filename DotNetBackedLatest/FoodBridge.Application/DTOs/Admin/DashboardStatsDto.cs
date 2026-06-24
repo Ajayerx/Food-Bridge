@@ -13,7 +13,7 @@ public class DashboardStatsDto
     // ── Revenue ───────────────────────────────────────────
     public decimal TotalRevenue { get; set; }
     public decimal TodayRevenue { get; set; }
-    public decimal MonthRevenue { get; set; }
+    public decimal PeriodRevenue { get; set; }
     public decimal PlatformCommission { get; set; }
     public decimal AverageOrderValue { get; set; }
 

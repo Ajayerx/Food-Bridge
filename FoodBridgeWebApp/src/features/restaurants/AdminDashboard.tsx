@@ -6,6 +6,7 @@ import {
   Card,
   Col,
   DatePicker,
+  Empty,
   Row,
   Skeleton,
   Table,
@@ -41,6 +42,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { useDashboard } from "../../hooks/useDashboard";
+import { useDebounce } from "../../hooks/useDebounce";
 import type { TopRestaurant, DashboardChartPoint } from "../../types";
 import dayjs from "dayjs";
 import type { Dayjs } from "dayjs";
@@ -212,7 +214,10 @@ export const AdminDashboardPage: React.FC = () => {
   const from = dates[0]?.toISOString();
   const to = dates[1]?.toISOString();
 
-  const { stats: s, isLoading, isError, refetch } = useDashboard(from, to);
+  const debouncedFrom = useDebounce(from, 400);
+  const debouncedTo = useDebounce(to, 400);
+
+  const { stats: s, isLoading, isError, refetch } = useDashboard(debouncedFrom, debouncedTo);
 
   const isDefaultRange = useMemo(() => {
     if (!dates[0] || !dates[1]) return true;
@@ -263,6 +268,14 @@ export const AdminDashboardPage: React.FC = () => {
             presets={presets}
             allowClear={false}
             style={{ width: 260 }}
+            disabledDate={(current) => {
+              if (current && current.isAfter(dayjs(), "day")) return true;
+              if (dates[0] && current) {
+                const diff = Math.abs(current.diff(dates[0], "day"));
+                if (diff > 366) return true;
+              }
+              return false;
+            }}
           />
           <Tooltip title="Refresh">
             <Button
@@ -291,7 +304,7 @@ export const AdminDashboardPage: React.FC = () => {
         <Col xs={24} sm={12} lg={6}>
           <StatCard
             title="Period Revenue"
-            value={fmt(s?.monthRevenue ?? 0)}
+            value={fmt(s?.periodRevenue ?? 0)}
             color="#1677ff"
             icon={<RiseOutlined />}
             sub={periodLabel}
@@ -450,37 +463,41 @@ export const AdminDashboardPage: React.FC = () => {
             style={{ borderRadius: 12 }}
           >
             <Skeleton loading={isLoading} active paragraph={{ rows: 5 }}>
-              <ResponsiveContainer width="100%" height={260}>
-                <AreaChart data={s?.revenueChart ?? []}>
-                  <defs>
-                    <linearGradient
-                      id="revenueGrad"
-                      x1="0"
-                      y1="0"
-                      x2="0"
-                      y2="1"
-                    >
-                      <stop offset="5%" stopColor="#52c41a" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#52c41a" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis dataKey="label" tick={{ fontSize: 12 }} />
-                  <YAxis
-                    tick={{ fontSize: 12 }}
-                    tickFormatter={(v) => `₹${v}`}
-                  />
-                  <ReTooltip formatter={(v: number) => fmt(v)} />
-                  <Area
-                    type="monotone"
-                    dataKey="value"
-                    name="Revenue"
-                    stroke="#52c41a"
-                    strokeWidth={2}
-                    fill="url(#revenueGrad)"
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
+              {(s?.revenueChart?.length ?? 0) > 0 ? (
+                <ResponsiveContainer width="100%" height={260}>
+                  <AreaChart data={s?.revenueChart ?? []}>
+                    <defs>
+                      <linearGradient
+                        id="revenueGrad"
+                        x1="0"
+                        y1="0"
+                        x2="0"
+                        y2="1"
+                      >
+                        <stop offset="5%" stopColor="#52c41a" stopOpacity={0.3} />
+                        <stop offset="95%" stopColor="#52c41a" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                    <XAxis dataKey="label" tick={{ fontSize: 12 }} />
+                    <YAxis
+                      tick={{ fontSize: 12 }}
+                      tickFormatter={(v) => `₹${v}`}
+                    />
+                    <ReTooltip formatter={(v: number) => fmt(v)} />
+                    <Area
+                      type="monotone"
+                      dataKey="value"
+                      name="Revenue"
+                      stroke="#52c41a"
+                      strokeWidth={2}
+                      fill="url(#revenueGrad)"
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              ) : (
+                <Empty description="No revenue data for this period" />
+              )}
             </Skeleton>
           </Card>
         </Col>
@@ -493,20 +510,24 @@ export const AdminDashboardPage: React.FC = () => {
             style={{ borderRadius: 12 }}
           >
             <Skeleton loading={isLoading} active paragraph={{ rows: 5 }}>
-              <ResponsiveContainer width="100%" height={260}>
-                <BarChart data={s?.ordersChart ?? []}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis dataKey="label" tick={{ fontSize: 12 }} />
-                  <YAxis tick={{ fontSize: 12 }} allowDecimals={false} />
-                  <ReTooltip formatter={(v: number) => num(v)} />
-                  <Bar
-                    dataKey="count"
-                    name="Orders"
-                    fill="#1677ff"
-                    radius={[4, 4, 0, 0]}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
+              {(s?.ordersChart?.length ?? 0) > 0 ? (
+                <ResponsiveContainer width="100%" height={260}>
+                  <BarChart data={s?.ordersChart ?? []}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                    <XAxis dataKey="label" tick={{ fontSize: 12 }} />
+                    <YAxis tick={{ fontSize: 12 }} allowDecimals={false} />
+                    <ReTooltip formatter={(v: number) => num(v)} />
+                    <Bar
+                      dataKey="count"
+                      name="Orders"
+                      fill="#1677ff"
+                      radius={[4, 4, 0, 0]}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <Empty description="No orders data for this period" />
+              )}
             </Skeleton>
           </Card>
         </Col>

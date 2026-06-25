@@ -24,7 +24,7 @@ public class GetSalesReportQueryHandler
             .Where(o => (o.OrderStatus == OrderStatus.Delivered
              || o.OrderStatus == OrderStatus.Completed)
                      && o.CreatedAt >= request.From
-                     && o.CreatedAt <= request.To.AddDays(1).AddTicks(-1));
+                     && o.CreatedAt < request.To.AddDays(1));
 
         // 2. Role-based filter
 
@@ -67,10 +67,11 @@ public class GetSalesReportQueryHandler
         var dataPoints = request.GroupBy.ToLower() switch
         {
             "week" => orders
-                .GroupBy(o => $"W{GetIso8601WeekOfYear(o.CreatedAt)}-{o.CreatedAt.Year}")
+                .GroupBy(o => new { o.CreatedAt.Year, Week = GetIso8601WeekOfYear(o.CreatedAt) })
+                .OrderBy(g => g.Key.Year).ThenBy(g => g.Key.Week)
                 .Select(g => new SalesDataPointDto
                 {
-                    Label = g.Key,
+                    Label = $"W{g.Key.Week:D2}-{g.Key.Year}",
                     Revenue = g.Sum(o => o.TotalAmount),
                     OrderCount = g.Count(),
                     AvgOrderValue = g.Count() > 0
@@ -79,10 +80,11 @@ public class GetSalesReportQueryHandler
                 }).ToList(),
 
             "month" => orders
-                .GroupBy(o => o.CreatedAt.ToString("MMM yyyy"))
+                .GroupBy(o => new DateTime(o.CreatedAt.Year, o.CreatedAt.Month, 1))
+                .OrderBy(g => g.Key)
                 .Select(g => new SalesDataPointDto
                 {
-                    Label = g.Key,
+                    Label = g.Key.ToString("MMM yyyy"),
                     Revenue = g.Sum(o => o.TotalAmount),
                     OrderCount = g.Count(),
                     AvgOrderValue = g.Count() > 0
@@ -91,10 +93,11 @@ public class GetSalesReportQueryHandler
                 }).ToList(),
 
             _ => orders // default: day
-                .GroupBy(o => o.CreatedAt.ToString("dd MMM yyyy"))
+                .GroupBy(o => o.CreatedAt.Date)
+                .OrderBy(g => g.Key)
                 .Select(g => new SalesDataPointDto
                 {
-                    Label = g.Key,
+                    Label = g.Key.ToString("dd MMM yyyy"),
                     Revenue = g.Sum(o => o.TotalAmount),
                     OrderCount = g.Count(),
                     AvgOrderValue = g.Count() > 0

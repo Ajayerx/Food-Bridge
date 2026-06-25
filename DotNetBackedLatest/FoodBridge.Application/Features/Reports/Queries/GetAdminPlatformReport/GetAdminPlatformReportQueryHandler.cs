@@ -12,23 +12,26 @@ public class GetAdminPlatformReportQueryHandler : IRequestHandler<GetAdminPlatfo
 
     public async Task<AdminPlatformReportDto> Handle(GetAdminPlatformReportQuery request, CancellationToken ct)
     {
+        var gmv = await _db.Orders.AsNoTracking()
+            .Where(o => o.CreatedAt >= request.From && o.CreatedAt < request.To.AddDays(1)
+                     && o.PaymentStatus == OrderPaymentStatus.Paid)
+            .SumAsync(o => (decimal?)o.TotalAmount, ct) ?? 0;
+
         var deliveredOrders = await _db.Orders.AsNoTracking()
             .Include(o => o.Restaurant)
-            .Where(o => o.CreatedAt >= request.From && o.CreatedAt <= request.To
-                     && o.OrderStatus == OrderStatus.Delivered)
+            .Where(o => o.CreatedAt >= request.From && o.CreatedAt < request.To.AddDays(1)
+                     && o.PaymentStatus == OrderPaymentStatus.Paid)
             .ToListAsync(ct);
-
-        var gmv = deliveredOrders.Sum(o => o.TotalAmount);
         var totalOrders = await _db.Orders.AsNoTracking()
-            .CountAsync(o => o.CreatedAt >= request.From && o.CreatedAt <= request.To, ct);
+            .CountAsync(o => o.CreatedAt >= request.From && o.CreatedAt < request.To.AddDays(1), ct);
         var commission = await _db.Commissions.AsNoTracking()
-            .Where(c => c.CreatedAt >= request.From && c.CreatedAt <= request.To)
+            .Where(c => c.CreatedAt >= request.From && c.CreatedAt < request.To.AddDays(1))
             .SumAsync(c => c.Amount, ct);
 
         var newUsers = await _db.Users.AsNoTracking()
-            .CountAsync(u => u.DeletedAt == null && u.CreatedAt >= request.From && u.CreatedAt <= request.To, ct);
+            .CountAsync(u => u.DeletedAt == null && u.CreatedAt >= request.From && u.CreatedAt < request.To.AddDays(1), ct);
         var newVendors = await _db.Vendors.AsNoTracking()
-            .CountAsync(v => v.CreatedAt >= request.From && v.CreatedAt <= request.To, ct);
+            .CountAsync(v => v.CreatedAt >= request.From && v.CreatedAt < request.To.AddDays(1), ct);
         var activeRestaurants = await _db.Restaurants.AsNoTracking()
             .CountAsync(r => r.DeletedAt == null && r.Status == RestaurantStatus.Active, ct);
         var totalUsers = await _db.Users.AsNoTracking()
@@ -36,13 +39,26 @@ public class GetAdminPlatformReportQueryHandler : IRequestHandler<GetAdminPlatfo
         var totalRestaurants = await _db.Restaurants.AsNoTracking()
             .CountAsync(r => r.DeletedAt == null && r.Status == RestaurantStatus.Active, ct);
 
-        var gmvChart = deliveredOrders
-            .GroupBy(o => o.CreatedAt.ToString("dd MMM yyyy"))
-            .Select(g => new SalesDataPointDto
+        var daysInRange = (request.To - request.From).Days + 1;
+        var maxPoints = 31;
+        var totalPoints = Math.Min(daysInRange, maxPoints);
+        var step = (double)daysInRange / totalPoints;
+
+        var gmvChart = Enumerable.Range(0, totalPoints)
+            .Select(i =>
             {
-                Label = g.Key,
-                Revenue = g.Sum(o => o.TotalAmount),
-                OrderCount = g.Count()
+                var startOffset = (int)(i * step);
+                var endOffset = i < totalPoints - 1 ? (int)((i + 1) * step) : daysInRange;
+                var bucketStart = request.From.Date.AddDays(startOffset);
+                var bucketEnd = request.From.Date.AddDays(endOffset);
+                var bucketOrders = deliveredOrders
+                    .Where(o => o.CreatedAt >= bucketStart && o.CreatedAt < bucketEnd).ToList();
+                return new SalesDataPointDto
+                {
+                    Label = bucketStart.ToString("dd MMM"),
+                    Revenue = bucketOrders.Sum(o => o.TotalAmount),
+                    OrderCount = bucketOrders.Count,
+                };
             }).ToList();
 
         var revenueByRestaurant = deliveredOrders
@@ -61,7 +77,7 @@ public class GetAdminPlatformReportQueryHandler : IRequestHandler<GetAdminPlatfo
             .ToDictionary(g => g.Key, g => g.Sum(o => o.TotalAmount));
 
         var commissionByRestaurant = await _db.Commissions.AsNoTracking()
-            .Where(c => c.CreatedAt >= request.From && c.CreatedAt <= request.To)
+            .Where(c => c.CreatedAt >= request.From && c.CreatedAt < request.To.AddDays(1))
             .GroupBy(c => c.RestaurantId)
             .Select(g => new { RestaurantId = g.Key, Amount = g.Sum(c => c.Amount) })
             .ToListAsync(ct);

@@ -4,6 +4,7 @@ using FoodBridge.Application.DTOs.Reports;
 using FoodBridge.Domain.Enums;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using System.Globalization;
 namespace FoodBridge.Application.Features.Reports.Queries.GetRevenueReport;
 
 public class GetRevenueReportQueryHandler
@@ -18,14 +19,27 @@ public class GetRevenueReportQueryHandler
         GetRevenueReportQuery request,
         CancellationToken ct)
     {
-        const decimal commissionRate = 0.10m;
+        // Commission rate from PlatformSettings
+        string commissionRateStr;
+        try
+        {
+            commissionRateStr = await _db.PlatformSettings
+                .Where(s => s.Key == "platform_commission_rate")
+                .Select(s => s.Value)
+                .FirstOrDefaultAsync(ct) ?? "10";
+        }
+        catch (System.Data.Common.DbException)
+        {
+            commissionRateStr = "10";
+        }
+        var commissionRate = decimal.Parse(commissionRateStr, CultureInfo.InvariantCulture) / 100m;
 
         // 1. Base query — paid orders only
         var query = _db.Orders
             .AsNoTracking()
             .Where(o => o.PaymentStatus == OrderPaymentStatus.Paid
                      && o.CreatedAt >= request.From
-                     && o.CreatedAt <= request.To);
+                     && o.CreatedAt < request.To.AddDays(1));
 
         // 2. Role-based filter
         if (request.RoleType == "Vendor")

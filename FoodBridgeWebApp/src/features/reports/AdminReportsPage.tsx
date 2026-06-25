@@ -1,7 +1,9 @@
 import React, { useState } from "react";
-import { Card, Col, DatePicker, Row, Statistic, Table, Tabs, Typography, Spin, Alert } from "antd";
+import { Card, Col, DatePicker, Row, Statistic, Table, Tabs, Typography, Spin, Alert, Skeleton, Empty } from "antd";
 import { useQuery } from "@tanstack/react-query";
 import {
+  AreaChart,
+  Area,
   BarChart,
   Bar,
   PieChart,
@@ -23,6 +25,11 @@ const COLORS = ["#1677ff", "#52c41a", "#faad14", "#f5222d", "#722ed1", "#13c2c2"
 function formatCurrency(v: number) {
   return `₹${v.toLocaleString("en-IN")}`;
 }
+
+const fmt = (n: number | undefined | null) =>
+  `₹${new Intl.NumberFormat("en-IN", {
+    maximumFractionDigits: 0,
+  }).format(n ?? 0)}`;
 
 export const AdminReportsPage: React.FC = () => {
   const [range, setRange] = useState<[dayjs.Dayjs, dayjs.Dayjs]>([
@@ -139,40 +146,58 @@ export const AdminReportsPage: React.FC = () => {
             <>
               <Row gutter={16} style={{ marginBottom: 24 }}>
                 {[
-                  { title: "Total Revenue", value: platformData?.totalRevenue, prefix: "₹", precision: 0 },
-                  { title: "Total Orders", value: platformData?.totalOrders },
+                  { title: "Total Revenue", value: fmt(platformData?.totalRevenue) },
+                  { title: "Total Orders", value: platformData?.totalOrders, precision: 0 },
                   { title: "Avg Order Value", value: platformData?.avgOrderValue, prefix: "₹", precision: 2 },
-                  { title: "Platform Commission", value: platformData?.totalRevenue, prefix: "₹", precision: 0 },
-                  { title: "Active Restaurants", value: platformData?.totalRestaurants },
-                  { title: "Total Users", value: platformData?.totalUsers },
-                  { title: "New Users", value: platformData?.newUsersToday },
-                ].map((s) => (
-                  <Col xs={24} sm={12} lg={6} key={s.title} style={{ marginBottom: 12 }}>
-                    <Card>
-                      <Statistic
-                        title={s.title}
-                        value={s.value ?? 0}
-                        prefix={s.prefix}
-                        loading={platformQuery.isLoading}
-                        precision={s.precision ?? 0}
-                      />
-                    </Card>
-                  </Col>
-                ))}
+                  { title: "Platform Commission", value: fmt(platformData?.platformCommission) },
+                  { title: "Active Restaurants", value: platformData?.totalRestaurants, precision: 0 },
+                  { title: "Total Users", value: platformData?.totalUsers, precision: 0 },
+                  { title: "New Users", value: platformData?.newUsersToday, precision: 0 },
+                ].map((s) => {
+                  const isFormatted = typeof s.value === "string";
+                  return (
+                    <Col xs={24} sm={12} lg={6} key={s.title} style={{ marginBottom: 12 }}>
+                      <Card>
+                        <Statistic
+                          title={s.title}
+                          value={isFormatted ? s.value : (s.value ?? 0)}
+                          prefix={isFormatted ? undefined : (s as any).prefix}
+                          loading={platformQuery.isLoading}
+                          precision={isFormatted ? undefined : (s as any).precision}
+                        />
+                      </Card>
+                    </Col>
+                  );
+                })}
               </Row>
 
               <Row gutter={16} style={{ marginBottom: 24 }}>
                 <Col xs={24} lg={12}>
                   <Card title="Revenue Over Time">
-                    <ResponsiveContainer width="100%" height={240}>
-                      <BarChart data={platformData?.revenueByDay ?? []}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="date" tick={{ fontSize: 11 }} />
-                        <YAxis tick={{ fontSize: 11 }} />
-                        <Tooltip formatter={(v: any) => formatCurrency(v)} />
-                        <Bar dataKey="revenue" fill="#1677ff" />
-                      </BarChart>
-                    </ResponsiveContainer>
+                    <Skeleton loading={platformQuery.isLoading} active paragraph={{ rows: 5 }}>
+                      {(platformData?.revenueByDay?.length ?? 0) > 0 ? (
+                        <ResponsiveContainer width="100%" height={240}>
+                          <AreaChart data={platformData?.revenueByDay ?? []}
+                            margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                            <defs>
+                              <linearGradient id="revChartGrad" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor="#1677ff" stopOpacity={0.25} />
+                                <stop offset="95%" stopColor="#1677ff" stopOpacity={0} />
+                              </linearGradient>
+                            </defs>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                            <XAxis dataKey="date" tick={{ fontSize: 11 }} />
+                            <YAxis tick={{ fontSize: 11 }}
+                              tickFormatter={(v: number) => `₹${v}`} />
+                            <Tooltip formatter={(v: number) => fmt(v)} />
+                            <Area type="monotone" dataKey="revenue"
+                              stroke="#1677ff" strokeWidth={2} fill="url(#revChartGrad)" />
+                          </AreaChart>
+                        </ResponsiveContainer>
+                      ) : (
+                        <Empty description="No revenue data for this period" />
+                      )}
+                    </Skeleton>
                   </Card>
                 </Col>
                 <Col xs={24} lg={12}>
@@ -245,20 +270,18 @@ export const AdminReportsPage: React.FC = () => {
             <>
               <Row gutter={16} style={{ marginBottom: 24 }}>
                 {[
-                  { title: "Total GMV", value: financialsData?.totalGmv, prefix: "₹" },
-                  { title: "Total Commission", value: financialsData?.totalCommission, prefix: "₹" },
-                  { title: "Total Payouts", value: financialsData?.totalPayouts, prefix: "₹" },
-                  { title: "Total Refunds", value: financialsData?.totalRefunds, prefix: "₹" },
-                  { title: "Net Revenue", value: financialsData?.netRevenue, prefix: "₹" },
+                  { title: "Total GMV", value: fmt(financialsData?.totalGmv) },
+                  { title: "Total Commission", value: fmt(financialsData?.totalCommission) },
+                  { title: "Total Payouts", value: fmt(financialsData?.totalPayouts) },
+                  { title: "Total Refunds", value: fmt(financialsData?.totalRefunds) },
+                  { title: "Net Revenue", value: fmt(financialsData?.netRevenue) },
                 ].map((s) => (
                   <Col xs={24} sm={12} lg={6} key={s.title} style={{ marginBottom: 12 }}>
                     <Card>
                       <Statistic
                         title={s.title}
-                        value={s.value ?? 0}
-                        prefix={s.prefix}
+                        value={s.value}
                         loading={financialsQuery.isLoading}
-                        precision={0}
                       />
                     </Card>
                   </Col>

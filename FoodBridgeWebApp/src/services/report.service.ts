@@ -87,6 +87,7 @@ export const reportService = {
                     totalUsers: Number(raw.total_users ?? 0),
                     newUsersToday: Number(raw.new_users ?? 0),
                     avgOrderValue: Number(raw.average_order_value ?? 0),
+                    platformCommission: Number(raw.platform_revenue ?? 0),
                     revenueByDay: (raw.gmv_chart ?? []).map((d: any) => ({
                         date: d.label ?? "",
                         revenue: Number(d.revenue ?? 0),

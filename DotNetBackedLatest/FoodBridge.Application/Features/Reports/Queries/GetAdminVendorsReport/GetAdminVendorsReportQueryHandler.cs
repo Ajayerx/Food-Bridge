@@ -13,8 +13,8 @@ public class GetAdminVendorsReportQueryHandler : IRequestHandler<GetAdminVendors
     public async Task<AdminVendorsReportDto> Handle(GetAdminVendorsReportQuery request, CancellationToken ct)
     {
         var orderData = await _db.Orders.AsNoTracking()
-            .Where(o => o.CreatedAt >= request.From && o.CreatedAt <= request.To
-                     && o.OrderStatus == OrderStatus.Delivered)
+            .Where(o => o.CreatedAt >= request.From && o.CreatedAt < request.To.AddDays(1)
+                     && (o.OrderStatus == OrderStatus.Delivered || o.OrderStatus == OrderStatus.Completed))
             .Select(o => new { o.RestaurantId, o.Restaurant.VendorId, o.TotalAmount })
             .ToListAsync(ct);
 
@@ -26,7 +26,7 @@ public class GetAdminVendorsReportQueryHandler : IRequestHandler<GetAdminVendors
         var vendorMap = vendors.ToDictionary(v => v.Id, v => v.User.FullName ?? v.BusinessName);
 
         var commissionByVendor = await _db.Commissions.AsNoTracking()
-            .Where(c => c.CreatedAt >= request.From && c.CreatedAt <= request.To)
+            .Where(c => c.CreatedAt >= request.From && c.CreatedAt < request.To.AddDays(1))
             .GroupBy(c => c.Restaurant.VendorId)
             .Select(g => new { VendorId = g.Key, Amount = g.Sum(c => c.Amount) })
             .ToListAsync(ct);

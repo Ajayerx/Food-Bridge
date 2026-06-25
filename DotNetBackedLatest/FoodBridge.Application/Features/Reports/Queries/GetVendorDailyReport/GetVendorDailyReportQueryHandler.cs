@@ -13,8 +13,8 @@ public class GetVendorDailyReportQueryHandler : IRequestHandler<GetVendorDailyRe
     public async Task<VendorDailyReportDto> Handle(GetVendorDailyReportQuery request, CancellationToken ct)
     {
         var query = _db.Orders.AsNoTracking()
-            .Where(o => o.OrderStatus == OrderStatus.Delivered
-                     && o.CreatedAt >= request.From && o.CreatedAt <= request.To);
+            .Where(o => (o.OrderStatus == OrderStatus.Delivered || o.OrderStatus == OrderStatus.Completed)
+                     && o.CreatedAt >= request.From && o.CreatedAt < request.To.AddDays(1));
 
         if (request.RoleType?.ToLower() == "vendor")
         {

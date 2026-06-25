@@ -22,7 +22,7 @@ public class GetOrderReportQueryHandler
         var query = _db.Orders
             .AsNoTracking()
             .Where(o => o.CreatedAt >= request.From
-                     && o.CreatedAt <= request.To);
+                     && o.CreatedAt < request.To.AddDays(1));
 
         // 2. Role-based filter
         if (request.RoleType == "Vendor")
@@ -47,15 +47,13 @@ public class GetOrderReportQueryHandler
         // 3. Count by status
         var total = orders.Count;
         var delivered = orders.Count(
-            o => o.OrderStatus == OrderStatus.Delivered);
+            o => o.OrderStatus == OrderStatus.Delivered || o.OrderStatus == OrderStatus.Completed);
         var cancelled = orders.Count(
-            o => o.OrderStatus == OrderStatus.Cancelled);
+            o => o.OrderStatus == OrderStatus.Cancelled || o.OrderStatus == OrderStatus.Refunded);
         var pending = orders.Count(
             o => o.OrderStatus == OrderStatus.Placed
               || o.OrderStatus == OrderStatus.Confirmed
               || o.OrderStatus == OrderStatus.Preparing);
-        var refunded = orders.Count(
-            o => o.OrderStatus == OrderStatus.Refunded);
 
         // 4. Status breakdown
         var statusBreakdown = orders
@@ -71,15 +69,16 @@ public class GetOrderReportQueryHandler
 
         // 5. Daily data
         var dailyData = orders
-            .GroupBy(o => o.CreatedAt.ToString("dd MMM yyyy"))
+            .GroupBy(o => o.CreatedAt.Date)
+            .OrderBy(g => g.Key)
             .Select(g => new OrderDataPointDto
             {
-                Label = g.Key,
+                Label = g.Key.ToString("dd MMM yyyy"),
                 TotalOrders = g.Count(),
                 DeliveredOrders = g.Count(
-                    o => o.OrderStatus == OrderStatus.Delivered),
+                    o => o.OrderStatus == OrderStatus.Delivered || o.OrderStatus == OrderStatus.Completed),
                 CancelledOrders = g.Count(
-                    o => o.OrderStatus == OrderStatus.Cancelled)
+                    o => o.OrderStatus == OrderStatus.Cancelled || o.OrderStatus == OrderStatus.Refunded)
             }).ToList();
 
         return new OrderReportDto
@@ -90,7 +89,7 @@ public class GetOrderReportQueryHandler
             DeliveredOrders = delivered,
             CancelledOrders = cancelled,
             PendingOrders = pending,
-            RefundedOrders = refunded,
+            RefundedOrders = 0,
             CancellationRate = total > 0
                 ? Math.Round((decimal)cancelled / total * 100, 1)
                 : 0,

@@ -15,7 +15,7 @@ public class GetVendorDeliveryReportQueryHandler : IRequestHandler<GetVendorDeli
         var taskQuery = _db.DeliveryTasks.AsNoTracking()
             .Include(t => t.Agent).ThenInclude(a => a.User)
             .Include(t => t.Order)
-            .Where(t => t.AssignedAt >= request.From && t.AssignedAt <= request.To);
+            .Where(t => t.AssignedAt >= request.From && t.AssignedAt < request.To.AddDays(1));
 
         if (request.RoleType?.ToLower() == "vendor")
         {

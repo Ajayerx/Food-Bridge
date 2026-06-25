@@ -18,6 +18,11 @@ import dayjs from "dayjs";
 
 const { RangePicker } = DatePicker;
 
+const fmt = (n: number | undefined | null) =>
+  `₹${new Intl.NumberFormat("en-IN", {
+    maximumFractionDigits: 0,
+  }).format(n ?? 0)}`;
+
 export const VendorReportsPage: React.FC = () => {
   const { restaurant } = useRestaurant();
   const [range, setRange] = useState<[dayjs.Dayjs, dayjs.Dayjs]>([
@@ -60,19 +65,27 @@ export const VendorReportsPage: React.FC = () => {
 
       <Row gutter={16} style={{ marginBottom: 24 }}>
         {[
-          { title: "Total Revenue", value: data?.totalRevenue, prefix: "₹" },
-          { title: "Total Orders", value: data?.totalOrders },
-          { title: "Avg Order Value", value: data?.avgOrderValue, prefix: "₹" },
-        ].map((s) => (
+          { title: "Total Revenue", value: fmt(data?.totalRevenue) },
+          { title: "Total Orders", value: data?.totalOrders, raw: true },
+          { title: "Avg Order Value", value: data?.avgOrderValue, prefix: "₹", precision: 2 },
+        ].map((s: any) => (
           <Col xs={24} sm={8} key={s.title}>
             <Card>
-              <Statistic
-                title={s.title}
-                value={s.value ?? 0}
-                prefix={s.prefix}
-                loading={isLoading}
-                precision={0}
-              />
+              {s.raw || s.precision ? (
+                <Statistic
+                  title={s.title}
+                  value={s.value ?? 0}
+                  prefix={s.prefix}
+                  loading={isLoading}
+                  precision={s.precision ?? 0}
+                />
+              ) : (
+                <Statistic
+                  title={s.title}
+                  value={s.value}
+                  loading={isLoading}
+                />
+              )}
             </Card>
           </Col>
         ))}

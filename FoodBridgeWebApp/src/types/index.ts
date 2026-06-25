@@ -435,6 +435,7 @@ export interface PlatformReport {
     totalRestaurants: number;
     totalUsers: number;
     newUsersToday: number;
+    platformCommission: number;
     revenueByDay: RevenueDataPoint[];
     revenueByRestaurant: Array<{ restaurantId: string; name: string; revenue: number }>;
     payoutSummary: Array<{

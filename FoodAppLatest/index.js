@@ -1,8 +1,8 @@
 import 'react-native-gesture-handler';
 
-if (__DEV__) {
-    require('./src/config/ReactotronConfig')
-}
+// if (__DEV__) {
+//     require('./src/config/ReactotronConfig')
+// }
 import { AppRegistry } from 'react-native';
 import App from './App';
 import { name as appName } from './app.json';

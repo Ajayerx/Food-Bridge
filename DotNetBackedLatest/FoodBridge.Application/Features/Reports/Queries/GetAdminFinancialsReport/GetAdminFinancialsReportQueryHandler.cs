@@ -13,18 +13,18 @@ public class GetAdminFinancialsReportQueryHandler : IRequestHandler<GetAdminFina
     public async Task<AdminFinancialsReportDto> Handle(GetAdminFinancialsReportQuery request, CancellationToken ct)
     {
         var orders = await _db.Orders.AsNoTracking()
-            .Where(o => o.CreatedAt >= request.From && o.CreatedAt <= request.To
-                     && o.OrderStatus == OrderStatus.Delivered)
+            .Where(o => o.CreatedAt >= request.From && o.CreatedAt < request.To.AddDays(1)
+                     && (o.OrderStatus == OrderStatus.Delivered || o.OrderStatus == OrderStatus.Completed))
             .ToListAsync(ct);
         var commissions = await _db.Commissions.AsNoTracking()
-            .Where(c => c.CreatedAt >= request.From && c.CreatedAt <= request.To)
+            .Where(c => c.CreatedAt >= request.From && c.CreatedAt < request.To.AddDays(1))
             .ToListAsync(ct);
         var payouts = await _db.VendorPayouts.AsNoTracking()
-            .Where(p => p.CreatedAt >= request.From && p.CreatedAt <= request.To
+            .Where(p => p.CreatedAt >= request.From && p.CreatedAt < request.To.AddDays(1)
                      && p.Status == PayoutStatus.Completed)
             .ToListAsync(ct);
         var refunds = await _db.Refunds.AsNoTracking()
-            .Where(r => r.CreatedAt >= request.From && r.CreatedAt <= request.To
+            .Where(r => r.CreatedAt >= request.From && r.CreatedAt < request.To.AddDays(1)
                      && r.Status == RefundStatus.Processed)
             .ToListAsync(ct);
 

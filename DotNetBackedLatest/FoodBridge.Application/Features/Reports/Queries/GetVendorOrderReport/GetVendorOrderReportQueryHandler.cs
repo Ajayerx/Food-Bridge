@@ -13,7 +13,7 @@ public class GetVendorOrderReportQueryHandler : IRequestHandler<GetVendorOrderRe
     public async Task<VendorOrderReportDto> Handle(GetVendorOrderReportQuery request, CancellationToken ct)
     {
         var query = _db.Orders.AsNoTracking()
-            .Where(o => o.CreatedAt >= request.From && o.CreatedAt <= request.To);
+            .Where(o => o.CreatedAt >= request.From && o.CreatedAt < request.To.AddDays(1));
 
         if (request.RoleType?.ToLower() == "vendor")
         {
@@ -52,7 +52,7 @@ public class GetVendorOrderReportQueryHandler : IRequestHandler<GetVendorOrderRe
             FromDate = request.From,
             ToDate = request.To,
             TotalOrders = total,
-            CompletedOrders = orders.Count(o => o.OrderStatus == OrderStatus.Delivered),
+            CompletedOrders = orders.Count(o => o.OrderStatus == OrderStatus.Delivered || o.OrderStatus == OrderStatus.Completed),
             CancelledOrders = orders.Count(o => o.OrderStatus == OrderStatus.Cancelled),
             CancellationRate = total > 0
                 ? Math.Round((decimal)orders.Count(o => o.OrderStatus == OrderStatus.Cancelled) / total * 100, 1)

@@ -8,6 +8,7 @@ public class VerifyOtpResponseDto
     public string MobileNumber { get; set; } = string.Empty;
     public string Role { get; set; } = string.Empty;
     public string? StaffRole { get; set; }
+    public string? Status { get; set; }
     public string AccessToken { get; set; } = string.Empty;
     public string RefreshToken { get; set; } = string.Empty;
     public int ExpiresIn { get; set; }

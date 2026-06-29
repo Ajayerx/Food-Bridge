@@ -76,4 +76,20 @@ export const agentService = {
     /** DELETE v1/agents/{id} */
     deleteAgent: (agentId: string) =>
         api.delete<ApiResponse<void>>(`/agents/${agentId}`),
+
+    /** PATCH v1/agents/{id}/approve */
+    approveAgent: (agentId: string) =>
+        api.patch<ApiResponse<void>>(`/agents/${agentId}/approve`),
+
+    /** PATCH v1/agents/{id}/reject */
+    rejectAgent: (agentId: string, reason?: string) =>
+        api.patch<ApiResponse<void>>(`/agents/${agentId}/reject`, { reason }),
+
+    /** PATCH v1/agents/{id}/suspend */
+    suspendAgent: (agentId: string, reason?: string) =>
+        api.patch<ApiResponse<void>>(`/agents/${agentId}/suspend`, { reason }),
+
+    /** PATCH v1/agents/{id}/unsuspend */
+    unsuspendAgent: (agentId: string) =>
+        api.patch<ApiResponse<void>>(`/agents/${agentId}/unsuspend`),
 };

@@ -90,6 +90,23 @@ public class VerifyOtpCommandHandler
             }
         }
 
+        // 2b. Block delivery agents based on their agent-level status
+        string? status = null;
+        if (user.Role == UserRole.DeliveryAgent)
+        {
+            var agent = await _db.DeliveryAgents
+                .FirstOrDefaultAsync(a => a.UserId == user.Id, ct);
+
+            if (agent is not null)
+            {
+                status = agent.Status.ToString();
+
+                if (agent.Status == AgentStatus.Banned)
+                    throw new ForbiddenException(
+                        "Your account has been banned. Contact support for more information.");
+            }
+        }
+
         // 3. Update last login
         user.LastLoginAt = DateTime.UtcNow;
 
@@ -118,6 +135,7 @@ public class VerifyOtpCommandHandler
             StaffRole = user.StaffUser != null
                 ? user.StaffUser.StaffRole.ToString().ToLower()
                 : null,
+            Status = status,
             AccessToken = accessToken,
             RefreshToken = refreshToken,
             ExpiresIn = 60,

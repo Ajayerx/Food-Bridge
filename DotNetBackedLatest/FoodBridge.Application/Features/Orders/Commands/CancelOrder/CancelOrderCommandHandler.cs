@@ -1,9 +1,10 @@
-// CancelOrderCommandHandler.cs
 using FoodBridge.Application.Common.Exceptions;
 using FoodBridge.Application.Common.Interfaces;
+using FoodBridge.Domain.Entities;
 using FoodBridge.Domain.Enums;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+
 namespace FoodBridge.Application.Features.Orders.Commands.CancelOrder;
 
 public class CancelOrderCommandHandler
@@ -24,13 +25,11 @@ public class CancelOrderCommandHandler
                 o => o.Id == request.OrderId, ct)
             ?? throw new NotFoundException("Order", request.OrderId);
 
-        // Only Placed or Confirmed orders can be cancelled
         if (order.OrderStatus != OrderStatus.Placed
-  && order.OrderStatus != OrderStatus.Confirmed)
+            && order.OrderStatus != OrderStatus.Confirmed)
             throw new BadRequestException(
                 "Order cannot be cancelled at this stage.");
 
-        // Customer can cancel their own order, Vendor/Admin can cancel any order
         var isCustomerOwner = order.Customer?.UserId == request.UserId;
         var isVendorOrAdmin = request.UserRole == "Vendor"
                            || request.UserRole == "Admin"
@@ -40,9 +39,20 @@ public class CancelOrderCommandHandler
             throw new ForbiddenException(
                 "You are not allowed to cancel this order.");
 
-        order.OrderStatus = OrderStatus.Cancelled;
-        order.CancelReason = request.Reason;
+        var oldStatus = order.OrderStatus.ToString();
+        order.MarkAsCancelled(request.Reason);
         order.UpdatedAt = DateTime.UtcNow;
+
+        _db.OrderStatusHistories.Add(new OrderStatusHistory
+        {
+            OrderId = order.Id,
+            FromStatus = oldStatus,
+            ToStatus = OrderStatus.Cancelled.ToString(),
+            ChangedByUserId = request.UserId,
+            ChangedByRole = request.UserRole,
+            Reason = request.Reason,
+            ChangedAt = DateTime.UtcNow,
+        });
 
         await _db.SaveChangesAsync(ct);
 

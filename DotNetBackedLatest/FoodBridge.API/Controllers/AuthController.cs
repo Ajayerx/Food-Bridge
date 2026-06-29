@@ -1,4 +1,6 @@
+using FoodBridge.Application.DTOs.Agents;
 using FoodBridge.Application.DTOs.Auth;
+using FoodBridge.Application.Features.Agents.Commands.AgentSelfRegistration;
 using FoodBridge.Application.Features.Auth.Commands.RequestOtp;
 using FoodBridge.Application.Features.Auth.Commands.VerifyOtp;
 using FoodBridge.Application.Features.Auth.Commands.RefreshToken;
@@ -63,5 +65,24 @@ public class AuthController : ControllerBase
         await _mediator.Send(new LogoutCommand(dto.RefreshToken), ct);
 
         return Ok(new { success = true, message = "Logged out successfully" });
+    }
+
+    /// <summary>POST v1/auth/agent/register — Public self-registration for delivery agents</summary>
+    [HttpPost("agent/register")]
+    [AllowAnonymous]
+    public async Task<IActionResult> AgentRegister(
+        [FromBody] AgentSelfRegistrationRequestDto dto,
+        CancellationToken ct)
+    {
+        var result = await _mediator.Send(
+            new AgentSelfRegistrationCommand(
+                dto.MobileNumber,
+                dto.FullName,
+                dto.Email,
+                dto.VehicleType,
+                dto.VehicleNumber,
+                dto.LicenseNumber), ct);
+
+        return Ok(new { success = true, message = "Registration submitted for review", data = result });
     }
 }

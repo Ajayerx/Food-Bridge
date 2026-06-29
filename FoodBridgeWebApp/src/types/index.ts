@@ -211,8 +211,10 @@ export type OrderStatus =
     | "preparing"
     | "ready"
     | "out_for_delivery"
+    | "delivered"
     | "completed"
-    | "cancelled";
+    | "cancelled"
+    | "refunded";
 
 export type OrderType = "delivery" | "takeaway" | "dinein";
 export type PaymentMethod = "online" | "cod";

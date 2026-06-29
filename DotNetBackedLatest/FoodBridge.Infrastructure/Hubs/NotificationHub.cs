@@ -17,4 +17,20 @@ public class NotificationHub : Hub
 
         await base.OnConnectedAsync();
     }
+
+    /// <summary>
+    /// Delivery agents call this to receive broadcast dispatch offers.
+    /// </summary>
+    public async Task JoinDispatchGroup()
+    {
+        await Groups.AddToGroupAsync(Context.ConnectionId, "delivery_agents");
+    }
+
+    /// <summary>
+    /// Delivery agents call this when they no longer want dispatch broadcasts.
+    /// </summary>
+    public async Task LeaveDispatchGroup()
+    {
+        await Groups.RemoveFromGroupAsync(Context.ConnectionId, "delivery_agents");
+    }
 }

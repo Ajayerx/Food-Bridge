@@ -223,6 +223,17 @@ public class CreateOrderCommandHandler
         _db.Orders.Add(order);
         await _db.SaveChangesAsync(ct);
 
+        _db.OrderStatusHistories.Add(new OrderStatusHistory
+        {
+            OrderId = order.Id,
+            FromStatus = "None",
+            ToStatus = OrderStatus.Placed.ToString(),
+            ChangedByUserId = request.UserId,
+            ChangedByRole = userRole,
+            ChangedAt = DateTime.UtcNow,
+        });
+        await _db.SaveChangesAsync(ct);
+
         return new OrderDto
         {
             Id = order.Id,
@@ -242,6 +253,12 @@ public class CreateOrderCommandHandler
             CouponCode = order.CouponCodeSnapshot,
             Notes = order.Notes,
             CreatedAt = order.CreatedAt,
+            AcceptedAt = order.AcceptedAt,
+            PreparedAt = order.PreparedAt,
+            ReadyAt = order.ReadyAt,
+            DeliveredAt = order.DeliveredAt,
+            CancelledAt = order.CancelledAt,
+            RefundedAt = order.RefundedAt,
         };
     }
 }

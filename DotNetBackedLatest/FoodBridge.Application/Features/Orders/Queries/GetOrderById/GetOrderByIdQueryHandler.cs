@@ -57,7 +57,12 @@ public class GetOrderByIdQueryHandler
             DeliveryAddressId = order.DeliveryAddressId,
             TableId = order.TableId,
             CreatedAt = order.CreatedAt,
+            AcceptedAt = order.AcceptedAt,
+            PreparedAt = order.PreparedAt,
+            ReadyAt = order.ReadyAt,
             DeliveredAt = order.DeliveredAt,
+            CancelledAt = order.CancelledAt,
+            RefundedAt = order.RefundedAt,
             Items = order.OrderItems.Select(oi => new OrderItemDto
             {
                 Id = oi.Id,

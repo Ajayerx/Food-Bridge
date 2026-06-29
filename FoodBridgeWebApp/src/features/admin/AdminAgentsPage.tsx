@@ -1,17 +1,16 @@
-// VendorAgentsPage.tsx
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   Avatar,
   Button,
   Card,
   Col,
+  Descriptions,
+  Drawer,
   Empty,
-  Form,
   Input,
   Modal,
   Popconfirm,
   Row,
-  Select,
   Skeleton,
   Space,
   Table,
@@ -24,34 +23,29 @@ import {
   CheckCircleOutlined,
   CloseCircleOutlined,
   DeleteOutlined,
-  EditOutlined,
+  EyeOutlined,
   MailOutlined,
+  PauseCircleOutlined,
   PhoneOutlined,
-  PlusOutlined,
+  PlayCircleOutlined,
   TeamOutlined,
   UserOutlined,
 } from "@ant-design/icons";
 import { useAgents } from "../../hooks/useAgents";
-import { useAppSelector } from "../../hooks/useAppSelector";
 import type { AgentApiRow } from "../../services/agent.service";
 import type { ColumnsType } from "antd/es/table";
 
-// ─── Vehicle options ──────────────────────────────────────────────────────────
-const VEHICLE_OPTIONS = [
-  { label: "Bike", value: "Bike" },
-  { label: "Bicycle", value: "Bicycle" },
-  { label: "Scooter", value: "Scooter" },
-  { label: "On Foot", value: "OnFoot" },
-];
-
-// ─── Status badge ─────────────────────────────────────────────────────────────
 const STATUS_COLORS: Record<
   string,
   { bg: string; text: string; border: string }
 > = {
   Pending: { bg: "#fffbeb", text: "#b45309", border: "#fde68a" },
   Approved: { bg: "#f0fdf4", text: "#15803d", border: "#bbf7d0" },
+  Active: { bg: "#f0fdf4", text: "#15803d", border: "#bbf7d0" },
   Suspended: { bg: "#fff5f5", text: "#dc2626", border: "#fecaca" },
+  Inactive: { bg: "#f3f4f6", text: "#6b7280", border: "#e5e7eb" },
+  Banned: { bg: "#fff5f5", text: "#dc2626", border: "#fecaca" },
+  Rejected: { bg: "#fff5f5", text: "#dc2626", border: "#fecaca" },
 };
 
 const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
@@ -80,14 +74,14 @@ const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
   );
 };
 
-// ─── Summary cards ────────────────────────────────────────────────────────────
 const SummaryCards: React.FC<{ agents: AgentApiRow[]; loading: boolean }> = ({
   agents,
   loading,
 }) => {
   const total = agents.length;
-  const approved = agents.filter((a) => a.status === "Approved").length;
-  const online = agents.filter((a) => a.is_available).length;
+  const approved = agents.filter(
+    (a) => a.status === "Active" || a.status === "Approved"
+  ).length;
   const pending = agents.filter((a) => a.status === "Pending").length;
 
   const stats = [
@@ -106,18 +100,18 @@ const SummaryCards: React.FC<{ agents: AgentApiRow[]; loading: boolean }> = ({
       bg: "#f0fdf4",
     },
     {
-      title: "Online Now",
-      value: online,
-      icon: <CarOutlined />,
-      color: "#7c3aed",
-      bg: "#faf5ff",
-    },
-    {
-      title: "Pending",
+      title: "Pending Review",
       value: pending,
       icon: <CloseCircleOutlined />,
       color: "#b45309",
       bg: "#fffbeb",
+    },
+    {
+      title: "Online Now",
+      value: agents.filter((a) => a.is_available).length,
+      icon: <CarOutlined />,
+      color: "#7c3aed",
+      bg: "#faf5ff",
     },
   ];
 
@@ -133,7 +127,7 @@ const SummaryCards: React.FC<{ agents: AgentApiRow[]; loading: boolean }> = ({
               background: "#fff",
               boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
             }}
-            bodyStyle={{ padding: "12px 16px" }}
+            styles={{ body: { padding: "12px 16px" } }}
           >
             {loading ? (
               <Skeleton active paragraph={false} />
@@ -179,15 +173,6 @@ const SummaryCards: React.FC<{ agents: AgentApiRow[]; loading: boolean }> = ({
   );
 };
 
-// ─── Avatar helpers ───────────────────────────────────────────────────────────
-function getInitials(name: string): string {
-  return name
-    .split(" ")
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((w) => w[0].toUpperCase())
-    .join("");
-}
 const AVATAR_COLORS = [
   "#3b82f6",
   "#10b981",
@@ -197,6 +182,16 @@ const AVATAR_COLORS = [
   "#ec4899",
   "#14b8a6",
 ];
+
+function getInitials(name: string): string {
+  return name
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((s) => s[0]?.toUpperCase() ?? "")
+    .join("");
+}
+
 function avatarColor(name: string): string {
   let hash = 0;
   for (let i = 0; i < name.length; i++)
@@ -204,70 +199,32 @@ function avatarColor(name: string): string {
   return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
 }
 
-// ─── Main page ────────────────────────────────────────────────────────────────
-export const VendorAgentsPage: React.FC = () => {
-  const { agents, isLoading, addAgent, updateAgent, deleteAgent } = useAgents();
-  const user = useAppSelector((s) => s.auth.user);
-  const isAdmin = user?.roleType === "Admin";
+export const AdminAgentsPage: React.FC = () => {
+  const { agents, isLoading, updateAgent, deleteAgent, approveAgent, rejectAgent, suspendAgent, unsuspendAgent } =
+    useAgents();
 
-  const [modal, setModal] = useState<{ open: boolean; editing?: AgentApiRow }>({
-    open: false,
-  });
-  const [form] = Form.useForm();
+  const [drawerAgent, setDrawerAgent] = useState<AgentApiRow | null>(null);
 
-  useEffect(() => {
-    if (modal.open && modal.editing) {
-      form.setFieldsValue({
-        fullName: modal.editing.full_name,
-        mobileNumber: modal.editing.mobile_number,
-        email: modal.editing.email ?? "",
-        vehicleType: modal.editing.vehicle_type,
-        vehicleNumber: modal.editing.vehicle_number,
-        licenseNumber: modal.editing.license_number,
-      });
-    } else if (modal.open) {
-      form.resetFields();
-    }
-  }, [modal.open, modal.editing, form]);
+  const [rejectModal, setRejectModal] = useState<{
+    open: boolean;
+    agent?: AgentApiRow;
+  }>({ open: false });
+  const [rejectReason, setRejectReason] = useState("");
 
-  const closeModal = () => {
-    setModal({ open: false });
-    form.resetFields();
-  };
+  const [suspendModal, setSuspendModal] = useState<{
+    open: boolean;
+    agent?: AgentApiRow;
+  }>({ open: false });
+  const [suspendReason, setSuspendReason] = useState("");
 
-  const handleFinish = (vals: any) => {
-    if (modal.editing) {
-      updateAgent.mutate(
-        {
-          id: modal.editing.id,
-          data: {
-            fullName: vals.fullName,
-            email: vals.email || undefined,
-            vehicleType: vals.vehicleType,
-            vehicleNumber: vals.vehicleNumber,
-            licenseNumber: vals.licenseNumber,
-          },
-        },
-        { onSuccess: closeModal },
-      );
-    } else {
-      addAgent.mutate(
-        {
-          mobileNumber: vals.mobileNumber,
-          fullName: vals.fullName,
-          email: vals.email || undefined,
-          vehicleType: vals.vehicleType,
-          vehicleNumber: vals.vehicleNumber,
-          licenseNumber: vals.licenseNumber,
-        },
-        { onSuccess: closeModal },
-      );
-    }
-  };
+  const isMutating =
+    updateAgent.isPending ||
+    deleteAgent.isPending ||
+    approveAgent.isPending ||
+    rejectAgent.isPending ||
+    suspendAgent.isPending ||
+    unsuspendAgent.isPending;
 
-  const isMutating = addAgent.isPending || updateAgent.isPending;
-
-  // ── Columns ────────────────────────────────────────────────────────────────
   const columns: ColumnsType<AgentApiRow> = [
     {
       title: (
@@ -372,8 +329,10 @@ export const VendorAgentsPage: React.FC = () => {
       render: (v: string) => <StatusBadge status={v} />,
       filters: [
         { text: "Pending", value: "Pending" },
-        { text: "Approved", value: "Approved" },
-        { text: "Suspended", value: "Suspended" },
+        { text: "Active", value: "Active" },
+        { text: "Rejected", value: "Rejected" },
+        { text: "Banned", value: "Banned" },
+        { text: "Inactive", value: "Inactive" },
       ],
       onFilter: (value, record) => record.status === value,
     },
@@ -466,63 +425,128 @@ export const VendorAgentsPage: React.FC = () => {
       sorter: (a, b) =>
         new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
     },
-    ...(isAdmin
-      ? [
-          {
-            title: (
-              <span style={{ fontWeight: 600, fontSize: 13, color: "#374151" }}>
-                Actions
-              </span>
-            ),
-            key: "actions",
-            width: 100,
-            render: (_: any, r: AgentApiRow) => (
-              <Space size={6}>
-                <Tooltip title="Edit agent">
-                  <Button
-                    size="small"
-                    icon={<EditOutlined />}
-                    onClick={() => setModal({ open: true, editing: r })}
-                    style={{
-                      borderRadius: 7,
-                      border: "1px solid #d1d5db",
-                      color: "#374151",
-                      boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
-                    }}
-                  />
-                </Tooltip>
-                <Popconfirm
-                  title="Remove this agent?"
-                  description="This will permanently remove the agent."
-                  onConfirm={() => deleteAgent.mutate(r.id)}
-                  okText="Remove"
-                  cancelText="Cancel"
-                  okButtonProps={{ danger: true }}
-                  placement="topRight"
-                >
-                  <Tooltip title="Remove agent">
-                    <Button
-                      size="small"
-                      danger
-                      icon={<DeleteOutlined />}
-                      loading={deleteAgent.isPending}
-                      style={{
-                        borderRadius: 7,
-                        boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
-                      }}
-                    />
-                  </Tooltip>
-                </Popconfirm>
-              </Space>
-            ),
-          } as any,
-        ]
-      : []),
+    {
+      title: (
+        <span style={{ fontWeight: 600, fontSize: 13, color: "#374151" }}>
+          Actions
+        </span>
+      ),
+      key: "actions",
+      width: 300,
+      render: (_: any, r: AgentApiRow) => (
+        <Space size={6}>
+          {r.status === "Pending" && (
+            <>
+              <Button
+                size="small"
+                type="primary"
+                icon={<CheckCircleOutlined />}
+                onClick={() => approveAgent.mutate(r.id)}
+                loading={approveAgent.isPending}
+                style={{
+                  borderRadius: 7,
+                  fontWeight: 600,
+                  background: "#16a34a",
+                  borderColor: "#16a34a",
+                  boxShadow: "0 1px 2px rgba(22,163,74,0.3)",
+                }}
+              >
+                Approve
+              </Button>
+              <Button
+                size="small"
+                danger
+                icon={<CloseCircleOutlined />}
+                onClick={() => {
+                  setRejectReason("");
+                  setRejectModal({ open: true, agent: r });
+                }}
+                style={{ borderRadius: 7, fontWeight: 600 }}
+              >
+                Reject
+              </Button>
+            </>
+          )}
+          <Tooltip title="View details">
+            <Button
+              size="small"
+              icon={<EyeOutlined />}
+              onClick={() => setDrawerAgent(r)}
+              style={{
+                borderRadius: 7,
+                border: "1px solid #d1d5db",
+                color: "#374151",
+                boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
+              }}
+            />
+          </Tooltip>
+          {r.status === "Active" && (
+            <Tooltip title="Suspend agent">
+              <Button
+                size="small"
+                danger
+                icon={<PauseCircleOutlined />}
+                onClick={() => {
+                  setSuspendReason("");
+                  setSuspendModal({ open: true, agent: r });
+                }}
+                loading={suspendAgent.isPending}
+                style={{
+                  borderRadius: 7,
+                  boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
+                }}
+              >
+                Suspend
+              </Button>
+            </Tooltip>
+          )}
+          {r.status === "Inactive" && (
+            <Tooltip title="Unsuspend agent">
+              <Button
+                size="small"
+                icon={<PlayCircleOutlined />}
+                onClick={() => unsuspendAgent.mutate(r.id)}
+                loading={unsuspendAgent.isPending}
+                style={{
+                  borderRadius: 7,
+                  border: "1px solid #16a34a",
+                  color: "#16a34a",
+                  boxShadow: "0 1px 2px rgba(22,163,74,0.3)",
+                }}
+              >
+                Unsuspend
+              </Button>
+            </Tooltip>
+          )}
+          <Popconfirm
+            title="Remove this agent?"
+            description="This will permanently remove the agent."
+            onConfirm={() => deleteAgent.mutate(r.id)}
+            okText="Remove"
+            cancelText="Cancel"
+            okButtonProps={{ danger: true }}
+            placement="topRight"
+          >
+            <Tooltip title="Remove agent">
+              <Button
+                size="small"
+                danger
+                icon={<DeleteOutlined />}
+                loading={deleteAgent.isPending}
+                style={{
+                  borderRadius: 7,
+                  boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
+                }}
+              />
+            </Tooltip>
+          </Popconfirm>
+        </Space>
+      ),
+    },
   ];
 
   return (
     <div style={{ padding: "24px", maxWidth: 1100 }}>
-      {/* ── Header ── */}
       <div
         style={{
           display: "flex",
@@ -539,31 +563,13 @@ export const VendorAgentsPage: React.FC = () => {
             Delivery Agents
           </Typography.Title>
           <Typography.Text style={{ color: "#6b7280", fontSize: 13 }}>
-            Manage your platform's delivery agents
+            Review, approve, and manage platform delivery agents
           </Typography.Text>
         </div>
-        {isAdmin && (
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={() => setModal({ open: true, editing: undefined })}
-            style={{
-              borderRadius: 8,
-              fontWeight: 600,
-              height: 36,
-              paddingInline: 16,
-              boxShadow: "0 1px 3px rgba(59,130,246,0.3)",
-            }}
-          >
-            Add Agent
-          </Button>
-        )}
       </div>
 
-      {/* ── Summary ── */}
       <SummaryCards agents={agents} loading={isLoading} />
 
-      {/* ── Table ── */}
       <div
         style={{
           background: "#fff",
@@ -608,166 +614,126 @@ export const VendorAgentsPage: React.FC = () => {
         />
       </div>
 
-      {/* ── Modal ── */}
+      {/* ── Reject Reason Modal ── */}
       <Modal
-        open={modal.open}
+        open={rejectModal.open}
         title={
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <div
-              style={{
-                width: 28,
-                height: 28,
-                borderRadius: 7,
-                background: "#eff6ff",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "#3b82f6",
-                fontSize: 14,
-              }}
-            >
-              <UserOutlined />
-            </div>
-            <span style={{ fontWeight: 700, fontSize: 15, color: "#111827" }}>
-              {modal.editing ? "Edit Delivery Agent" : "Add Delivery Agent"}
-            </span>
-          </div>
+          <span style={{ fontWeight: 700, fontSize: 15, color: "#111827" }}>
+            Reject Delivery Agent
+          </span>
         }
-        onCancel={closeModal}
-        onOk={() => form.submit()}
-        confirmLoading={isMutating}
-        okText={modal.editing ? "Save Changes" : "Add Agent"}
-        cancelText="Cancel"
-        width={460}
-        destroyOnClose
-        okButtonProps={{ style: { borderRadius: 7, fontWeight: 600 } }}
-        cancelButtonProps={{ style: { borderRadius: 7 } }}
-        styles={{
-          header: { borderBottom: "1px solid #f3f4f6", paddingBottom: 12 },
-          body: { paddingTop: 16 },
+        onCancel={() => setRejectModal({ open: false })}
+        onOk={() => {
+          if (rejectModal.agent) {
+            rejectAgent.mutate({
+              id: rejectModal.agent.id,
+              reason: rejectReason || undefined,
+            });
+          }
+          setRejectModal({ open: false });
         }}
+        confirmLoading={rejectAgent.isPending}
+        okText="Reject Agent"
+        okButtonProps={{ danger: true, style: { borderRadius: 7, fontWeight: 600 } }}
+        cancelButtonProps={{ style: { borderRadius: 7 } }}
+        width={420}
+        destroyOnClose
       >
-        <Form
-          form={form}
-          layout="vertical"
-          onFinish={handleFinish}
-          requiredMark={false}
-        >
-          <Form.Item
-            name="fullName"
-            label={
-              <span style={{ fontWeight: 600, color: "#374151", fontSize: 13 }}>
-                Full Name
-              </span>
-            }
-            rules={[
-              { required: true, message: "Please enter full name" },
-              { max: 100, message: "Max 100 characters" },
-            ]}
-          >
-            <Input
-              prefix={<UserOutlined style={{ color: "#9ca3af" }} />}
-              placeholder="e.g. Suresh Patel"
-              style={{ borderRadius: 8 }}
-            />
-          </Form.Item>
+        <div style={{ padding: "8px 0" }}>
+          <Typography.Text style={{ color: "#6b7280", fontSize: 13 }}>
+            Provide a reason for rejection (optional). The agent will be notified.
+          </Typography.Text>
+          <Input.TextArea
+            rows={3}
+            value={rejectReason}
+            onChange={(e) => setRejectReason(e.target.value)}
+            placeholder="e.g. Incomplete documents provided"
+            style={{ marginTop: 12, borderRadius: 8 }}
+          />
+        </div>
+      </Modal>
 
-          <Form.Item
-            name="mobileNumber"
-            label={
-              <span style={{ fontWeight: 600, color: "#374151", fontSize: 13 }}>
-                Mobile Number
-              </span>
-            }
-            rules={[
-              {
-                required: !modal.editing,
-                message: "Please enter mobile number",
-              },
-              {
-                pattern: /^[6-9]\d{9}$/,
-                message: "Enter a valid 10-digit mobile number",
-              },
-            ]}
+      {/* ── Agent Detail Drawer ── */}
+      <Drawer
+        open={!!drawerAgent}
+        onClose={() => setDrawerAgent(null)}
+        title={
+          <span style={{ fontWeight: 700, fontSize: 15, color: "#111827" }}>
+            Agent Details
+          </span>
+        }
+        width={480}
+        destroyOnClose
+      >
+        {drawerAgent && (
+          <Descriptions column={1} size="small" bordered
+            styles={{
+              label: { fontWeight: 600, color: "#374151", whiteSpace: "nowrap" },
+            }}
           >
-            <Input
-              prefix={<PhoneOutlined style={{ color: "#9ca3af" }} />}
-              placeholder="e.g. 9876543210"
-              maxLength={10}
-              style={{ borderRadius: 8 }}
-              disabled={!!modal.editing}
-            />
-          </Form.Item>
+            <Descriptions.Item label="Full Name">{drawerAgent.full_name || "—"}</Descriptions.Item>
+            <Descriptions.Item label="Mobile">{drawerAgent.mobile_number}</Descriptions.Item>
+            <Descriptions.Item label="Email">{drawerAgent.email || "—"}</Descriptions.Item>
+            <Descriptions.Item label="Status"><StatusBadge status={drawerAgent.status} /></Descriptions.Item>
+            <Descriptions.Item label="Online">
+              <Tag color={drawerAgent.is_available ? "green" : "default"}>{drawerAgent.is_available ? "Online" : "Offline"}</Tag>
+            </Descriptions.Item>
+            <Descriptions.Item label="Vehicle Type">{drawerAgent.vehicle_type || "—"}</Descriptions.Item>
+            <Descriptions.Item label="Vehicle Number">{drawerAgent.vehicle_number || "—"}</Descriptions.Item>
+            <Descriptions.Item label="License Number">{drawerAgent.license_number || "—"}</Descriptions.Item>
+            <Descriptions.Item label="Total Deliveries">{drawerAgent.total_deliveries}</Descriptions.Item>
+            <Descriptions.Item label="Total Earnings">₹{Number(drawerAgent.total_earnings).toLocaleString("en-IN")}</Descriptions.Item>
+            <Descriptions.Item label="Joined">
+              {drawerAgent.created_at
+                ? new Date(drawerAgent.created_at).toLocaleDateString("en-IN", {
+                    day: "2-digit",
+                    month: "short",
+                    year: "numeric",
+                  })
+                : "—"}
+            </Descriptions.Item>
+          </Descriptions>
+        )}
+      </Drawer>
 
-          <Form.Item
-            name="email"
-            label={
-              <span style={{ fontWeight: 600, color: "#374151", fontSize: 13 }}>
-                Email{" "}
-                <span style={{ color: "#9ca3af", fontWeight: 400 }}>
-                  (optional)
-                </span>
-              </span>
-            }
-            rules={[{ type: "email", message: "Enter a valid email address" }]}
-          >
-            <Input
-              prefix={<MailOutlined style={{ color: "#9ca3af" }} />}
-              placeholder="e.g. suresh@example.com"
-              style={{ borderRadius: 8 }}
-            />
-          </Form.Item>
-
-          <Form.Item
-            name="vehicleType"
-            label={
-              <span style={{ fontWeight: 600, color: "#374151", fontSize: 13 }}>
-                Vehicle Type{" "}
-                <span style={{ color: "#9ca3af", fontWeight: 400 }}>
-                  (optional)
-                </span>
-              </span>
-            }
-          >
-            <Select
-              placeholder="Select vehicle type"
-              style={{ borderRadius: 8 }}
-              options={VEHICLE_OPTIONS}
-              allowClear
-            />
-          </Form.Item>
-
-          <Form.Item
-            name="vehicleNumber"
-            label={
-              <span style={{ fontWeight: 600, color: "#374151", fontSize: 13 }}>
-                Vehicle Number{" "}
-                <span style={{ color: "#9ca3af", fontWeight: 400 }}>
-                  (optional)
-                </span>
-              </span>
-            }
-          >
-            <Input placeholder="e.g. MH12AB1234" style={{ borderRadius: 8 }} />
-          </Form.Item>
-
-          <Form.Item
-            name="licenseNumber"
-            label={
-              <span style={{ fontWeight: 600, color: "#374151", fontSize: 13 }}>
-                License Number{" "}
-                <span style={{ color: "#9ca3af", fontWeight: 400 }}>
-                  (optional)
-                </span>
-              </span>
-            }
-          >
-            <Input
-              placeholder="e.g. DL-1420110012345"
-              style={{ borderRadius: 8 }}
-            />
-          </Form.Item>
-        </Form>
+      {/* ── Suspend Reason Modal ── */}
+      <Modal
+        open={suspendModal.open}
+        title={
+          <span style={{ fontWeight: 700, fontSize: 15, color: "#111827" }}>
+            Suspend Delivery Agent
+          </span>
+        }
+        onCancel={() => setSuspendModal({ open: false })}
+        onOk={() => {
+          if (suspendModal.agent) {
+            suspendAgent.mutate({
+              id: suspendModal.agent.id,
+              reason: suspendReason || undefined,
+            });
+          }
+          setSuspendModal({ open: false });
+        }}
+        confirmLoading={suspendAgent.isPending}
+        okText="Suspend Agent"
+        okButtonProps={{ danger: true, style: { borderRadius: 7, fontWeight: 600 } }}
+        cancelButtonProps={{ style: { borderRadius: 7 } }}
+        width={420}
+        destroyOnClose
+      >
+        <div style={{ padding: "8px 0" }}>
+          <Typography.Text style={{ color: "#6b7280", fontSize: 13 }}>
+            Provide a reason for suspension. The agent will be notified and their account will be
+            deactivated until an admin reinstates them.
+          </Typography.Text>
+          <Input.TextArea
+            rows={3}
+            value={suspendReason}
+            onChange={(e) => setSuspendReason(e.target.value)}
+            placeholder="e.g. Violation of platform terms"
+            style={{ marginTop: 12, borderRadius: 8 }}
+          />
+        </div>
       </Modal>
 
       {/* ── Zebra striping ── */}
@@ -782,4 +748,4 @@ export const VendorAgentsPage: React.FC = () => {
   );
 };
 
-export default VendorAgentsPage;
+export default AdminAgentsPage;

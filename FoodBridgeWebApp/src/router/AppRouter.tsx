@@ -21,7 +21,7 @@ import { VendorOrdersBoard } from "../features/orders/VendorOrdersBoard";
 import { VendorMenuPage } from "../features/restaurants/VendorMenuPage";
 import { VendorStaffPage } from "../features/restaurants/VendorStaffPage";
 import { VendorTablesPage } from "../features/restaurants/VendorTablesPage";
-import { VendorAgentsPage } from "../features/restaurants/VendorAgentsPage";
+import { AdminAgentsPage } from "../features/admin/AdminAgentsPage";
 import { VendorCouponsPage } from "../features/coupons/VendorCouponsPage";
 import { VendorReportsPage } from "../features/reports/VendorReportsPage";
 import { SupportTicketsPage } from "../features/support/SupportTicketsPage";
@@ -166,6 +166,7 @@ export const AppRouter: React.FC = () => {
             <Route path="/admin/users" element={<AdminUsersPage />} />
             <Route path="/admin/reports" element={<AdminReportsPage />} />
             <Route path="/admin/support" element={<SupportTicketsPage />} />
+            <Route path="/admin/agents" element={<AdminAgentsPage />} />
             <Route path="/admin/settings" element={<SettingsPage />} />
           </Route>
         </Route>
@@ -180,7 +181,6 @@ export const AppRouter: React.FC = () => {
             {/* ✅ separate */}
             <Route path="/vendor/staff" element={<VendorStaffPage />} />{" "}
             {/* ✅ separate */}
-            <Route path="/vendor/agents" element={<VendorAgentsPage />} />
             <Route path="/vendor/coupons" element={<VendorCouponsPage />} />
             <Route path="/vendor/reviews" element={<VendorReviewsPage />} />
             <Route path="/vendor/reports" element={<VendorReportsPage />} />

@@ -33,6 +33,7 @@ public interface IAppDbContext
     DbSet<Order> Orders { get; }
     DbSet<OrderItem> OrderItems { get; }
     DbSet<OrderItemModifier> OrderItemModifiers { get; }
+    DbSet<OrderStatusHistory> OrderStatusHistories { get; }
 
     // ── Coupons ───────────────────────────────────────────
     DbSet<Coupon> Coupons { get; }
@@ -40,6 +41,7 @@ public interface IAppDbContext
 
     // ── Delivery ──────────────────────────────────────────
     DbSet<DeliveryTask> DeliveryTasks { get; }
+    DbSet<DispatchOffer> DispatchOffers { get; }
 
     // ── Payments ──────────────────────────────────────────
     DbSet<Payment> Payments { get; }

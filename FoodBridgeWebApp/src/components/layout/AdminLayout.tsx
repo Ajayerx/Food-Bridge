@@ -2,6 +2,7 @@ import React from "react";
 import { Avatar, Dropdown, Layout, Menu, Space, Typography } from "antd";
 import {
   AppstoreOutlined,
+  CarOutlined,
   ShopOutlined,
   BarChartOutlined,
   CustomerServiceOutlined,
@@ -43,6 +44,11 @@ export const AdminLayout: React.FC = () => {
       key: "/admin/users",
       icon: <TeamOutlined />,
       label: <Link to="/admin/users">Users</Link>,
+    },
+    {
+      key: "/admin/agents",
+      icon: <CarOutlined />,
+      label: <Link to="/admin/agents">Delivery Agents</Link>,
     },
     {
       key: "/admin/reports",

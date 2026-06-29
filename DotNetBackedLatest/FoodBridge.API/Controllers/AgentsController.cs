@@ -2,6 +2,10 @@ using FoodBridge.Application.DTOs.Agents;
 using FoodBridge.Application.Features.Agents.Commands.CreateAgent;
 using FoodBridge.Application.Features.Agents.Commands.UpdateAgent;
 using FoodBridge.Application.Features.Agents.Commands.DeleteAgent;
+using FoodBridge.Application.Features.Agents.Commands.ApproveAgent;
+using FoodBridge.Application.Features.Agents.Commands.RejectAgent;
+using FoodBridge.Application.Features.Agents.Commands.SuspendAgent;
+using FoodBridge.Application.Features.Agents.Commands.UnsuspendAgent;
 using FoodBridge.Application.Features.Agents.Queries.GetAgents;
 using FoodBridge.Application.Features.Agents.Queries.GetAgentById;
 using FoodBridge.Application.Common.Interfaces;
@@ -98,5 +102,51 @@ public class AgentsController : ControllerBase
         await _mediator.Send(new DeleteAgentCommand(id), ct);
 
         return Ok(new { success = true, message = "Agent removed" });
+    }
+
+    /// <summary>PATCH v1/agents/{id}/approve — Admin: approve pending agent</summary>
+    [HttpPatch("{id:guid}/approve")]
+    public async Task<IActionResult> ApproveAgent(Guid id, CancellationToken ct)
+    {
+        var adminUserId = _currentUser.UserId!.Value;
+        await _mediator.Send(new ApproveAgentCommand(id, adminUserId), ct);
+
+        return Ok(new { success = true, message = "Agent approved successfully" });
+    }
+
+    /// <summary>PATCH v1/agents/{id}/reject — Admin: reject pending agent</summary>
+    [HttpPatch("{id:guid}/reject")]
+    public async Task<IActionResult> RejectAgent(
+        Guid id,
+        [FromBody] RejectAgentRequestDto? dto,
+        CancellationToken ct)
+    {
+        var adminUserId = _currentUser.UserId!.Value;
+        await _mediator.Send(new RejectAgentCommand(id, adminUserId, dto?.Reason), ct);
+
+        return Ok(new { success = true, message = "Agent rejected" });
+    }
+
+    /// <summary>PATCH v1/agents/{id}/suspend — Admin: suspend an active agent</summary>
+    [HttpPatch("{id:guid}/suspend")]
+    public async Task<IActionResult> SuspendAgent(
+        Guid id,
+        [FromBody] RejectAgentRequestDto? dto,
+        CancellationToken ct)
+    {
+        var adminUserId = _currentUser.UserId!.Value;
+        await _mediator.Send(new SuspendAgentCommand(id, adminUserId, dto?.Reason), ct);
+
+        return Ok(new { success = true, message = "Agent suspended successfully" });
+    }
+
+    /// <summary>PATCH v1/agents/{id}/unsuspend — Admin: reinstate a suspended agent</summary>
+    [HttpPatch("{id:guid}/unsuspend")]
+    public async Task<IActionResult> UnsuspendAgent(Guid id, CancellationToken ct)
+    {
+        var adminUserId = _currentUser.UserId!.Value;
+        await _mediator.Send(new UnsuspendAgentCommand(id, adminUserId), ct);
+
+        return Ok(new { success = true, message = "Agent unsuspended successfully" });
     }
 }

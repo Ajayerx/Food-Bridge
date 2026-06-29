@@ -74,6 +74,60 @@ export function useAgents() {
             ),
     });
 
+    // ── Approve ────────────────────────────────────────────────────────────────
+    const approveAgent = useMutation({
+        mutationFn: (id: string) => agentService.approveAgent(id),
+        onSuccess: () => {
+            invalidate();
+            message.success("Agent approved successfully");
+        },
+        onError: (e: any) =>
+            message.error(
+                e?.response?.data?.error?.message ?? "Failed to approve agent"
+            ),
+    });
+
+    // ── Suspend ────────────────────────────────────────────────────────────────
+    const suspendAgent = useMutation({
+        mutationFn: ({ id, reason }: { id: string; reason?: string }) =>
+            agentService.suspendAgent(id, reason),
+        onSuccess: () => {
+            invalidate();
+            message.success("Agent suspended successfully");
+        },
+        onError: (e: any) =>
+            message.error(
+                e?.response?.data?.error?.message ?? "Failed to suspend agent"
+            ),
+    });
+
+    // ── Unsuspend ──────────────────────────────────────────────────────────────
+    const unsuspendAgent = useMutation({
+        mutationFn: (id: string) => agentService.unsuspendAgent(id),
+        onSuccess: () => {
+            invalidate();
+            message.success("Agent unsuspended successfully");
+        },
+        onError: (e: any) =>
+            message.error(
+                e?.response?.data?.error?.message ?? "Failed to unsuspend agent"
+            ),
+    });
+
+    // ── Reject ─────────────────────────────────────────────────────────────────
+    const rejectAgent = useMutation({
+        mutationFn: ({ id, reason }: { id: string; reason?: string }) =>
+            agentService.rejectAgent(id, reason),
+        onSuccess: () => {
+            invalidate();
+            message.success("Agent rejected");
+        },
+        onError: (e: any) =>
+            message.error(
+                e?.response?.data?.error?.message ?? "Failed to reject agent"
+            ),
+    });
+
     return {
         agents,
         isLoading,
@@ -81,5 +135,9 @@ export function useAgents() {
         addAgent,
         updateAgent,
         deleteAgent,
+        approveAgent,
+        rejectAgent,
+        suspendAgent,
+        unsuspendAgent,
     };
 }

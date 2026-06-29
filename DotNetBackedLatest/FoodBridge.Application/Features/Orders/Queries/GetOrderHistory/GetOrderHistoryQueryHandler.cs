@@ -63,7 +63,12 @@ public class GetOrderHistoryQueryHandler
             TotalAmount = o.TotalAmount,
             CouponCode = o.CouponCodeSnapshot,
             CreatedAt = o.CreatedAt,
+            AcceptedAt = o.AcceptedAt,
+            PreparedAt = o.PreparedAt,
+            ReadyAt = o.ReadyAt,
             DeliveredAt = o.DeliveredAt,
+            CancelledAt = o.CancelledAt,
+            RefundedAt = o.RefundedAt,
             Items = o.OrderItems.Select(oi => new OrderItemDto
             {
                 Id = oi.Id,

@@ -27,7 +27,12 @@ public class OrderDto
     public Guid? DeliveryAgentId { get; set; }
     public string? AgentName { get; set; }
     public DateTime CreatedAt { get; set; }
+    public DateTime? AcceptedAt { get; set; }
+    public DateTime? PreparedAt { get; set; }
+    public DateTime? ReadyAt { get; set; }
     public DateTime? DeliveredAt { get; set; }
+    public DateTime? CancelledAt { get; set; }
+    public DateTime? RefundedAt { get; set; }
     public List<OrderItemDto> Items { get; set; } = new();
 }
 

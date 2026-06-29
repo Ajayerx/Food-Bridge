@@ -171,6 +171,7 @@ internal class TestAppDbContext : FoodBridge.Application.Common.Interfaces.IAppD
     public DbSet<Coupon> Coupons => _inner.Coupons;
     public DbSet<CouponRedemption> CouponRedemptions => _inner.CouponRedemptions;
     public DbSet<DeliveryTask> DeliveryTasks => _inner.DeliveryTasks;
+    public DbSet<DispatchOffer> DispatchOffers => _inner.DispatchOffers;
     public DbSet<Payment> Payments => _inner.Payments;
     public DbSet<Refund> Refunds => _inner.Refunds;
     public DbSet<Commission> Commissions => _inner.Commissions;
@@ -183,6 +184,7 @@ internal class TestAppDbContext : FoodBridge.Application.Common.Interfaces.IAppD
     public DbSet<PlatformSetting> PlatformSettings => _inner.PlatformSettings;
     public DbSet<AuditLog> AuditLogs => _inner.AuditLogs;
     public DbSet<Banner> Banners => _inner.Banners;
+    public DbSet<OrderStatusHistory> OrderStatusHistories => _inner.OrderStatusHistories;
 
     public DatabaseFacade Database => _inner.Database;
 

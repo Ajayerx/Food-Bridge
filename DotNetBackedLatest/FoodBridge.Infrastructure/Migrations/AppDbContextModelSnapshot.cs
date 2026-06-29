@@ -595,6 +595,45 @@ namespace FoodBridge.Infrastructure.Migrations
                     b.ToTable("DeviceTokens", "dbo");
                 });
 
+            modelBuilder.Entity("FoodBridge.Domain.Entities.DispatchOffer", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("AcceptedByAgentId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("OrderId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AcceptedByAgentId");
+
+                    b.HasIndex("OrderId", "Status")
+                        .HasFilter("[Status] = 'Pending'");
+
+                    b.ToTable("DispatchOffers", "dbo");
+                });
+
             modelBuilder.Entity("FoodBridge.Domain.Entities.ItemVariant", b =>
                 {
                     b.Property<Guid>("Id")
@@ -885,9 +924,15 @@ namespace FoodBridge.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<DateTime?>("AcceptedAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("CancelReason")
                         .HasMaxLength(300)
                         .HasColumnType("nvarchar(300)");
+
+                    b.Property<DateTime?>("CancelledAt")
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("CouponCodeSnapshot")
                         .HasMaxLength(20)
@@ -953,6 +998,15 @@ namespace FoodBridge.Infrastructure.Migrations
                         .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
+
+                    b.Property<DateTime?>("PreparedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("ReadyAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("RefundedAt")
+                        .HasColumnType("datetime2");
 
                     b.Property<Guid>("RestaurantId")
                         .HasColumnType("uniqueidentifier");
@@ -1091,6 +1145,56 @@ namespace FoodBridge.Infrastructure.Migrations
                     b.ToTable("OrderItemModifiers", "dbo");
                 });
 
+            modelBuilder.Entity("FoodBridge.Domain.Entities.OrderStatusHistory", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("ChangedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETUTCDATE()");
+
+                    b.Property<string>("ChangedByRole")
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<Guid?>("ChangedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("FromStatus")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<Guid>("OrderId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("ToStatus")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ChangedAt");
+
+                    b.HasIndex("OrderId");
+
+                    b.ToTable("OrderStatusHistories", "dbo");
+                });
+
             modelBuilder.Entity("FoodBridge.Domain.Entities.Payment", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1198,7 +1302,7 @@ namespace FoodBridge.Infrastructure.Migrations
                         new
                         {
                             Id = new Guid("10000001-0000-0000-0000-000000000001"),
-                            CreatedAt = new DateTime(2026, 6, 19, 11, 21, 37, 546, DateTimeKind.Utc).AddTicks(1800),
+                            CreatedAt = new DateTime(2026, 6, 25, 9, 54, 6, 970, DateTimeKind.Utc).AddTicks(2456),
                             Description = "Platform commission percentage on each order",
                             Key = "platform_commission_rate",
                             Value = "10"
@@ -1206,7 +1310,7 @@ namespace FoodBridge.Infrastructure.Migrations
                         new
                         {
                             Id = new Guid("10000001-0000-0000-0000-000000000002"),
-                            CreatedAt = new DateTime(2026, 6, 19, 11, 21, 37, 546, DateTimeKind.Utc).AddTicks(1807),
+                            CreatedAt = new DateTime(2026, 6, 25, 9, 54, 6, 970, DateTimeKind.Utc).AddTicks(2463),
                             Description = "Default GST tax rate percentage",
                             Key = "default_tax_rate",
                             Value = "5"
@@ -1214,7 +1318,7 @@ namespace FoodBridge.Infrastructure.Migrations
                         new
                         {
                             Id = new Guid("10000001-0000-0000-0000-000000000003"),
-                            CreatedAt = new DateTime(2026, 6, 19, 11, 21, 37, 546, DateTimeKind.Utc).AddTicks(1812),
+                            CreatedAt = new DateTime(2026, 6, 25, 9, 54, 6, 970, DateTimeKind.Utc).AddTicks(2467),
                             Description = "Maximum delivery radius in kilometers",
                             Key = "max_delivery_radius_km",
                             Value = "10"
@@ -1222,7 +1326,7 @@ namespace FoodBridge.Infrastructure.Migrations
                         new
                         {
                             Id = new Guid("10000001-0000-0000-0000-000000000004"),
-                            CreatedAt = new DateTime(2026, 6, 19, 11, 21, 37, 546, DateTimeKind.Utc).AddTicks(1816),
+                            CreatedAt = new DateTime(2026, 6, 25, 9, 54, 6, 970, DateTimeKind.Utc).AddTicks(2472),
                             Description = "OTP expiry time in seconds",
                             Key = "otp_expiry_seconds",
                             Value = "300"
@@ -1230,7 +1334,7 @@ namespace FoodBridge.Infrastructure.Migrations
                         new
                         {
                             Id = new Guid("10000001-0000-0000-0000-000000000005"),
-                            CreatedAt = new DateTime(2026, 6, 19, 11, 21, 37, 546, DateTimeKind.Utc).AddTicks(1821),
+                            CreatedAt = new DateTime(2026, 6, 25, 9, 54, 6, 970, DateTimeKind.Utc).AddTicks(2476),
                             Description = "Minimum vendor payout amount in INR",
                             Key = "min_payout_amount",
                             Value = "500"
@@ -1238,7 +1342,7 @@ namespace FoodBridge.Infrastructure.Migrations
                         new
                         {
                             Id = new Guid("10000001-0000-0000-0000-000000000006"),
-                            CreatedAt = new DateTime(2026, 6, 19, 11, 21, 37, 546, DateTimeKind.Utc).AddTicks(1825),
+                            CreatedAt = new DateTime(2026, 6, 25, 9, 54, 6, 970, DateTimeKind.Utc).AddTicks(2480),
                             Description = "Default agent earnings per delivery in INR",
                             Key = "agent_delivery_earnings_per_order",
                             Value = "30"
@@ -1246,7 +1350,7 @@ namespace FoodBridge.Infrastructure.Migrations
                         new
                         {
                             Id = new Guid("10000001-0000-0000-0000-000000000007"),
-                            CreatedAt = new DateTime(2026, 6, 19, 11, 21, 37, 546, DateTimeKind.Utc).AddTicks(1829),
+                            CreatedAt = new DateTime(2026, 6, 25, 9, 54, 6, 970, DateTimeKind.Utc).AddTicks(2486),
                             Description = "Support email address",
                             Key = "support_email",
                             Value = "support@foodbridge.in"
@@ -1254,7 +1358,7 @@ namespace FoodBridge.Infrastructure.Migrations
                         new
                         {
                             Id = new Guid("10000001-0000-0000-0000-000000000008"),
-                            CreatedAt = new DateTime(2026, 6, 19, 11, 21, 37, 546, DateTimeKind.Utc).AddTicks(1847),
+                            CreatedAt = new DateTime(2026, 6, 25, 9, 54, 6, 970, DateTimeKind.Utc).AddTicks(2490),
                             Description = "Support phone number",
                             Key = "support_phone",
                             Value = "+91-9999999999"
@@ -2062,6 +2166,24 @@ namespace FoodBridge.Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("FoodBridge.Domain.Entities.DispatchOffer", b =>
+                {
+                    b.HasOne("FoodBridge.Domain.Entities.DeliveryAgent", "AcceptedByAgent")
+                        .WithMany()
+                        .HasForeignKey("AcceptedByAgentId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("FoodBridge.Domain.Entities.Order", "Order")
+                        .WithMany()
+                        .HasForeignKey("OrderId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.Navigation("AcceptedByAgent");
+
+                    b.Navigation("Order");
+                });
+
             modelBuilder.Entity("FoodBridge.Domain.Entities.ItemVariant", b =>
                 {
                     b.HasOne("FoodBridge.Domain.Entities.MenuItem", "MenuItem")
@@ -2224,6 +2346,17 @@ namespace FoodBridge.Infrastructure.Migrations
                     b.Navigation("ModifierOption");
 
                     b.Navigation("OrderItem");
+                });
+
+            modelBuilder.Entity("FoodBridge.Domain.Entities.OrderStatusHistory", b =>
+                {
+                    b.HasOne("FoodBridge.Domain.Entities.Order", "Order")
+                        .WithMany()
+                        .HasForeignKey("OrderId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.Navigation("Order");
                 });
 
             modelBuilder.Entity("FoodBridge.Domain.Entities.Payment", b =>

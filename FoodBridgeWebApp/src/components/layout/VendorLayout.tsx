@@ -68,11 +68,6 @@ export const VendorLayout: React.FC = () => {
       label: <Link to="/vendor/staff">Staff</Link>,
     },
     {
-      key: "/vendor/agents",
-      icon: <CarOutlined />,
-      label: <Link to="/vendor/agents">Delivery Agents</Link>,
-    },
-    {
       key: "/vendor/coupons",
       icon: <GiftOutlined />,
       label: <Link to="/vendor/coupons">Coupons</Link>,

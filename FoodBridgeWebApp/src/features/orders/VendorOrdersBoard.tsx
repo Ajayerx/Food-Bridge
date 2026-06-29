@@ -71,8 +71,10 @@ const STATUS_COLUMNS: {
     color: "orange",
     hex: "#fa8c16",
   },
+  { key: "delivered", label: "Delivered", color: "green", hex: "#389e0d" },
   { key: "completed", label: "Completed", color: "green", hex: "#52c41a" },
   { key: "cancelled", label: "Cancelled", color: "red", hex: "#ff4d4f" },
+  { key: "refunded", label: "Refunded", color: "purple", hex: "#722ed1" },
 ];
 
 // ✅ Contract 7.3 — delivery flow for vendor/manager
@@ -81,7 +83,8 @@ const DELIVERY_TRANSITIONS: Partial<Record<OrderStatus, OrderStatus>> = {
   accepted: "preparing",
   preparing: "ready",
   ready: "out_for_delivery",
-  out_for_delivery: "completed",
+  out_for_delivery: "delivered",
+  delivered: "completed",
 };
 
 // ✅ Contract 7.3 — dine-in/takeaway skips out_for_delivery
@@ -96,7 +99,9 @@ const NEXT_LABEL: Partial<Record<OrderStatus, string>> = {
   placed: "Accept",
   accepted: "Start Preparing",
   preparing: "Mark Ready for Pickup",
+  ready: "Out for Delivery",
   out_for_delivery: "Mark Delivered",
+  delivered: "Mark Completed",
 };
 
 // ✅ Helper — get next status based on order type + role
@@ -134,8 +139,8 @@ function getNextLabel(
   ) {
     return "Complete & Collect Payment";
   }
-  if (o.status === "ready" && o.orderType === "delivery") {
-    return "Out for Delivery";
+  if (nextStatus === "completed" && o.orderType === "delivery") {
+    return "Mark Completed";
   }
   return NEXT_LABEL[o.status] ?? null;
 }
@@ -781,6 +786,9 @@ export const VendorOrdersBoard: React.FC = () => {
   const [api, contextHolder] = notification.useNotification();
   const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [cancelModalOpen, setCancelModalOpen] = useState(false);
+  const [cancelReason, setCancelReason] = useState("");
+  const [cancellingOrderId, setCancellingOrderId] = useState<string | null>(null);
 
   // ✅ Role detection
   const isVendor = user?.roleType === "Vendor";
@@ -860,26 +868,33 @@ export const VendorOrdersBoard: React.FC = () => {
   });
 
   const cancelOrder = useMutation({
-    mutationFn: (id: string) =>
-      orderService.cancelOrder(id, "Cancelled by vendor"),
-    onSuccess: (_, id) => {
+    mutationFn: ({ id, reason }: { id: string; reason: string }) =>
+      orderService.cancelOrder(id, reason || "Cancelled by vendor"),
+    onSuccess: (_, { id }) => {
       qc.invalidateQueries({ queryKey: ["vendor-orders", restaurant?.id] });
       qc.invalidateQueries({ queryKey: ["order-detail", id] });
       setSelected(null);
+      setCancelModalOpen(false);
+      setCancelReason("");
+      setCancellingOrderId(null);
       api.success({
         message: "Order Cancelled",
         placement: "topRight",
         duration: 3,
       });
     },
-    onError: (e: any) =>
+    onError: (e: any) => {
+      setCancelModalOpen(false);
+      setCancelReason("");
+      setCancellingOrderId(null);
       api.error({
         message: "Cancel Failed",
         description:
           e?.response?.data?.error?.message ?? "Failed to cancel order",
         placement: "topRight",
         duration: 5,
-      }),
+      });
+    },
   });
   const settleBill = useMutation({
     mutationFn: ({
@@ -1267,8 +1282,44 @@ export const VendorOrdersBoard: React.FC = () => {
             userRoleKey={userRoleKey}
             restaurantId={restaurant?.id ?? ""}
             itemAddedAt={null}
+            onOpenCancelModal={(id: string) => {
+              setCancellingOrderId(id);
+              setCancelReason("");
+              setCancelModalOpen(true);
+            }}
           />
         )}
+      </Modal>
+
+      <Modal
+        title="Cancel Order"
+        open={cancelModalOpen}
+        onOk={() => {
+          if (cancellingOrderId) {
+            cancelOrder.mutate({
+              id: cancellingOrderId,
+              reason: cancelReason,
+            });
+          }
+        }}
+        onCancel={() => {
+          setCancelModalOpen(false);
+          setCancelReason("");
+          setCancellingOrderId(null);
+        }}
+        confirmLoading={cancelOrder.isPending}
+        okText="Confirm Cancel"
+        okButtonProps={{ danger: true }}
+      >
+        <Typography.Text style={{ display: "block", marginBottom: 8 }}>
+          Are you sure you want to cancel this order? Please provide a reason.
+        </Typography.Text>
+        <Input.TextArea
+          rows={3}
+          placeholder="Reason for cancellation (optional)"
+          value={cancelReason}
+          onChange={(e) => setCancelReason(e.target.value)}
+        />
       </Modal>
     </div>
   );
@@ -1291,6 +1342,7 @@ const OrderDetail: React.FC<{
   userRoleKey: string | null;
   restaurantId: string;
   itemAddedAt: string | null;
+  onOpenCancelModal?: (id: string) => void;
 }> = ({
   order,
   updateStatus,
@@ -1303,6 +1355,7 @@ const OrderDetail: React.FC<{
   userRoleKey,
   restaurantId,
   itemAddedAt,
+  onOpenCancelModal,
 }) => {
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
 
@@ -1632,7 +1685,9 @@ const OrderDetail: React.FC<{
               danger
               loading={cancelOrder.isPending}
               disabled={isMutating}
-              onClick={() => cancelOrder.mutate(String(o.id))}
+              onClick={() =>
+                onOpenCancelModal?.(String(o.id))
+              }
             >
               Cancel Order
             </Button>

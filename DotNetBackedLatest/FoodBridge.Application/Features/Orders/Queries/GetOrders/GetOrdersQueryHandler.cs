@@ -103,7 +103,12 @@ public class GetOrdersQueryHandler
             TableName = o.Table?.TableNumber ?? null,
             DeliveryAgentId = o.DeliveryAgentId,
             CreatedAt = o.CreatedAt,
+            AcceptedAt = o.AcceptedAt,
+            PreparedAt = o.PreparedAt,
+            ReadyAt = o.ReadyAt,
             DeliveredAt = o.DeliveredAt,
+            CancelledAt = o.CancelledAt,
+            RefundedAt = o.RefundedAt,
             Items = o.OrderItems.Select(i => new OrderItemDto
             {
                 Id = i.Id,

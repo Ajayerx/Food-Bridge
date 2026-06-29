@@ -36,6 +36,7 @@ public class AppDbContext : DbContext, IAppDbContext
     public DbSet<Order> Orders => Set<Order>();
     public DbSet<OrderItem> OrderItems => Set<OrderItem>();
     public DbSet<OrderItemModifier> OrderItemModifiers => Set<OrderItemModifier>();
+    public DbSet<OrderStatusHistory> OrderStatusHistories => Set<OrderStatusHistory>();
 
     // ── Coupons ───────────────────────────────────────────
     public DbSet<Coupon> Coupons => Set<Coupon>();
@@ -43,6 +44,7 @@ public class AppDbContext : DbContext, IAppDbContext
 
     // ── Delivery ──────────────────────────────────────────
     public DbSet<DeliveryTask> DeliveryTasks => Set<DeliveryTask>();
+    public DbSet<DispatchOffer> DispatchOffers => Set<DispatchOffer>();
 
     // ── Payments ──────────────────────────────────────────
     public DbSet<Payment> Payments => Set<Payment>();
@@ -139,6 +141,8 @@ public class AppDbContext : DbContext, IAppDbContext
         // ── DeliveryAgent dependents ─────────────────────────────
         modelBuilder.Entity<DeliveryTask>()
             .HasQueryFilter(dt => dt.Agent.User.DeletedAt == null);
+        modelBuilder.Entity<DispatchOffer>()
+            .HasQueryFilter(d => d.Order.Restaurant.DeletedAt == null);
 
         // ── MenuItem dependents ──────────────────────────────────
         modelBuilder.Entity<ItemVariant>()
@@ -153,6 +157,8 @@ public class AppDbContext : DbContext, IAppDbContext
         // ── Order dependents ─────────────────────────────────────
         modelBuilder.Entity<Payment>()
             .HasQueryFilter(p => p.Order.Restaurant.DeletedAt == null);
+        modelBuilder.Entity<OrderStatusHistory>()
+            .HasQueryFilter(h => h.Order.Restaurant.DeletedAt == null);
 
         // ── OrderItem dependents ─────────────────────────────────
         modelBuilder.Entity<OrderItemModifier>()

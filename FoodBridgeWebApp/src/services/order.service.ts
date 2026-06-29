@@ -7,8 +7,10 @@ const FE_TO_BE: Record<OrderStatus, string> = {
     preparing: "Preparing",
     ready: "ReadyForPickup",
     out_for_delivery: "OutForDelivery",
+    delivered: "Delivered",
     completed: "Completed",
     cancelled: "Cancelled",
+    refunded: "Refunded",
 };
 
 const BE_TO_FE: Record<string, OrderStatus> = {
@@ -17,9 +19,10 @@ const BE_TO_FE: Record<string, OrderStatus> = {
     preparing: "preparing",
     readyforpickup: "ready",
     outfordelivery: "out_for_delivery",
-    delivered: "completed",
+    delivered: "delivered",
     completed: "completed",
     cancelled: "cancelled",
+    refunded: "refunded",
 };
 
 const ORDER_TYPE_TO_BE: Record<string, string> = {

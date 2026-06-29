@@ -131,7 +131,7 @@ public class OrdersController : ControllerBase
 
     /// <summary>POST v1/orders/{id}/settle-bill</summary>
     [HttpPost("{id:guid}/settle-bill")]
-    //[Authorize(Roles = "Vendor,Staff")]
+    [Authorize(Roles = "Vendor,Staff,Admin")]
     public async Task<IActionResult> SettleBill(
         Guid id,
         [FromQuery] string paymentMethod,

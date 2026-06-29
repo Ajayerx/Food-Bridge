@@ -71,6 +71,12 @@ public class OrderConfiguration
         builder.Property(o => o.CancelReason)
             .HasMaxLength(300);
 
+        builder.Property(o => o.AcceptedAt);
+        builder.Property(o => o.PreparedAt);
+        builder.Property(o => o.ReadyAt);
+        builder.Property(o => o.CancelledAt);
+        builder.Property(o => o.RefundedAt);
+
         builder.Property(o => o.CreatedAt)
             .IsRequired()
             .HasDefaultValueSql("GETUTCDATE()");

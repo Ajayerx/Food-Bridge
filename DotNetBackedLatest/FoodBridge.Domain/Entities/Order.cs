@@ -36,10 +36,33 @@ public class Order : BaseEntity
     public string? Notes { get; set; }
     public string? CancelReason { get; set; }
     public DateTime? DeliveredAt { get; set; }
+    public DateTime? AcceptedAt { get; set; }
+    public DateTime? PreparedAt { get; set; }
+    public DateTime? ReadyAt { get; set; }
+    public DateTime? CancelledAt { get; set; }
+    public DateTime? RefundedAt { get; set; }
 
     public ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
 
     // ── Domain Methods ────────────────────────────────────
+
+    public void MarkAsAccepted()
+    {
+        OrderStatus = OrderStatus.Confirmed;
+        AcceptedAt = DateTime.UtcNow;
+    }
+
+    public void MarkAsPreparing()
+    {
+        OrderStatus = OrderStatus.Preparing;
+        PreparedAt = DateTime.UtcNow;
+    }
+
+    public void MarkAsReady()
+    {
+        OrderStatus = OrderStatus.ReadyForPickup;
+        ReadyAt = DateTime.UtcNow;
+    }
 
     public void MarkAsDelivered()
     {
@@ -52,6 +75,22 @@ public class Order : BaseEntity
     {
         OrderStatus = OrderStatus.Completed;
         TryAutoCompletePayment();
+    }
+
+    public void MarkAsCancelled(string? reason)
+    {
+        OrderStatus = OrderStatus.Cancelled;
+        CancelledAt = DateTime.UtcNow;
+        CancelReason = reason;
+    }
+
+    public void MarkAsRefunded()
+    {
+        if (OrderStatus != OrderStatus.Cancelled)
+            throw new InvalidOperationException("Only cancelled orders can be refunded.");
+
+        OrderStatus = OrderStatus.Refunded;
+        RefundedAt = DateTime.UtcNow;
     }
 
     private void TryAutoCompletePayment()

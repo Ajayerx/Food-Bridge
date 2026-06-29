@@ -8,7 +8,7 @@ public class UpdateOrderStatusCommandValidator
     private static readonly string[] ValidStatuses =
     {
         "Confirmed", "Preparing", "ReadyForPickup",
-        "OutForDelivery", "Delivered","Completed",  "Cancelled"
+        "OutForDelivery", "Delivered", "Completed", "Cancelled", "Refunded"
     };
 
     public UpdateOrderStatusCommandValidator()

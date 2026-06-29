@@ -1,6 +1,8 @@
 using FoodBridge.Application.DTOs.Delivery;
 using FoodBridge.Application.Features.Delivery.Commands.UpdateTaskStatus;
 using FoodBridge.Application.Features.Delivery.Commands.ToggleAvailability;
+using FoodBridge.Application.Features.Delivery.Queries.GetMyProfile;
+using FoodBridge.Application.Features.Delivery.Queries.GetActiveTask;
 using FoodBridge.Application.Features.Delivery.Queries.GetMyTasks;
 using FoodBridge.Application.Features.Delivery.Queries.GetTaskById;
 using FoodBridge.Application.Common.Interfaces;
@@ -85,5 +87,25 @@ public class DeliveryController : ControllerBase
                 dto.CurrentLongitude), ct);
 
         return Ok(new { success = true, message = "Availability updated" });
+    }
+
+    /// <summary>GET v1/delivery/profile — Get current agent's profile</summary>
+    [HttpGet("profile")]
+    public async Task<IActionResult> GetMyProfile(CancellationToken ct)
+    {
+        var result = await _mediator.Send(
+            new GetMyProfileQuery(_currentUser.UserId!.Value), ct);
+
+        return Ok(new { success = true, data = result });
+    }
+
+    /// <summary>GET v1/delivery/tasks/active — Get current active task</summary>
+    [HttpGet("tasks/active")]
+    public async Task<IActionResult> GetActiveTask(CancellationToken ct)
+    {
+        var result = await _mediator.Send(
+            new GetActiveTaskQuery(_currentUser.UserId!.Value), ct);
+
+        return Ok(new { success = true, data = result });
     }
 }

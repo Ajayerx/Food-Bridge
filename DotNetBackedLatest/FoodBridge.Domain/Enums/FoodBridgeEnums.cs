@@ -169,11 +169,21 @@ public enum DeliveryTaskStatus
     Failed
 }
 
+public enum DispatchOfferStatus
+{
+    Pending,
+    Accepted,
+    Rejected,
+    Expired
+}
+
 public enum AgentStatus
 {
+    Pending,
     Active,
     Inactive,
-    Banned
+    Banned,
+    Rejected
 }
 
 // ── NEW ──────────────────────────────────────

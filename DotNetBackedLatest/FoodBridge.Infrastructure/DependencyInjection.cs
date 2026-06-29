@@ -58,6 +58,10 @@ public static class DependencyInjection
         services.AddScoped<IOrderNotificationService, OrderNotificationService>();
         services.AddScoped<IPricingService, PricingService>();
 
+        // ── Background Services ────────────────────────────
+        services.AddHostedService<OrderCancellationService>();
+        services.AddHostedService<DispatchOfferExpirationService>();
+
         return services;
     }
 }

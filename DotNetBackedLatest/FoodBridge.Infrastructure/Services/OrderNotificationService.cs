@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.SignalR;
 using FoodBridge.Application.Common.Interfaces;
+using FoodBridge.Application.DTOs.Dispatch;
 using FoodBridge.Infrastructure.Hubs;
 using FoodBridge.Infrastructure.Persistence;
 using FoodBridge.Domain.Enums;
@@ -94,6 +95,11 @@ public class OrderNotificationService : IOrderNotificationService
                 "Your food is being freshly prepared. Hang tight!",
                 NotificationType.OrderPreparing),
 
+            "ready_for_pickup" => (
+                "Order Ready for Pickup 📦",
+                "Your order is ready! Please collect it from the restaurant.",
+                NotificationType.OrderReady),
+
             "out_for_delivery" => (
                 "Out for Delivery 🛵",
                 "Your order is on the way! Track it live.",
@@ -104,14 +110,41 @@ public class OrderNotificationService : IOrderNotificationService
                 "Enjoy your meal! Don't forget to rate your experience.",
                 NotificationType.OrderDelivered),
 
+            "completed" => (
+                "Order Completed ✅",
+                "Your order has been completed. Thank you!",
+                NotificationType.OrderUpdate),
+
             "cancelled" => (
                 "Order Cancelled ❌",
                 "Your order has been cancelled.",
                 NotificationType.OrderCancelled),
 
-            // placed, preparing, ready_for_pickup, completed, refunded
-            // are internal states — skip customer notification
+            // placed, refunded are internal states — skip customer notification
             _ => null
         };
+    }
+
+    // ── Dispatch Offer Notifications ─────────────────────────
+
+    public async Task NotifyNewDispatchOffer(DispatchOfferDto offer, CancellationToken ct = default)
+    {
+        await _notificationHubContext.Clients
+            .Group("delivery_agents")
+            .SendAsync("newDispatchOffer", offer, ct);
+    }
+
+    public async Task NotifyDispatchOfferAccepted(Guid offerId, Guid orderId, CancellationToken ct = default)
+    {
+        await _notificationHubContext.Clients
+            .Group("delivery_agents")
+            .SendAsync("dispatchOfferAccepted", new { offerId, orderId }, ct);
+    }
+
+    public async Task NotifyDispatchOfferExpired(Guid offerId, Guid orderId, CancellationToken ct = default)
+    {
+        await _notificationHubContext.Clients
+            .Group("delivery_agents")
+            .SendAsync("dispatchOfferExpired", new { offerId, orderId }, ct);
     }
 }
